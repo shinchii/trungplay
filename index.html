@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>APTV CarPlay - Trình Phát Nhạc Xe Hơi</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- App Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- App Shell Container -->
+    <div class="car-app-container">
+        
+        <!-- HEADER TOP BAR -->
+        <header class="site-header">
+            <div class="header-inner">
+                <div class="brand">
+                    <div class="brand-icon">
+                        <i class="fa-solid fa-compact-disc fa-spin-pulse"></i>
+                    </div>
+                    <div class="brand-text">
+                        <div class="brand-name">APTV <span class="accent-gold">CARPLAY DRIVE</span></div>
+                        <div class="brand-subtitle"><span class="pulse-dot"></span> KHÔNG GIAN ÂM NHẠC TRÊN XE</div>
+                    </div>
+                </div>
+
+                <!-- Search Input In Header -->
+                <div class="header-search-box">
+                    <i class="fa-solid fa-magnifying-glass search-icon-header"></i>
+                    <input type="text" id="txt-header-search" placeholder="Nhập tên bài hát hoặc ca sĩ (Ví dụ: MCK, Sơn Tùng, Đen Vâu, Lofi...)..." tabindex="0" autocomplete="off">
+                    <button id="btn-header-voice" class="voice-btn-header" tabindex="0" title="Tìm bằng giọng nói Tiếng Việt" aria-label="Nói giọng nói">
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
+                </div>
+
+                <div class="header-right">
+                    <div class="clock-display" id="car-clock">12:00</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN LAYOUT (2 COLUMNS) -->
+        <div class="app-main-layout">
+            
+            <!-- LEFT COLUMN: PLAYER & CONTROLS -->
+            <section class="player-column">
+                <div class="video-card">
+                    <div class="player-wrapper">
+                        <iframe id="youtubePlayer" 
+                                src="https://www.youtube.com/embed/jFfP7kU2rE8?enablejsapi=1&autoplay=0&playsinline=1&rel=0" 
+                                title="YouTube Music Player" 
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                allowfullscreen 
+                                tabindex="0">
+                        </iframe>
+                    </div>
+
+                    <!-- Song Meta Info -->
+                    <div class="video-info-bar">
+                        <div class="current-label">
+                            <span class="live-dot"></span>
+                            <span id="playing-status-label">ĐANG PHÁT</span>
+                        </div>
+                        <h2 id="playing-song-title" class="song-title">Chìm Sâu</h2>
+                        <p id="playing-song-artist" class="song-artist">RPT MCK ft. Trung Trần</p>
+                    </div>
+
+                    <!-- YouTube Timeline & Control Buttons (demohdc Style) -->
+                    <div class="youtube-controls">
+                        <!-- Timeline Row -->
+                        <div class="youtube-timeline-row">
+                            <div class="youtube-time">
+                                <span id="youtubeCurrentTime">00:00</span>
+                                <span>/</span>
+                                <span id="youtubeDuration">00:00</span>
+                            </div>
+                            <div class="youtube-progress" id="youtubeProgress" tabindex="0" title="Kéo/Bấm để tua bài hát">
+                                <div id="youtubeProgressBar"></div>
+                            </div>
+                        </div>
+
+                        <!-- Actions Buttons Row -->
+                        <div class="youtube-actions-row">
+                            <div class="youtube-button-group">
+                                <button id="btnPrevVideo" class="ctrl-btn" tabindex="0" title="Bài trước" aria-label="Bài trước">
+                                    <i class="fa-solid fa-backward-step"></i>
+                                </button>
+                                <button id="btnPlayPause" class="ctrl-btn play-main-btn" tabindex="0" title="Phát / Tạm dừng" aria-label="Phát hoặc Tạm dừng">
+                                    <i class="fa-solid fa-play" id="iconPlayPause"></i>
+                                </button>
+                                <button id="btnNextVideo" class="ctrl-btn" tabindex="0" title="Bài tiếp" aria-label="Bài tiếp">
+                                    <i class="fa-solid fa-forward-step"></i>
+                                </button>
+                                <button id="btnRepeatMode" class="ctrl-btn mode-btn" tabindex="0" title="Chế độ lặp lại" aria-label="Chế độ lặp">
+                                    <i class="fa-solid fa-repeat" id="iconRepeat"></i>
+                                </button>
+                                <button id="btnShuffleMode" class="ctrl-btn mode-btn" tabindex="0" title="Phát ngẫu nhiên" aria-label="Phát ngẫu nhiên">
+                                    <i class="fa-solid fa-shuffle" id="iconShuffle"></i>
+                                </button>
+                            </div>
+
+                            <div class="favorite-bar">
+                                <button id="btnYeuThich" class="ctrl-btn fav-btn" tabindex="0" title="Thêm vào yêu thích" aria-label="Yêu thích">
+                                    <i class="fa-regular fa-heart" id="iconFav"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="youtube-mode-label" id="youtubeModeLabel">Chế độ: Phát theo thứ tự</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- RIGHT COLUMN: PLAYLIST & SEARCH RESULTS -->
+            <section class="playlist-column">
+                <div class="playlist-card">
+                    <!-- Section Header Tabs -->
+                    <div class="playlist-tabs-header">
+                        <button class="playlist-tab-btn active" id="tab-suggest" tabindex="0" role="tab">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            <span>Gợi Ý Lái Xe</span>
+                        </button>
+
+                        <button class="playlist-tab-btn" id="tab-search-results" tabindex="0" role="tab">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <span>Kết Quả Tìm Kiếm</span>
+                            <span class="badge-count" id="badge-search-count">0</span>
+                        </button>
+
+                        <button class="playlist-tab-btn" id="tab-favorites" tabindex="0" role="tab">
+                            <i class="fa-solid fa-heart text-red"></i>
+                            <span>Đã Thích</span>
+                            <span class="badge-count" id="badge-fav-count">0</span>
+                        </button>
+                    </div>
+
+                    <!-- Category Quick Filter Chips (When in Suggest Tab) -->
+                    <div class="category-chips-wrapper" id="genre-chips-container">
+                        <button class="chip-btn active" data-genre="mck" tabindex="0">🔥 MCK</button>
+                        <button class="chip-btn" data-genre="sontung" tabindex="0">👑 Sơn Tùng M-TP</button>
+                        <button class="chip-btn" data-genre="denvau" tabindex="0">🎤 Đen Vâu</button>
+                        <button class="chip-btn" data-genre="hieuthuhai" tabindex="0">⚡ HIEUTHUHAI</button>
+                        <button class="chip-btn" data-genre="lofi" tabindex="0">☕ Lofi Chill</button>
+                        <button class="chip-btn" data-genre="vpop" tabindex="0">🔥 V-Pop Hits</button>
+                        <button class="chip-btn" data-genre="bolero" tabindex="0">📻 Bolero Nhạc Vàng</button>
+                        <button class="chip-btn" data-genre="remix" tabindex="0">🚀 Remix Xe Hơi</button>
+                    </div>
+
+                    <!-- Voice Banner Indicator -->
+                    <div class="voice-banner-status" id="voice-status-banner" style="display: none;">
+                        <i class="fa-solid fa-microphone-lines fa-bounce text-red"></i>
+                        <span id="voice-status-text">Đang nghe giọng nói... Nói tên bài hát!</span>
+                    </div>
+
+                    <!-- Video Song List -->
+                    <div class="song-list-container" id="main-song-list">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <!-- Application Engine Script -->
+    <script src="app.js"></script>
+</body>
+</html>
