@@ -1,7 +1,7 @@
 /**
  * =========================================================
- * APTV CARPLAY DRIVE - DEMOHDC 100% FAITHFUL ENGINE
- * Spatial Knob Focus, Dual-Fallback YouTube Player, Real-time Search
+ * APTV CARPLAY DRIVE - ENGINE JAVASCRIPT
+ * Direct Iframe Playback, Instant Search & Spatial Knob Focus
  * =========================================================
  */
 
@@ -81,9 +81,8 @@ const MUSIC_CATEGORIES = {
 // =========================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    initWelcomeOverlay();
+    initClock();
     initSpatialKeyNavigation();
-    initModals();
     initYouTubeSDK();
     initControls();
     initCategoryChips();
@@ -93,18 +92,16 @@ document.addEventListener('DOMContentLoaded', () => {
     setPlaylist(MUSIC_CATEGORIES.mck, 0, false);
 });
 
-// XOAY ĐĨA NHẠC WELCOME OVERLAY
-function initWelcomeOverlay() {
-    const btnStart = document.getElementById('btnStartApp');
-    const overlay = document.getElementById('welcomeOverlay');
-
-    btnStart.addEventListener('click', () => {
-        overlay.classList.add('hide');
-        // Tự động phát bài hát khi bấm Bắt Đầu
-        if (state.currentTrack) {
-            playTrackAtIndex(state.currentTrackIndex, true);
-        }
-    });
+function initClock() {
+    const clockEl = document.getElementById('car-clock');
+    function update() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        clockEl.textContent = `${hours}:${minutes}`;
+    }
+    update();
+    setInterval(update, 1000);
 }
 
 // =========================================================
@@ -116,15 +113,12 @@ function initSpatialKeyNavigation() {
         const activeElement = document.activeElement;
         const isTextInput = activeElement && activeElement.tagName === 'INPUT';
 
-        // Phím Backspace / Escape => Đóng Modal hoặc quay lại ô Search
         if ((e.key === 'Backspace' && !isTextInput) || e.key === 'Escape') {
             e.preventDefault();
-            closeAllModals();
-            document.getElementById('btnHeaderSearch').focus();
+            document.getElementById('txtSearchkey').focus();
             return;
         }
 
-        // Di chuyển viền Focus vàng theo núm xoay / mũi tên
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
             if (isTextInput && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
                 return;
@@ -134,7 +128,6 @@ function initSpatialKeyNavigation() {
             return;
         }
 
-        // Enter hoặc Space chọn nút
         if ((e.key === 'Enter' || e.key === ' ') && activeElement && activeElement.hasAttribute('tabindex')) {
             if (!isTextInput) {
                 e.preventDefault();
@@ -142,6 +135,10 @@ function initSpatialKeyNavigation() {
             }
         }
     });
+
+    setTimeout(() => {
+        document.getElementById('txtSearchkey').focus();
+    }, 400);
 }
 
 function navigateSpatial(direction) {
@@ -190,7 +187,7 @@ function navigateSpatial(direction) {
                 isValidDirection = dx < -10 && Math.abs(dy) < Math.abs(dx) * 2;
                 break;
             case 'ArrowRight':
-                isValidDirection = dx > 10 && Math.abs(dx) < Math.abs(dy) * 2;
+                isValidDirection = dx > 10 && Math.abs(dy) < Math.abs(dx) * 2;
                 break;
         }
 
@@ -210,76 +207,7 @@ function navigateSpatial(direction) {
 }
 
 // =========================================================
-// 3. MODALS & SIDEBAR MANAGEMENT
-// =========================================================
-
-function initModals() {
-    // Open Search Modal
-    document.getElementById('btnHeaderSearch').addEventListener('click', () => {
-        document.getElementById('searchModal').classList.add('show');
-        document.getElementById('txtSearchkey').focus();
-    });
-
-    document.getElementById('btnCloseSearchModal').addEventListener('click', () => {
-        document.getElementById('searchModal').classList.remove('show');
-    });
-
-    // Open Sidebar Menu
-    document.getElementById('btnHeaderMenu').addEventListener('click', () => {
-        document.getElementById('sidebarMenu').classList.add('is-open');
-        document.getElementById('sidebarBackdrop').classList.add('is-open');
-    });
-
-    document.getElementById('btnCloseMenu').addEventListener('click', closeSidebarMenu);
-    document.getElementById('sidebarBackdrop').addEventListener('click', closeSidebarMenu);
-
-    // Open Settings Modal
-    document.getElementById('btnHeaderSettings').addEventListener('click', () => {
-        document.getElementById('settingsModal').classList.add('is-open');
-    });
-
-    document.getElementById('btnCloseSettings').addEventListener('click', () => {
-        document.getElementById('settingsModal').classList.remove('is-open');
-    });
-
-    // Sidebar Playlist Items Click
-    const playlistItems = document.querySelectorAll('#playlistMenuList .playlist-item');
-    playlistItems.forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            playlistItems.forEach(i => i.classList.remove('active'));
-            item.classList.add('active');
-
-            const pid = item.getAttribute('data-id');
-            closeSidebarMenu();
-
-            if (pid === 'suggest') {
-                document.getElementById('sectionTitle').textContent = 'Gợi ý bài hát lái xe';
-                setPlaylist(MUSIC_CATEGORIES.mck, 0, true);
-            } else if (pid === 'search') {
-                document.getElementById('sectionTitle').textContent = 'Kết quả tìm kiếm';
-                renderSongList(state.searchResults);
-            } else if (pid === 'fav') {
-                document.getElementById('sectionTitle').textContent = 'Danh sách yêu thích';
-                renderSongList(state.favSongs);
-            }
-        });
-    });
-}
-
-function closeSidebarMenu() {
-    document.getElementById('sidebarMenu').classList.remove('is-open');
-    document.getElementById('sidebarBackdrop').classList.remove('is-open');
-}
-
-function closeAllModals() {
-    document.getElementById('searchModal').classList.remove('show');
-    closeSidebarMenu();
-    document.getElementById('settingsModal').classList.remove('is-open');
-}
-
-// =========================================================
-// 4. YOUTUBE IFRAME SDK & DUAL-FALLBACK ENGINE
+// 3. YOUTUBE IFRAME SDK & DIRECT IFRAME PLAYBACK
 // =========================================================
 
 function initYouTubeSDK() {
@@ -325,19 +253,17 @@ function onPlayerError(event) {
 }
 
 // =========================================================
-// 5. PLAYER CONTROLS & TIMELINE ENGINE
+// 4. CONTROLS & TIMELINE ENGINE
 // =========================================================
 
 function initControls() {
     document.getElementById('btnPlayPause').addEventListener('click', togglePlayPause);
     document.getElementById('btnNextVideo').addEventListener('click', playNextVideo);
     document.getElementById('btnPrevVideo').addEventListener('click', playPreviousVideo);
-    document.getElementById('btnStopVideo').addEventListener('click', stopVideo);
     document.getElementById('btnRepeatMode').addEventListener('click', toggleRepeatMode);
     document.getElementById('btnShuffleMode').addEventListener('click', toggleShuffleMode);
     document.getElementById('btnYeuThich').addEventListener('click', toggleYeuThich);
 
-    // Tua bài hát trên thanh Tiến trình
     document.getElementById('youtubeProgress').addEventListener('click', (e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
@@ -370,17 +296,6 @@ function togglePlayPause() {
     }
 }
 
-function stopVideo() {
-    if (state.ytPlayer && typeof state.ytPlayer.stopVideo === 'function') {
-        state.ytPlayer.stopVideo();
-    } else {
-        const iframe = document.getElementById('youtubePlayer');
-        if (iframe) iframe.src = 'about:blank';
-    }
-    state.isPlaying = false;
-    updatePlayButtonIcon(false);
-}
-
 function setPlaylist(tracks, startIndex = 0, autoPlay = true) {
     state.currentPlaylist = tracks;
     state.currentTrackIndex = startIndex;
@@ -394,18 +309,22 @@ function playTrackAtIndex(index, autoPlay = true) {
     const track = state.currentPlaylist[index];
     state.currentTrack = track;
 
-    // Dual-Fallback Playback
+    // Direct iframe update for 100% reliable video loading across all browsers & Vercel
+    const iframe = document.getElementById('youtubePlayer');
+    if (iframe) {
+        const autoplayParam = autoPlay ? 1 : 0;
+        iframe.src = `https://www.youtube.com/embed/${track.id}?enablejsapi=1&autoplay=${autoplayParam}&playsinline=1&rel=0`;
+    }
+
     if (state.ytPlayer && typeof state.ytPlayer.loadVideoById === 'function') {
-        if (autoPlay) {
-            state.ytPlayer.loadVideoById(track.id);
-        } else {
-            state.ytPlayer.cueVideoById(track.id);
-        }
-    } else {
-        const iframe = document.getElementById('youtubePlayer');
-        if (iframe) {
-            const autoplayParam = autoPlay ? 1 : 0;
-            iframe.src = `https://www.youtube.com/embed/${track.id}?enablejsapi=1&autoplay=${autoplayParam}&playsinline=1&rel=0`;
+        try {
+            if (autoPlay) {
+                state.ytPlayer.loadVideoById(track.id);
+            } else {
+                state.ytPlayer.cueVideoById(track.id);
+            }
+        } catch(e) {
+            console.log('YT SDK fallback to direct iframe src');
         }
     }
 
@@ -528,7 +447,7 @@ function formatTime(seconds) {
 }
 
 // =========================================================
-// 6. CATEGORY CHIPS & SONG LIST RENDERER
+// 5. CATEGORY CHIPS & SONG LIST RENDERER
 // =========================================================
 
 function initCategoryChips() {
@@ -553,7 +472,7 @@ function renderSongList(tracks) {
         container.innerHTML = `
             <div style="text-align:center; padding:40px; color:#9ca3af;">
                 <i class="fa-solid fa-compact-disc" style="font-size:2rem; margin-bottom:10px;"></i>
-                <p>Không tìm thấy bài hát nào cho từ khóa này. Vui lòng thử MCK, Sơn Tùng, Đen Vâu, Lofi...</p>
+                <p>Không tìm thấy bài hát phù hợp. Vui lòng thử từ khóa khác như MCK, Sơn Tùng, Đen Vâu, Lofi...</p>
             </div>
         `;
         return;
@@ -591,7 +510,7 @@ function markActiveSongInList(activeIdx) {
 }
 
 // =========================================================
-// 7. REAL-TIME SEARCH & VOICE SEARCH (KHẮC PHỤC HOÀN TOÀN)
+// 6. REAL-TIME SEARCH & VOICE SEARCH (KHỬ DẤU TIẾNG VIỆT)
 // =========================================================
 
 function removeVietnameseTones(str) {
@@ -615,25 +534,16 @@ function removeVietnameseTones(str) {
 
 function initVoiceAndSearch() {
     const input = document.getElementById('txtSearchkey');
-    const btnExec = document.getElementById('btnSeach');
     const btnVoice = document.getElementById('btnVoiceSearch');
+
+    input.addEventListener('input', (e) => {
+        executeInstantSearch(e.target.value);
+    });
 
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
-            searchYouTube();
+            executeInstantSearch(input.value);
         }
-    });
-
-    btnExec.addEventListener('click', searchYouTube);
-
-    // Quick tag chips in search modal
-    const tags = document.querySelectorAll('.search-quick-tags .tag-chip');
-    tags.forEach(t => {
-        t.addEventListener('click', () => {
-            const q = t.getAttribute('data-query');
-            input.value = q;
-            searchYouTube();
-        });
     });
 
     // Voice Search Web Speech API
@@ -647,8 +557,8 @@ function initVoiceAndSearch() {
         state.speechRecognition.onstart = () => {
             state.isListening = true;
             btnVoice.classList.add('is-listening');
-            document.getElementById('searchVoiceNotice').style.display = 'block';
-            document.getElementById('searchVoiceNotice').textContent = 'Đang lắng nghe... Nói tên bài hát!';
+            document.getElementById('searchVoiceNotice').style.display = 'flex';
+            document.getElementById('voice-notice-text').textContent = 'Đang lắng nghe... Nói tên bài hát!';
         };
 
         state.speechRecognition.onresult = (event) => {
@@ -657,11 +567,12 @@ function initVoiceAndSearch() {
                 transcript += event.results[i][0].transcript;
             }
             input.value = transcript;
-            document.getElementById('searchVoiceNotice').textContent = `Đã nhận diện: "${transcript}"`;
+            document.getElementById('voice-notice-text').textContent = `Đã nhận diện: "${transcript}"`;
 
             if (state.voiceTimer) clearTimeout(state.voiceTimer);
             state.voiceTimer = setTimeout(() => {
-                searchYouTube();
+                executeInstantSearch(transcript);
+                document.getElementById('searchVoiceNotice').style.display = 'none';
             }, 1800);
         };
 
@@ -680,16 +591,16 @@ function initVoiceAndSearch() {
     }
 }
 
-function searchYouTube() {
-    const input = document.getElementById('txtSearchkey');
-    const query = input.value;
-    if (!query || !query.trim()) return;
+function executeInstantSearch(query) {
+    if (!query || !query.trim()) {
+        document.getElementById('sectionTitle').textContent = 'Danh sách bài hát';
+        setPlaylist(MUSIC_CATEGORIES.mck, 0, false);
+        return;
+    }
 
-    closeAllModals();
     const qClean = removeVietnameseTones(query);
     const qWords = qClean.split(/\s+/).filter(w => w.length > 0);
 
-    // Lọc bài hát khớp từ khóa
     const results = VERIFIED_CATALOG.filter(track => {
         const titleClean = removeVietnameseTones(track.title);
         const artistClean = removeVietnameseTones(track.artist);
@@ -701,13 +612,11 @@ function searchYouTube() {
 
     state.searchResults = results;
     document.getElementById('sectionTitle').textContent = `Kết quả tìm kiếm cho "${query}"`;
-    
-    // Nạp danh sách kết quả và tự động phát ngay bài đầu tiên
     setPlaylist(results, 0, true);
 }
 
 // =========================================================
-// 8. LOCALSTORAGE FAVORITES ENGINE
+// 7. LOCALSTORAGE FAVORITES ENGINE
 // =========================================================
 
 function toggleYeuThich() {

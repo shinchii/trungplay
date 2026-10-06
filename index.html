@@ -16,42 +16,11 @@
 <body>
 
     <!-- =========================================================
-         WELCOME OVERLAY (MÀN HÌNH CHỜ XOAY ĐĨA NHẠC CHUẨN DEMOHDC)
-         ========================================================= -->
-    <div id="welcomeOverlay">
-        <div class="overlay-bg-glow"></div>
-        <div class="overlay-bg-glow glow-2"></div>
-        
-        <div class="welcome-card">
-            <div class="disc-wrapper">
-                <div class="vinyl-disc">
-                    <div class="disc-center">
-                        <i class="fa-solid fa-play disc-play-icon"></i>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="welcome-brand">APTV CARPLAY DRIVE</div>
-            <h1 class="welcome-title">KHÔNG GIAN ÂM NHẠC TRÊN XE</h1>
-            <p class="welcome-subtitle">Nghe nhạc YouTube mượt mà trên ô tô • Tối ưu núm xoay vô lăng • Tìm kiếm giọng nói Tiếng Việt</p>
-            
-            <div class="sound-wave">
-                <span></span><span></span><span></span><span></span><span></span>
-            </div>
-
-            <button id="btnStartApp" class="btn-start" tabindex="0">
-                <span>BẮT ĐẦU NGHE NHẠC</span>
-                <i class="fa-solid fa-arrow-right btn-icon"></i>
-            </button>
-        </div>
-    </div>
-
-    <!-- =========================================================
-         SITE HEADER
+         SITE HEADER (THANH TÌM KIẾM TRỰC TIẾP)
          ========================================================= -->
     <header class="site-header">
         <div class="header-inner">
-            <a href="#" class="brand" onclick="return false;">
+            <div class="brand">
                 <div class="brand-icon">
                     <div class="brand-icon-core"></div>
                     <div class="brand-icon-ring ring-1"></div>
@@ -63,64 +32,28 @@
                         <span class="loading-dot"></span> KHÔNG GIAN ÂM NHẠC TRÊN XE
                     </span>
                 </div>
-            </a>
+            </div>
 
-            <div class="header-actions">
-                <button id="btnHeaderSearch" class="hd-header-btn" tabindex="0" title="Tìm kiếm bài hát">
-                    <i class="fa-solid fa-magnifying-glass"></i>
+            <!-- Header Search Bar -->
+            <div class="header-search-bar">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="txtSearchkey" placeholder="Nhập tên bài hát hoặc ca sĩ (Ví dụ: MCK, Sơn Tùng, Đen Vâu, Lofi, Bolero...)..." tabindex="0" autocomplete="off">
+                <button id="btnVoiceSearch" class="btn-voice-search" tabindex="0" title="Tìm bằng giọng nói Tiếng Việt" aria-label="Nói giọng nói">
+                    <i class="fa-solid fa-microphone"></i>
                 </button>
-                <button id="btnHeaderMenu" class="hd-header-btn" tabindex="0" title="Danh mục Menu">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-                <button id="btnHeaderSettings" class="hd-header-btn" tabindex="0" title="Cài đặt">
-                    <i class="fa-solid fa-gear"></i>
-                </button>
+            </div>
+
+            <div class="header-right">
+                <div class="clock-display" id="car-clock">12:00</div>
             </div>
         </div>
     </header>
 
-    <!-- =========================================================
-         SEARCH MODAL (KHUNG TÌM KIẾM CHUẨN DEMOHDC)
-         ========================================================= -->
-    <div id="searchModal" aria-hidden="true">
-        <div class="search-box">
-            <button id="btnCloseSearchModal" class="search-close" tabindex="0" title="Đóng">&#10005;</button>
-
-            <div class="search-title-row">
-                <div>
-                    <h2 class="search-title">TÌM KIẾM YOUTUBE</h2>
-                    <p class="search-subtitle">Nhập tên bài hát hoặc bấm Mic để nói từ khóa</p>
-                </div>
-                <button id="btnVoiceSearch" class="btn-voice-search" tabindex="0" title="Tìm kiếm giọng nói Tiếng Việt">
-                    <i class="fa-solid fa-microphone voice-mic-icon"></i>
-                </button>
-            </div>
-
-            <div class="search-input-wrapper">
-                <input type="text" id="txtSearchkey" placeholder="Ví dụ: nhac mck, sơn tùng, lofi chill, bolero..." tabindex="0" autocomplete="off">
-                <button id="btnSeach" class="btn-search-exec" tabindex="0">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <span>Tìm kiếm</span>
-                </button>
-            </div>
-
-            <div id="searchVoiceNotice" class="search-thongbao-giongnoi" style="display: none;">
-                Bấm microphone để nói tên bài hát hoặc ca sĩ...
-            </div>
-
-            <!-- Quick search chips -->
-            <div class="search-quick-tags">
-                <button class="tag-chip" data-query="mck" tabindex="0">🔥 MCK</button>
-                <button class="tag-chip" data-query="sơn tùng" tabindex="0">👑 Sơn Tùng M-TP</button>
-                <button class="tag-chip" data-query="đen vâu" tabindex="0">🎤 Đen Vâu</button>
-                <button class="tag-chip" data-query="hieuthuhai" tabindex="0">⚡ HIEUTHUHAI</button>
-                <button class="tag-chip" data-query="lofi chill" tabindex="0">☕ Lofi Chill</button>
-                <button class="tag-chip" data-query="bolero" tabindex="0">📻 Bolero</button>
-                <button class="tag-chip" data-query="remix xe hơi" tabindex="0">🚀 Remix</button>
-            </div>
-        </div>
+    <!-- Voice Notice Banner -->
+    <div id="searchVoiceNotice" class="search-thongbao-giongnoi" style="display: none;">
+        <i class="fa-solid fa-microphone-lines fa-bounce text-red"></i>
+        <span id="voice-notice-text">Bấm microphone để nói tên bài hát hoặc ca sĩ...</span>
     </div>
-    <div id="searchBackdrop" aria-hidden="true"></div>
 
     <!-- =========================================================
          MAIN APPLICATION CONTENT
@@ -144,7 +77,7 @@
                     <div class="video-info">
                         <div class="current-label">ĐANG PHÁT</div>
                         <h2 id="currentTitle" class="current-title">Chìm Sâu</h2>
-                        <p id="currentArtist" class="song-artist" style="color:#9ca3af; font-size:13px;">RPT MCK ft. Trung Trần</p>
+                        <p id="currentArtist" class="song-artist">RPT MCK ft. Trung Trần</p>
                     </div>
                 </div>
 
@@ -168,7 +101,6 @@
                             <button id="btnNextVideo" tabindex="0" title="Bài tiếp"><i class="fa-solid fa-forward-step"></i></button>
                             <button id="btnRepeatMode" class="youtube-mode-btn" tabindex="0" title="Chế độ lặp"><i class="fa-solid fa-repeat" id="iconRepeat"></i></button>
                             <button id="btnShuffleMode" class="youtube-mode-btn" tabindex="0" title="Phát ngẫu nhiên"><i class="fa-solid fa-shuffle" id="iconShuffle"></i></button>
-                            <button id="btnStopVideo" tabindex="0" title="Dừng nhạc"><i class="fa-solid fa-stop"></i></button>
                         </div>
 
                         <div class="favorite-bar">
@@ -210,62 +142,9 @@
         </div>
 
         <footer class="footer">
-            APTV CARPLAY DRIVE • Tải ứng dụng nghe nhạc xe hơi tốt nhất
+            APTV CARPLAY DRIVE • Trình phát nhạc xe hơi chuyên nghiệp
         </footer>
     </main>
-
-    <!-- =========================================================
-         SIDEBAR MENU POPUP
-         ========================================================= -->
-    <aside class="sidebar" id="sidebarMenu">
-        <div class="sidebar-popup-header">
-            <div>
-                <div class="sidebar-popup-title">DANH MỤC</div>
-                <div class="sidebar-popup-subtitle">Chọn danh mục bạn muốn nghe</div>
-            </div>
-            <button id="btnCloseMenu" tabindex="0">&#215;</button>
-        </div>
-        <div class="playlist-list" id="playlistMenuList">
-            <a href="#" class="playlist-item active" data-id="suggest" tabindex="0">
-                <span class="playlist-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
-                <span class="playlist-menu-name">Gợi Ý Lái Xe</span>
-            </a>
-            <a href="#" class="playlist-item" data-id="search" tabindex="0">
-                <span class="playlist-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
-                <span class="playlist-menu-name">Kết Quả Tìm Kiếm</span>
-            </a>
-            <a href="#" class="playlist-item" data-id="fav" tabindex="0">
-                <span class="playlist-icon"><i class="fa-solid fa-heart text-red"></i></span>
-                <span class="playlist-menu-name">Đã Yêu Thích</span>
-            </a>
-        </div>
-    </aside>
-    <div id="sidebarBackdrop"></div>
-
-    <!-- =========================================================
-         SETTINGS MODAL
-         ========================================================= -->
-    <div id="settingsModal" aria-hidden="true">
-        <div class="settings-modal-card">
-            <div class="settings-modal-header">
-                <div>
-                    <div class="settings-modal-title">CÀI ĐẶT HỆ THỐNG</div>
-                    <div class="settings-modal-subtitle">Tùy chỉnh hiển thị và núm xoay ô tô</div>
-                </div>
-                <button id="btnCloseSettings" tabindex="0">&#10005;</button>
-            </div>
-            <div class="settings-modal-body">
-                <div class="settings-field">
-                    <label class="settings-field-label">Điều khiển bằng Núm Xoay (Knob Controls)</label>
-                    <p class="settings-option-note">Xoay núm để di chuyển viền vàng Neon 4px. Bấm núm (Enter) để phát bài ngay.</p>
-                </div>
-                <div class="settings-field">
-                    <label class="settings-field-label">Phím tắt vô lăng</label>
-                    <p class="settings-option-note">Bấm phím Backspace / Escape để quay lại thanh tìm kiếm nhanh.</p>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Application JavaScript Engine -->
     <script src="app.js"></script>
