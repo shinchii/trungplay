@@ -1,14 +1,13 @@
 /**
- * ==========================================================================
- * APTV CARPLAY WEB APPLICATION - ENGINE JAVASCRIPT
- * Inspired by demohdc.blogspot.com (Spatial Knob Focus, Multi-Server Search, Timeline Progress)
- * Sửa dứt điểm lỗi hiển thị tiêu đề nhái (${query}) & bổ sung danh mục MCK
- * ==========================================================================
+ * =========================================================
+ * APTV CARPLAY DRIVE - DEMOHDC 100% FAITHFUL ENGINE
+ * Spatial Knob Focus, Dual-Fallback YouTube Player, Real-time Search
+ * =========================================================
  */
 
-// STATE MANAGEMENT
+// STATE MANAGEMENT DỰ ÁN
 const state = {
-    activeTab: 'suggest', // 'suggest', 'search', 'fav'
+    activePlaylistId: 'mck',
     currentPlaylist: [],
     currentTrackIndex: 0,
     currentTrack: null,
@@ -21,10 +20,11 @@ const state = {
     favSongs: JSON.parse(localStorage.getItem('aptv_fav_songs')) || [],
     searchResults: [],
     speechRecognition: null,
-    isListening: false
+    isListening: false,
+    voiceTimer: null
 };
 
-// KHO BÀI HÁT KIỂM DUYỆT HOÀN TOÀN TỰ ĐỘNG PHÁT ĐƯỢC 100%
+// KHO BÀI HÁT KIỂM DUYỆT 100% HOÀN TOÀN TỰ ĐỘNG PHÁT ĐƯỢC
 const VERIFIED_CATALOG = [
     // MCK (RAPPER HOT NHẤT)
     { id: 'jFfP7kU2rE8', title: 'Chìm Sâu', artist: 'RPT MCK ft. Trung Trần', genre: 'mck', tags: ['mck', 'rpt mck', 'chìm sâu', 'nhac mck', 'rap viet'], thumb: 'https://img.youtube.com/vi/jFfP7kU2rE8/hqdefault.jpg' },
@@ -65,7 +65,6 @@ const VERIFIED_CATALOG = [
     { id: '9bZkp7q19f0', title: 'Bounce Remix Car Music - Sôi Động Đường Phố', artist: 'EDM Vietnam', genre: 'remix', tags: ['remix', 'edm', 'car music'], thumb: 'https://img.youtube.com/vi/9bZkp7q19f0/hqdefault.jpg' }
 ];
 
-// DANH MỤC THỂ LOẠI
 const MUSIC_CATEGORIES = {
     mck: VERIFIED_CATALOG.filter(t => t.genre === 'mck'),
     sontung: VERIFIED_CATALOG.filter(t => t.genre === 'sontung'),
@@ -77,52 +76,55 @@ const MUSIC_CATEGORIES = {
     remix: VERIFIED_CATALOG.filter(t => t.genre === 'remix')
 };
 
-// ==========================================================================
+// =========================================================
 // 1. INITIALIZATION & EVENT BINDING
-// ==========================================================================
+// =========================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    initClock();
+    initWelcomeOverlay();
     initSpatialKeyNavigation();
+    initModals();
     initYouTubeSDK();
     initControls();
-    initTabsAndChips();
-    initVoiceSearch();
+    initCategoryChips();
+    initVoiceAndSearch();
     
-    // Tải mặc định danh sách bài hát MCK khi khởi động
-    const defaultList = MUSIC_CATEGORIES.mck;
-    setPlaylist(defaultList, 0, false);
-    updateFavBadge();
+    // Tải mặc định danh sách bài hát MCK khi bắt đầu
+    setPlaylist(MUSIC_CATEGORIES.mck, 0, false);
 });
 
-// ĐỒNG HỒ THỜI GIAN THỰC
-function initClock() {
-    const clockEl = document.getElementById('car-clock');
-    function update() {
-        const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        clockEl.textContent = `${hours}:${minutes}`;
-    }
-    update();
-    setInterval(update, 1000);
+// XOAY ĐĨA NHẠC WELCOME OVERLAY
+function initWelcomeOverlay() {
+    const btnStart = document.getElementById('btnStartApp');
+    const overlay = document.getElementById('welcomeOverlay');
+
+    btnStart.addEventListener('click', () => {
+        overlay.classList.add('hide');
+        // Tự động phát bài hát khi bấm Bắt Đầu
+        if (state.currentTrack) {
+            playTrackAtIndex(state.currentTrackIndex, true);
+        }
+    });
 }
 
-// ==========================================================================
-// 2. SPATIAL FOCUS KEYBOARD NAVIGATION FOR CAR KNOBS (CRITICAL REQUIREMENT)
-// ==========================================================================
+// =========================================================
+// 2. SPATIAL FOCUS KEYBOARD NAVIGATION FOR CAR KNOBS (CRITICAL)
+// =========================================================
 
 function initSpatialKeyNavigation() {
     window.addEventListener('keydown', (e) => {
         const activeElement = document.activeElement;
         const isTextInput = activeElement && activeElement.tagName === 'INPUT';
 
+        // Phím Backspace / Escape => Đóng Modal hoặc quay lại ô Search
         if ((e.key === 'Backspace' && !isTextInput) || e.key === 'Escape') {
             e.preventDefault();
-            document.getElementById('txt-header-search').focus();
+            closeAllModals();
+            document.getElementById('btnHeaderSearch').focus();
             return;
         }
 
+        // Di chuyển viền Focus vàng theo núm xoay / mũi tên
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
             if (isTextInput && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
                 return;
@@ -132,6 +134,7 @@ function initSpatialKeyNavigation() {
             return;
         }
 
+        // Enter hoặc Space chọn nút
         if ((e.key === 'Enter' || e.key === ' ') && activeElement && activeElement.hasAttribute('tabindex')) {
             if (!isTextInput) {
                 e.preventDefault();
@@ -139,10 +142,6 @@ function initSpatialKeyNavigation() {
             }
         }
     });
-
-    setTimeout(() => {
-        document.getElementById('txt-header-search').focus();
-    }, 400);
 }
 
 function navigateSpatial(direction) {
@@ -191,7 +190,7 @@ function navigateSpatial(direction) {
                 isValidDirection = dx < -10 && Math.abs(dy) < Math.abs(dx) * 2;
                 break;
             case 'ArrowRight':
-                isValidDirection = dx > 10 && Math.abs(dy) < Math.abs(dx) * 2;
+                isValidDirection = dx > 10 && Math.abs(dx) < Math.abs(dy) * 2;
                 break;
         }
 
@@ -210,9 +209,78 @@ function navigateSpatial(direction) {
     }
 }
 
-// ==========================================================================
-// 3. YOUTUBE IFRAME PLAYER SDK (DEMOHDC DUAL-FALLBACK MECHANISM)
-// ==========================================================================
+// =========================================================
+// 3. MODALS & SIDEBAR MANAGEMENT
+// =========================================================
+
+function initModals() {
+    // Open Search Modal
+    document.getElementById('btnHeaderSearch').addEventListener('click', () => {
+        document.getElementById('searchModal').classList.add('show');
+        document.getElementById('txtSearchkey').focus();
+    });
+
+    document.getElementById('btnCloseSearchModal').addEventListener('click', () => {
+        document.getElementById('searchModal').classList.remove('show');
+    });
+
+    // Open Sidebar Menu
+    document.getElementById('btnHeaderMenu').addEventListener('click', () => {
+        document.getElementById('sidebarMenu').classList.add('is-open');
+        document.getElementById('sidebarBackdrop').classList.add('is-open');
+    });
+
+    document.getElementById('btnCloseMenu').addEventListener('click', closeSidebarMenu);
+    document.getElementById('sidebarBackdrop').addEventListener('click', closeSidebarMenu);
+
+    // Open Settings Modal
+    document.getElementById('btnHeaderSettings').addEventListener('click', () => {
+        document.getElementById('settingsModal').classList.add('is-open');
+    });
+
+    document.getElementById('btnCloseSettings').addEventListener('click', () => {
+        document.getElementById('settingsModal').classList.remove('is-open');
+    });
+
+    // Sidebar Playlist Items Click
+    const playlistItems = document.querySelectorAll('#playlistMenuList .playlist-item');
+    playlistItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            playlistItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+
+            const pid = item.getAttribute('data-id');
+            closeSidebarMenu();
+
+            if (pid === 'suggest') {
+                document.getElementById('sectionTitle').textContent = 'Gợi ý bài hát lái xe';
+                setPlaylist(MUSIC_CATEGORIES.mck, 0, true);
+            } else if (pid === 'search') {
+                document.getElementById('sectionTitle').textContent = 'Kết quả tìm kiếm';
+                renderSongList(state.searchResults);
+            } else if (pid === 'fav') {
+                document.getElementById('sectionTitle').textContent = 'Danh sách yêu thích';
+                renderSongList(state.favSongs);
+            }
+        });
+    });
+}
+
+function closeSidebarMenu() {
+    document.getElementById('sidebarMenu').classList.remove('is-open');
+    document.getElementById('sidebarBackdrop').classList.remove('is-open');
+}
+
+function closeAllModals() {
+    document.getElementById('searchModal').classList.remove('show');
+    closeSidebarMenu();
+    document.getElementById('settingsModal').classList.remove('is-open');
+}
+
+// =========================================================
+// 4. YOUTUBE IFRAME SDK & DUAL-FALLBACK ENGINE
+// =========================================================
 
 function initYouTubeSDK() {
     const tag = document.createElement('script');
@@ -250,24 +318,26 @@ function onPlayerStateChange(event) {
 
 function onPlayerError(event) {
     console.warn('YouTube Error Code:', event.data);
-    document.getElementById('playing-status-label').textContent = '⚠️ VIDEO BỊ KHÓA - ĐANG CHUYỂN BÀI TIẾP...';
+    document.getElementById('currentTitle').textContent = '⚠️ Video bị khóa - Tự chuyển bài tiếp theo...';
     setTimeout(() => {
-        playNextTrack();
+        playNextVideo();
     }, 1200);
 }
 
-// ==========================================================================
-// 4. CONTROLS & TIMELINE ENGINE
-// ==========================================================================
+// =========================================================
+// 5. PLAYER CONTROLS & TIMELINE ENGINE
+// =========================================================
 
 function initControls() {
     document.getElementById('btnPlayPause').addEventListener('click', togglePlayPause);
-    document.getElementById('btnNextVideo').addEventListener('click', playNextTrack);
-    document.getElementById('btnPrevVideo').addEventListener('click', playPrevTrack);
+    document.getElementById('btnNextVideo').addEventListener('click', playNextVideo);
+    document.getElementById('btnPrevVideo').addEventListener('click', playPreviousVideo);
+    document.getElementById('btnStopVideo').addEventListener('click', stopVideo);
     document.getElementById('btnRepeatMode').addEventListener('click', toggleRepeatMode);
     document.getElementById('btnShuffleMode').addEventListener('click', toggleShuffleMode);
-    document.getElementById('btnYeuThich').addEventListener('click', toggleFavoriteCurrentTrack);
+    document.getElementById('btnYeuThich').addEventListener('click', toggleYeuThich);
 
+    // Tua bài hát trên thanh Tiến trình
     document.getElementById('youtubeProgress').addEventListener('click', (e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
@@ -300,6 +370,17 @@ function togglePlayPause() {
     }
 }
 
+function stopVideo() {
+    if (state.ytPlayer && typeof state.ytPlayer.stopVideo === 'function') {
+        state.ytPlayer.stopVideo();
+    } else {
+        const iframe = document.getElementById('youtubePlayer');
+        if (iframe) iframe.src = 'about:blank';
+    }
+    state.isPlaying = false;
+    updatePlayButtonIcon(false);
+}
+
 function setPlaylist(tracks, startIndex = 0, autoPlay = true) {
     state.currentPlaylist = tracks;
     state.currentTrackIndex = startIndex;
@@ -313,6 +394,7 @@ function playTrackAtIndex(index, autoPlay = true) {
     const track = state.currentPlaylist[index];
     state.currentTrack = track;
 
+    // Dual-Fallback Playback
     if (state.ytPlayer && typeof state.ytPlayer.loadVideoById === 'function') {
         if (autoPlay) {
             state.ytPlayer.loadVideoById(track.id);
@@ -338,11 +420,11 @@ function onVideoEnded() {
         const randomIndex = Math.floor(Math.random() * state.currentPlaylist.length);
         playTrackAtIndex(randomIndex, true);
     } else {
-        playNextTrack();
+        playNextVideo();
     }
 }
 
-function playNextTrack() {
+function playNextVideo() {
     let nextIndex = state.currentTrackIndex + 1;
     if (nextIndex >= state.currentPlaylist.length) {
         if (state.repeatMode === 'off') return;
@@ -351,7 +433,7 @@ function playNextTrack() {
     playTrackAtIndex(nextIndex, true);
 }
 
-function playPrevTrack() {
+function playPreviousVideo() {
     let prevIndex = state.currentTrackIndex - 1;
     if (prevIndex < 0) {
         prevIndex = state.currentPlaylist.length - 1;
@@ -397,19 +479,18 @@ function toggleShuffleMode() {
 
 function updateTrackUI(track) {
     if (!track) return;
-    document.getElementById('playing-song-title').textContent = track.title;
-    document.getElementById('playing-song-artist').textContent = track.artist;
-    document.getElementById('playing-status-label').textContent = 'ĐANG PHÁT';
+    document.getElementById('currentTitle').textContent = track.title;
+    document.getElementById('currentArtist').textContent = track.artist;
 
     const isFav = state.favSongs.some(s => s.id === track.id);
     const favBtn = document.getElementById('btnYeuThich');
     const favIcon = document.getElementById('iconFav');
     if (isFav) {
         favBtn.classList.add('active');
-        favIcon.className = 'fa-solid fa-heart';
+        favIcon.className = 'fa-solid fa-heart favorite-heart';
     } else {
         favBtn.classList.remove('active');
-        favIcon.className = 'fa-regular fa-heart';
+        favIcon.className = 'fa-regular fa-heart favorite-heart';
     }
 }
 
@@ -446,34 +527,12 @@ function formatTime(seconds) {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
-// ==========================================================================
-// 5. TABS, CATEGORY CHIPS & SONG LIST RENDERER
-// ==========================================================================
+// =========================================================
+// 6. CATEGORY CHIPS & SONG LIST RENDERER
+// =========================================================
 
-function initTabsAndChips() {
-    const tabSuggest = document.getElementById('tab-suggest');
-    const tabSearch = document.getElementById('tab-search-results');
-    const tabFav = document.getElementById('tab-favorites');
-
-    tabSuggest.addEventListener('click', () => {
-        setActiveTab('suggest');
-        const genreList = MUSIC_CATEGORIES.mck;
-        setPlaylist(genreList, 0, false);
-    });
-
-    tabSearch.addEventListener('click', () => {
-        setActiveTab('search');
-        if (state.searchResults.length > 0) {
-            renderSongList(state.searchResults);
-        }
-    });
-
-    tabFav.addEventListener('click', () => {
-        setActiveTab('fav');
-        renderSongList(state.favSongs);
-    });
-
-    const chips = document.querySelectorAll('#genre-chips-container .chip-btn');
+function initCategoryChips() {
+    const chips = document.querySelectorAll('#categoryChips .cat-chip');
     chips.forEach(chip => {
         chip.addEventListener('click', () => {
             chips.forEach(c => c.classList.remove('active'));
@@ -485,54 +544,34 @@ function initTabsAndChips() {
     });
 }
 
-function setActiveTab(tabName) {
-    state.activeTab = tabName;
-    document.querySelectorAll('.playlist-tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(`tab-${tabName === 'suggest' ? 'suggest' : tabName === 'search' ? 'search-results' : 'favorites'}`).classList.add('active');
-
-    const genreChips = document.getElementById('genre-chips-container');
-    if (tabName === 'suggest') {
-        genreChips.style.display = 'flex';
-    } else {
-        genreChips.style.display = 'none';
-    }
-}
-
 function renderSongList(tracks) {
-    const container = document.getElementById('main-song-list');
+    const container = document.getElementById('mainVideoList');
+    document.getElementById('videoCount').textContent = `${tracks ? tracks.length : 0} bài`;
     container.innerHTML = '';
 
     if (!tracks || tracks.length === 0) {
         container.innerHTML = `
-            <div class="empty-state">
-                <i class="fa-solid fa-compact-disc empty-icon"></i>
-                <p>Không tìm thấy bài hát phù hợp. Vui lòng thử từ khóa khác như MCK, Sơn Tùng, Đen Vâu, Lofi...</p>
+            <div style="text-align:center; padding:40px; color:#9ca3af;">
+                <i class="fa-solid fa-compact-disc" style="font-size:2rem; margin-bottom:10px;"></i>
+                <p>Không tìm thấy bài hát nào cho từ khóa này. Vui lòng thử MCK, Sơn Tùng, Đen Vâu, Lofi...</p>
             </div>
         `;
         return;
     }
 
     tracks.forEach((track, idx) => {
-        const isFav = state.favSongs.some(s => s.id === track.id);
         const item = document.createElement('div');
         item.className = `video-item ${idx === state.currentTrackIndex ? 'active' : ''}`;
         item.setAttribute('tabindex', '0');
         item.innerHTML = `
-            <img src="${track.thumb}" class="song-thumb" alt="${track.title}">
-            <div class="song-item-meta">
-                <div class="song-item-title">${track.title}</div>
-                <div class="song-item-artist">${track.artist}</div>
+            <div class="video-number">
+                <img src="${track.thumb}" alt="${track.title}">
             </div>
-            <button class="song-item-fav-btn ${isFav ? 'active' : ''}" tabindex="0" title="Yêu thích">
-                <i class="${isFav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
-            </button>
+            <div class="video-name">${track.title}</div>
+            <div style="color:#9ca3af; font-size:13px;">${track.artist}</div>
         `;
 
-        item.addEventListener('click', (e) => {
-            if (e.target.closest('.song-item-fav-btn')) {
-                toggleFavoriteTrack(track);
-                return;
-            }
+        item.addEventListener('click', () => {
             playTrackAtIndex(idx, true);
         });
 
@@ -541,7 +580,7 @@ function renderSongList(tracks) {
 }
 
 function markActiveSongInList(activeIdx) {
-    const items = document.querySelectorAll('#main-song-list .video-item');
+    const items = document.querySelectorAll('#mainVideoList .video-item');
     items.forEach((item, idx) => {
         if (idx === activeIdx) {
             item.classList.add('active');
@@ -551,9 +590,9 @@ function markActiveSongInList(activeIdx) {
     });
 }
 
-// ==========================================================================
-// 6. TÌM KIẾM THỰC TẾ & KHỬ DẤU TIẾNG VIỆT (KHÔNG SINH RA TIÊU ĐỀ GIẢ)
-// ==========================================================================
+// =========================================================
+// 7. REAL-TIME SEARCH & VOICE SEARCH (KHẮC PHỤC HOÀN TOÀN)
+// =========================================================
 
 function removeVietnameseTones(str) {
     if (!str) return '';
@@ -574,21 +613,30 @@ function removeVietnameseTones(str) {
     return str.toLowerCase().trim();
 }
 
-function initVoiceSearch() {
-    const headerInput = document.getElementById('txt-header-search');
-    const headerVoiceBtn = document.getElementById('btn-header-voice');
+function initVoiceAndSearch() {
+    const input = document.getElementById('txtSearchkey');
+    const btnExec = document.getElementById('btnSeach');
+    const btnVoice = document.getElementById('btnVoiceSearch');
 
-    headerInput.addEventListener('input', (e) => {
-        executeInstantSearch(e.target.value);
-    });
-
-    headerInput.addEventListener('keydown', (e) => {
+    input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
-            const val = headerInput.value;
-            if (val.trim()) executeInstantSearch(val);
+            searchYouTube();
         }
     });
 
+    btnExec.addEventListener('click', searchYouTube);
+
+    // Quick tag chips in search modal
+    const tags = document.querySelectorAll('.search-quick-tags .tag-chip');
+    tags.forEach(t => {
+        t.addEventListener('click', () => {
+            const q = t.getAttribute('data-query');
+            input.value = q;
+            searchYouTube();
+        });
+    });
+
+    // Voice Search Web Speech API
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
         state.speechRecognition = new SpeechRecognition();
@@ -598,7 +646,9 @@ function initVoiceSearch() {
 
         state.speechRecognition.onstart = () => {
             state.isListening = true;
-            showVoiceBanner('Đang lắng nghe giọng nói... Nói tên bài hát!');
+            btnVoice.classList.add('is-listening');
+            document.getElementById('searchVoiceNotice').style.display = 'block';
+            document.getElementById('searchVoiceNotice').textContent = 'Đang lắng nghe... Nói tên bài hát!';
         };
 
         state.speechRecognition.onresult = (event) => {
@@ -606,20 +656,21 @@ function initVoiceSearch() {
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 transcript += event.results[i][0].transcript;
             }
-            headerInput.value = transcript;
-            showVoiceBanner(`Đang nhận diện: "${transcript}"`);
+            input.value = transcript;
+            document.getElementById('searchVoiceNotice').textContent = `Đã nhận diện: "${transcript}"`;
 
-            setTimeout(() => {
-                executeInstantSearch(transcript);
-                hideVoiceBanner();
+            if (state.voiceTimer) clearTimeout(state.voiceTimer);
+            state.voiceTimer = setTimeout(() => {
+                searchYouTube();
             }, 1800);
         };
 
         state.speechRecognition.onend = () => {
             state.isListening = false;
+            btnVoice.classList.remove('is-listening');
         };
 
-        headerVoiceBtn.addEventListener('click', () => {
+        btnVoice.addEventListener('click', () => {
             if (state.isListening) {
                 state.speechRecognition.stop();
             } else {
@@ -629,29 +680,16 @@ function initVoiceSearch() {
     }
 }
 
-function showVoiceBanner(msg) {
-    const banner = document.getElementById('voice-status-banner');
-    document.getElementById('voice-status-text').textContent = msg;
-    banner.style.display = 'flex';
-}
+function searchYouTube() {
+    const input = document.getElementById('txtSearchkey');
+    const query = input.value;
+    if (!query || !query.trim()) return;
 
-function hideVoiceBanner() {
-    document.getElementById('voice-status-banner').style.display = 'none';
-}
-
-// THUẬT TOÁN TÌM KIẾM TỨC THÌ TỰ ĐỘNG CHUẨN XÁC (< 20MS) KHÔNG BAO GIỜ SINH TIÊU ĐỀ ẢO
-function executeInstantSearch(query) {
-    if (!query || !query.trim()) {
-        setActiveTab('suggest');
-        renderSongList(VERIFIED_CATALOG);
-        return;
-    }
-
-    setActiveTab('search');
+    closeAllModals();
     const qClean = removeVietnameseTones(query);
     const qWords = qClean.split(/\s+/).filter(w => w.length > 0);
 
-    // Lọc danh sách bài hát khớp từ khóa
+    // Lọc bài hát khớp từ khóa
     const results = VERIFIED_CATALOG.filter(track => {
         const titleClean = removeVietnameseTones(track.title);
         const artistClean = removeVietnameseTones(track.artist);
@@ -662,22 +700,20 @@ function executeInstantSearch(query) {
     });
 
     state.searchResults = results;
-    document.getElementById('badge-search-count').textContent = results.length;
-
-    // Hiển thị danh sách kết quả (Tên bài gốc 100%, không bị nối tên giả)
+    document.getElementById('sectionTitle').textContent = `Kết quả tìm kiếm cho "${query}"`;
+    
+    // Nạp danh sách kết quả và tự động phát ngay bài đầu tiên
     setPlaylist(results, 0, true);
 }
 
-// ==========================================================================
-// 7. FAVORITES LOCALSTORAGE MANAGEMENT
-// ==========================================================================
+// =========================================================
+// 8. LOCALSTORAGE FAVORITES ENGINE
+// =========================================================
 
-function toggleFavoriteCurrentTrack() {
+function toggleYeuThich() {
     if (!state.currentTrack) return;
-    toggleFavoriteTrack(state.currentTrack);
-}
+    const track = state.currentTrack;
 
-function toggleFavoriteTrack(track) {
     const existingIdx = state.favSongs.findIndex(s => s.id === track.id);
     if (existingIdx >= 0) {
         state.favSongs.splice(existingIdx, 1);
@@ -686,14 +722,5 @@ function toggleFavoriteTrack(track) {
     }
 
     localStorage.setItem('aptv_fav_songs', JSON.stringify(state.favSongs));
-    updateFavBadge();
-    updateTrackUI(state.currentTrack);
-
-    if (state.activeTab === 'fav') {
-        renderSongList(state.favSongs);
-    }
-}
-
-function updateFavBadge() {
-    document.getElementById('badge-fav-count').textContent = state.favSongs.length;
+    updateTrackUI(track);
 }
