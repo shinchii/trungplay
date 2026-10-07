@@ -4,9 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b0d12">
-<title>Trung Play - Nghe Nhạc & Xem TV Trực Tuyến</title>
-<!-- HLS.js cho Stream M3U8 trên Chrome/Android/Desktop -->
+<title>Trung Play - APTV CarPlay & Web Stream</title>
+
+<!-- CryptoJS MD5 Hashing -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+<!-- Firebase v10 Compat SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+<!-- HLS.js cho Stream M3U8 -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
 <!-- YouTube IFrame API -->
 <script src="https://www.youtube.com/iframe_api"></script>
 
@@ -21,20 +30,21 @@
   --accent: #ff3650;
   --accent2: #ff6b7d;
   --good: #43d19e;
-  --shadow: 0 18px 50px rgba(0,0,0,.35);
+  --shadow: 0 18px 50px rgba(0,0,0,.45);
   --r: 18px;
 }
 * { box-sizing: border-box; }
 html, body {
   margin: 0;
   min-height: 100%;
-  background: radial-gradient(1000px 600px at 80% -10%, rgba(255,54,80,.14), transparent 60%), var(--bg);
+  background: radial-gradient(1000px 600px at 80% -10%, rgba(255,54,80,.15), transparent 60%), var(--bg);
   color: var(--text);
   font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; border: 0; color: inherit; }
 
+/* APP LAYOUT */
 .app {
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr);
@@ -46,7 +56,7 @@ button { cursor: pointer; border: 0; color: inherit; }
   height: 100vh;
   padding: 20px 14px;
   border-right: 1px solid var(--line);
-  background: rgba(10, 12, 16, .86);
+  background: rgba(10, 12, 16, .88);
   backdrop-filter: blur(18px);
   z-index: 20;
 }
@@ -54,7 +64,7 @@ button { cursor: pointer; border: 0; color: inherit; }
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 4px 10px 25px;
+  padding: 4px 10px 22px;
 }
 .logo {
   width: 42px;
@@ -63,7 +73,7 @@ button { cursor: pointer; border: 0; color: inherit; }
   background: linear-gradient(145deg, #ff5368, #d90029);
   display: grid;
   place-items: center;
-  box-shadow: 0 8px 24px rgba(255,54,80,.3);
+  box-shadow: 0 8px 24px rgba(255,54,80,.35);
 }
 .logo:before {
   content: "";
@@ -112,7 +122,7 @@ button { cursor: pointer; border: 0; color: inherit; }
   gap: 12px;
   padding: 14px 22px;
   border-bottom: 1px solid rgba(39,45,56,.75);
-  background: rgba(9, 11, 15, .82);
+  background: rgba(9, 11, 15, .84);
   backdrop-filter: blur(20px);
 }
 .mobile-menu { display: none; }
@@ -120,7 +130,7 @@ button { cursor: pointer; border: 0; color: inherit; }
   display: flex;
   align-items: center;
   flex: 1;
-  max-width: 760px;
+  max-width: 680px;
   margin: auto;
   background: #151a22;
   border: 1px solid var(--line);
@@ -159,6 +169,19 @@ button { cursor: pointer; border: 0; color: inherit; }
 @keyframes micPulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: .5; transform: scale(1.15); }
+}
+
+.user-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: rgba(67, 209, 158, 0.12);
+  border: 1px solid rgba(67, 209, 158, 0.3);
+  color: var(--good);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .page { padding: 24px; max-width: 1450px; margin: auto; }
@@ -267,11 +290,12 @@ button { cursor: pointer; border: 0; color: inherit; }
 }
 .field:focus { border-color: #485263; }
 
+/* MODALS */
 .modal-back {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.7);
-  backdrop-filter: blur(6px);
+  background: rgba(0,0,0,.75);
+  backdrop-filter: blur(8px);
   display: none;
   place-items: center;
   padding: 18px;
@@ -291,11 +315,155 @@ button { cursor: pointer; border: 0; color: inherit; }
 .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .modal h2 { margin: 0; font-size: 20px; }
 
+/* AUTHENTICATION MODAL (LOCK SCREEN & VIETQR) */
+#authModal {
+  z-index: 9999;
+  background: rgba(5, 7, 10, 0.94);
+  backdrop-filter: blur(20px);
+}
+.auth-box {
+  width: min(480px, 94%);
+  background: #11151c;
+  border: 1px solid #28303f;
+  border-radius: 24px;
+  padding: 28px 24px;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.8);
+}
+.auth-head {
+  text-align: center;
+  margin-bottom: 22px;
+}
+.auth-head .logo-big {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 12px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #ff5368, #d90029);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 10px 30px rgba(255,54,80,0.4);
+}
+.auth-head .logo-big:before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 17px solid white;
+  margin-left: 4px;
+}
+.auth-head h1 { font-size: 22px; margin: 0 0 6px; }
+.auth-head p { margin: 0; color: var(--muted); font-size: 13px; }
+
+.auth-tabs {
+  display: flex;
+  background: #090b0f;
+  padding: 4px;
+  border-radius: 14px;
+  margin-bottom: 20px;
+  border: 1px solid var(--line);
+}
+.auth-tabs button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  transition: all .2s;
+}
+.auth-tabs button.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(255,54,80,0.3);
+}
+
+.auth-form { display: grid; gap: 14px; }
+.btn-submit {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ff5368, #dc2626);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.35);
+  margin-top: 6px;
+  transition: all .2s;
+}
+.btn-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px rgba(239, 68, 68, 0.45);
+}
+.btn-submit:active { transform: scale(0.98); }
+
+.error-msg {
+  color: #ff5368;
+  background: rgba(255,54,80,0.1);
+  border: 1px solid rgba(255,54,80,0.3);
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  display: none;
+}
+
+/* VIETQR PAYMENT CONTAINER */
+.qr-container {
+  display: none;
+  text-align: center;
+  margin-top: 18px;
+  padding: 18px;
+  background: #0a0d13;
+  border: 1px solid #212936;
+  border-radius: 18px;
+  animation: qrFade .3s ease;
+}
+@keyframes qrFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.qr-img {
+  width: 220px;
+  height: 220px;
+  margin: 10px auto;
+  border-radius: 12px;
+  border: 3px solid #fff;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  background: #fff;
+}
+.qr-info {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #d1d7e0;
+  margin-top: 10px;
+}
+.qr-info strong { color: var(--accent); font-size: 14px; }
+.qr-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(255, 184, 0, 0.1);
+  border: 1px solid rgba(255, 184, 0, 0.25);
+  color: #ffb800;
+  font-size: 12px;
+  font-weight: 600;
+}
+.qr-status-spin {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 184, 0, 0.3);
+  border-top-color: #ffb800;
+  border-radius: 50%;
+  animation: qrSpin .8s linear infinite;
+}
+@keyframes qrSpin { to { transform: rotate(360deg); } }
+
 .toast {
   position: fixed;
   right: 18px;
   bottom: 18px;
-  z-index: 100;
+  z-index: 100000;
   background: #202631;
   border: 1px solid #343d4a;
   border-radius: 12px;
@@ -358,8 +526,8 @@ button { cursor: pointer; border: 0; color: inherit; }
       <button data-view="settings"><span class="ico">⚙</span>Cài đặt</button>
     </nav>
     <div class="side-foot">
-      Trung Play v2.0<br>
-      Tự động phát bài · TV HLS
+      APTV CarPlay v2.5<br>
+      Firebase Firestore Sync
     </div>
   </aside>
 
@@ -372,6 +540,9 @@ button { cursor: pointer; border: 0; color: inherit; }
         <button type="button" id="btnMic" class="btn-mic" title="Tìm bằng giọng nói">🎙️</button>
         <button type="submit" title="Tìm kiếm">⌕</button>
       </form>
+      <div class="user-badge" id="userBadge" style="display:none">
+        <span class="user-phone" id="badgePhone">0965512394</span>
+      </div>
       <button class="iconbtn" id="openUrlBtn" title="Mở Link YouTube trực tiếp">🔗</button>
       <button class="iconbtn" id="settingsTop" title="Cài đặt">⚙</button>
     </header>
@@ -465,9 +636,9 @@ button { cursor: pointer; border: 0; color: inherit; }
             <span class="muted">Hỗ trợ HLS Stream</span>
           </div>
           <div class="setting">
-            <label>URL danh sách M3U (Cài sẵn mặc định của bạn)</label>
+            <label>URL danh sách M3U</label>
             <input class="field" id="m3uUrl" placeholder="https://raw.githubusercontent.com/iptv-org/iptv/master/streams/vn.m3u">
-            <small>Đã hỗ trợ phát stream .m3u8 trực tiếp trên tất cả trình duyệt (Android, iOS, PC).</small>
+            <small>Đã hỗ trợ phát stream .m3u8 trực tiếp trên tất cả trình duyệt.</small>
           </div>
           <div class="controls">
             <button class="pill primary" id="loadM3u">⚡ Nạp lại danh sách Kênh</button>
@@ -481,18 +652,16 @@ button { cursor: pointer; border: 0; color: inherit; }
       <section id="view-settings" class="view" hidden>
         <div class="content-grid">
           <div class="panel">
-            <div class="section-title"><h2>Cài đặt Tìm kiếm & Proxy</h2></div>
+            <div class="section-title"><h2>Thông tin tài khoản</h2></div>
             <div class="setting">
-              <label>YouTube Data API Key (Tùy chọn)</label>
-              <input class="field" id="apiKey" type="password" placeholder="Để trống nếu muốn dùng bộ tìm kiếm công khai mặc định">
-              <small>Hệ thống có sẵn bộ tìm kiếm công khai (No-Key). Nếu bạn có API Key riêng, nhập vào đây để tìm nhanh hơn.</small>
+              <label>Số điện thoại tài khoản</label>
+              <input class="field" id="accPhone" readonly>
             </div>
             <div class="setting">
-              <label>Proxy tùy chọn (Dành cho M3U Stream)</label>
-              <input class="field" id="proxyUrl" placeholder="https://your-proxy.example/?url=">
-              <small>Dùng khi một số kênh TV bị chặn CORS trên trình duyệt.</small>
+              <label>Hạn sử dụng gói cước</label>
+              <input class="field" id="accExpire" readonly>
             </div>
-            <button class="pill primary" id="saveSettings">Lưu cài đặt</button>
+            <button class="pill" id="btnLogout" style="color:#ff5368">Đăng xuất tài khoản</button>
           </div>
 
           <div class="panel">
@@ -527,521 +696,80 @@ button { cursor: pointer; border: 0; color: inherit; }
   </div>
 </div>
 
+<!-- MODAL BẢO MẬT & ĐĂNG NHẬP / ĐĂNG KÝ THANH TOÁN VIETQR -->
+<div class="modal-back open" id="authModal">
+  <div class="auth-box">
+    <div class="auth-head">
+      <div class="logo-big"></div>
+      <h1>Trung Play CarPlay</h1>
+      <p>Vui lòng đăng nhập tài khoản để tiếp tục sử dụng</p>
+    </div>
+
+    <!-- TABS -->
+    <div class="auth-tabs">
+      <button class="active" id="tabLoginBtn">ĐĂNG NHẬP</button>
+      <button id="tabRegBtn">ĐĂNG KÝ TÀI KHOẢN</button>
+    </div>
+
+    <!-- ERROR MSG -->
+    <div class="error-msg" id="authError"></div>
+
+    <!-- TAB 1: FORM ĐĂNG NHẬP -->
+    <div id="formLogin" class="auth-form">
+      <div class="setting" style="margin-bottom:8px">
+        <label>Số điện thoại đăng ký</label>
+        <input class="field" id="loginPhone" type="tel" placeholder="Ví dụ: 0965512394" autocomplete="username">
+      </div>
+      <div class="setting" style="margin-bottom:8px">
+        <label>Mật khẩu</label>
+        <input class="field" id="loginPass" type="password" placeholder="Nhập mật khẩu" autocomplete="current-password">
+      </div>
+      <button class="btn-submit" id="btnDoLogin">ĐĂNG NHẬP NGAY</button>
+    </div>
+
+    <!-- TAB 2: FORM ĐĂNG KÝ (MẶC ĐỊNH CHỌN GÓI 100K) -->
+    <div id="formReg" class="auth-form" style="display:none">
+      <div class="setting" style="margin-bottom:8px">
+        <label>Số điện thoại của bạn</label>
+        <input class="field" id="regPhone" type="tel" placeholder="Ví dụ: 0965512394">
+      </div>
+      <div class="setting" style="margin-bottom:8px">
+        <label>Tạo mật khẩu</label>
+        <input class="field" id="regPass" type="password" placeholder="Tạo mật khẩu đăng nhập">
+      </div>
+      <div class="setting" style="margin-bottom:8px">
+        <label>Chọn Gói cước Dịch vụ</label>
+        <select class="field" id="regPlan">
+          <option value="7" data-price="20000">Gói Dùng thử: 20.000 VNĐ (7 ngày)</option>
+          <option value="365" data-price="100000" selected>Gói 1 Năm (Khuyên dùng): 100.000 VNĐ (365 ngày)</option>
+          <option value="3650" data-price="300000">Gói Vĩnh viễn: 300.000 VNĐ (10 năm)</option>
+        </select>
+      </div>
+      <button class="btn-submit" id="btnCreateQr">⚡ TẠO MÃ THANH TOÁN QR</button>
+
+      <!-- VIETQR DISPLAY CONTAINER -->
+      <div class="qr-container" id="qrContainer">
+        <div style="font-weight:700;font-size:15px;color:#fff">Quét mã VietQR TPBank để kích hoạt</div>
+        <img class="qr-img" id="qrImage" src="" alt="Mã VietQR TPBank">
+        <div class="qr-info">
+          Ngân hàng: <strong>TPBank (TPB)</strong><br>
+          Chủ TK: <strong>DOAN QUANG TRUNG</strong><br>
+          Số TK: <strong style="color:#fff;font-size:15px">15940510182</strong><br>
+          Số tiền: <strong id="qrAmountText" style="color:var(--good);font-size:16px">100.000 VNĐ</strong><br>
+          Nội dung CK: <strong id="qrContentText" style="color:#ff3650;font-size:16px;background:rgba(255,54,80,0.15);padding:2px 8px;border-radius:6px">TP 0965512394</strong>
+        </div>
+        <div class="qr-status">
+          <div class="qr-status-spin"></div>
+          <span>Đang chờ thanh toán... Kích hoạt tự động khi nhận tiền!</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
-<script>
-// LINK M3U MẶC ĐỊNH CHO MỌI NGƯỜI DÙNG (CÓ THỂ THAY BẰNG LINK CỦA BẠN)
-const DEFAULT_M3U_URL = 'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/vn.m3u';
-
-const KEY = 'trungplay_v2';
-const defaults = {
-  apiKey: '',
-  proxyUrl: '',
-  playlist: [],
-  favorites: [],
-  history: [],
-  tv: [],
-  tvUrl: DEFAULT_M3U_URL,
-  autoNext: true
-};
-
-let state = loadState();
-let current = null;
-let currentIndex = -1;
-let ytPlayer = null;
-let hlsPlayer = null;
-
-function loadState() {
-  try {
-    return { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') };
-  } catch (e) {
-    return { ...defaults };
-  }
-}
-function save() {
-  localStorage.setItem(KEY, JSON.stringify(state));
-}
-
-function toast(t) {
-  const e = document.getElementById('toast');
-  e.textContent = t;
-  e.classList.add('show');
-  clearTimeout(window.__toast);
-  window.__toast = setTimeout(() => e.classList.remove('show'), 2400);
-}
-
-function esc(s) {
-  return String(s ?? '').replace(/[&<>"']/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m]));
-}
-
-function vidFromUrl(s) {
-  s = (s || '').trim();
-  if (/^[\w-]{11}$/.test(s)) return s;
-  try {
-    const u = new URL(s);
-    if (u.hostname.includes('youtu.be')) return u.pathname.slice(1).split('/')[0];
-    return u.searchParams.get('v') || ((u.pathname.match(/\/shorts\/([^/]+)/) || [])[1]) || ((u.pathname.match(/\/embed\/([^/]+)/) || [])[1]) || '';
-  } catch (e) { return ''; }
-}
-
-function ytThumb(id) {
-  return `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
-}
-
-function addHistory(item) {
-  state.history = [item, ...state.history.filter(x => x.id !== item.id)].slice(0, 100);
-  save();
-  renderAll();
-}
-
-function destroyPlayers() {
-  if (hlsPlayer) {
-    hlsPlayer.destroy();
-    hlsPlayer = null;
-  }
-  if (ytPlayer && typeof ytPlayer.destroy === 'function') {
-    try { ytPlayer.destroy(); } catch (e) {}
-    ytPlayer = null;
-  }
-  document.getElementById('playerWrap').innerHTML = '<div id="playerContainer"></div>';
-}
-
-// PHÁT VIDEO YOUTUBE VỚI TÍNH NĂNG TỰ CHUYỂN BÀI KHI HẾT (AUTO-NEXT)
-function play(item, add = true) {
-  if (!item?.id) return;
-  destroyPlayers();
-  
-  current = item;
-  currentIndex = state.playlist.findIndex(x => x.id === item.id);
-  
-  if (add) addHistory(item);
-
-  document.getElementById('nowTitle').textContent = item.title || 'YouTube Video';
-  document.getElementById('nowSub').textContent = item.channel ? (item.channel + ' · YouTube') : ('YouTube · ' + item.id);
-
-  // Dùng YouTube IFrame API nếu khả dụng
-  if (window.YT && window.YT.Player) {
-    ytPlayer = new YT.Player('playerContainer', {
-      height: '100%',
-      width: '100%',
-      videoId: item.id,
-      playerVars: {
-        autoplay: 1,
-        rel: 0,
-        modestbranding: 1,
-        playsinline: 1
-      },
-      events: {
-        'onStateChange': onYtStateChange
-      }
-    });
-  } else {
-    // Fallback Iframe tĩnh
-    document.getElementById('playerWrap').innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(item.id)}?autoplay=1&rel=0&modestbranding=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
-  }
-
-  toast('Đang phát: ' + (item.title || item.id));
-  renderAll();
-}
-
-function onYtStateChange(event) {
-  // YT.PlayerState.ENDED === 0
-  if (event.data === 0) {
-    if (state.autoNext && state.playlist.length > 0) {
-      toast('Tự động chuyển bài tiếp theo...');
-      playNext();
-    }
-  }
-}
-
-function playNext() {
-  if (!state.playlist.length) return toast('Playlist đang trống');
-  let i = currentIndex < 0 ? 0 : (currentIndex + 1) % state.playlist.length;
-  play(state.playlist[i]);
-}
-
-function playPrev() {
-  if (!state.playlist.length) return toast('Playlist đang trống');
-  let i = currentIndex <= 0 ? state.playlist.length - 1 : currentIndex - 1;
-  play(state.playlist[i]);
-}
-
-// PHÁT TV STREAM (HỖ TRỢ M3U8 MỌI THIẾT BỊ BẰNG HLS.JS)
-function playTv(ch) {
-  destroyPlayers();
-  showView('home');
-  current = null;
-  
-  const src = state.proxyUrl ? state.proxyUrl + encodeURIComponent(ch.url) : ch.url;
-  const wrap = document.getElementById('playerWrap');
-  wrap.innerHTML = `<video id="tvVideo" controls autoplay playsinline style="width:100%;height:100%;background:#000"></video>`;
-  const video = document.getElementById('tvVideo');
-
-  if (window.Hls && Hls.isSupported() && (src.includes('.m3u8') || !video.canPlayType('application/vnd.apple.mpegurl'))) {
-    hlsPlayer = new Hls();
-    hlsPlayer.loadSource(src);
-    hlsPlayer.attachMedia(video);
-    hlsPlayer.on(Hls.Events.MANIFEST_PARSED, function() {
-      video.play().catch(e => console.log('Autoplay blocked:', e));
-    });
-  } else {
-    video.src = src;
-    video.play().catch(e => console.log('Autoplay blocked:', e));
-  }
-
-  document.getElementById('nowTitle').textContent = ch.name;
-  document.getElementById('nowSub').textContent = '📺 TV / Live Stream';
-  toast('Đang phát TV: ' + ch.name);
-}
-
-function addPlaylist(item) {
-  if (!item?.id) return;
-  if (!state.playlist.some(x => x.id === item.id)) {
-    state.playlist.push(item);
-    save();
-    renderAll();
-    toast('Đã thêm vào playlist');
-  } else toast('Video đã có trong playlist');
-}
-
-function toggleFav(item) {
-  const i = state.favorites.findIndex(x => x.id === item.id);
-  if (i >= 0) {
-    state.favorites.splice(i, 1);
-    toast('Đã bỏ yêu thích');
-  } else {
-    state.favorites.unshift(item);
-    toast('Đã thêm yêu thích');
-  }
-  save();
-  renderAll();
-}
-
-function itemHtml(item, kind = 'result') {
-  const fav = state.favorites.some(x => x.id === item.id);
-  const isPlaying = current && current.id === item.id;
-  return `
-    <div class="item ${isPlaying ? 'active-play' : ''}">
-      <img class="thumb" src="${esc(item.thumb || ytThumb(item.id))}" loading="lazy">
-      <div style="min-width:0">
-        <div class="item-title" title="${esc(item.title || 'YouTube video')}">${esc(item.title || 'YouTube video')}</div>
-        <div class="item-sub">${esc(item.channel || 'YouTube')} · ${kind === 'history' ? 'Đã xem' : 'Video'}</div>
-      </div>
-      <div class="actions">
-        <button class="iconbtn" data-play="${esc(item.id)}" title="Phát ngay">▶</button>
-        <button class="iconbtn" data-add="${esc(item.id)}" title="Thêm playlist">＋</button>
-        <button class="iconbtn" data-fav="${esc(item.id)}" title="${fav ? 'Bỏ yêu thích' : 'Yêu thích'}">${fav ? '♥' : '♡'}</button>
-      </div>
-    </div>`;
-}
-
-function renderList(el, arr, kind) {
-  el.innerHTML = arr.length ? arr.map(x => itemHtml(x, kind)).join('') : `<div class="empty">Chưa có dữ liệu.</div>`;
-  el.querySelectorAll('[data-play]').forEach(b => b.onclick = () => play(findItem(b.dataset.play)));
-  el.querySelectorAll('[data-add]').forEach(b => b.onclick = () => addPlaylist(findItem(b.dataset.add)));
-  el.querySelectorAll('[data-fav]').forEach(b => b.onclick = () => toggleFav(findItem(b.dataset.fav)));
-}
-
-function findItem(id) {
-  return [current, ...state.playlist, ...state.favorites, ...state.history].filter(Boolean).find(x => x.id === id) || { id, title: 'YouTube video', thumb: ytThumb(id) };
-}
-
-function renderAll() {
-  renderList(document.getElementById('playlistList'), state.playlist, 'playlist');
-  renderList(document.getElementById('playlistList2'), state.playlist, 'playlist');
-  renderList(document.getElementById('favoritesList'), state.favorites, 'favorite');
-  renderList(document.getElementById('historyList'), state.history, 'history');
-  
-  document.getElementById('apiKey').value = state.apiKey;
-  document.getElementById('proxyUrl').value = state.proxyUrl;
-  document.getElementById('m3uUrl').value = state.tvUrl;
-
-  const btnAuto = document.getElementById('autoNextBtn');
-  btnAuto.textContent = `🔄 Tự phát tiếp: ${state.autoNext ? 'Bật' : 'Tắt'}`;
-  btnAuto.classList.toggle('active', state.autoNext);
-
-  renderTv();
-}
-
-// BỘ TÌM KIẾM THÔNG MINH (KẾT HỢP CẢ API KEY LẪN PUBLIC SEARCH NÊN MỌI NGƯỜI DÙNG ĐỀU DÙNG ĐƯỢC KHI PHÁT HÀNH)
-async function search(q) {
-  q = (q || '').trim();
-  if (!q) return;
-  const out = document.getElementById('results');
-  out.innerHTML = '<div class="empty">🔍 Đang tìm kiếm video...</div>';
-
-  // 1. Ưu tiên dùng Google API Key nếu người dùng tự nhập
-  if (state.apiKey) {
-    try {
-      const u = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=15&q=${encodeURIComponent(q)}&key=${encodeURIComponent(state.apiKey)}`;
-      const r = await fetch(u);
-      const j = await r.json();
-      if (r.ok && j.items) {
-        const arr = j.items.map(x => ({
-          id: x.id.videoId,
-          title: x.snippet.title,
-          channel: x.snippet.channelTitle,
-          thumb: x.snippet.thumbnails?.medium?.url || ytThumb(x.id.videoId)
-        }));
-        renderSearchResults(arr);
-        return;
-      }
-    } catch (e) {
-      console.warn('Google API failed, switching to public fallback search...');
-    }
-  }
-
-  // 2. Tự động dùng Public Search Instances khi KHÔNG CÓ API KEY (Public Friendly)
-  const publicApis = [
-    `https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(q)}&filter=videos`,
-    `https://api.piped.private.coffee/search?q=${encodeURIComponent(q)}&filter=videos`,
-    `https://invidious.drgns.space/api/v1/search?q=${encodeURIComponent(q)}&type=video`
-  ];
-
-  for (const apiUrl of publicApis) {
-    try {
-      const res = await fetch(apiUrl, { signal: AbortSignal.timeout(4000) });
-      if (!res.ok) continue;
-      const data = await res.json();
-      let items = [];
-      if (Array.isArray(data.items)) {
-        items = data.items.map(x => ({
-          id: (x.url || '').split('v=')[1] || x.id,
-          title: x.title,
-          channel: x.uploaderName || x.author || 'YouTube',
-          thumb: x.thumbnail || ytThumb((x.url || '').split('v=')[1])
-        })).filter(x => x.id);
-      } else if (Array.isArray(data)) {
-        items = data.map(x => ({
-          id: x.videoId,
-          title: x.title,
-          channel: x.author,
-          thumb: x.videoThumbnails?.[0]?.url || ytThumb(x.videoId)
-        })).filter(x => x.id);
-      }
-
-      if (items.length > 0) {
-        renderSearchResults(items);
-        return;
-      }
-    } catch (err) {
-      console.warn('Public API error, trying fallback...', apiUrl, err);
-    }
-  }
-
-  // Nếu không tìm kiếm được qua API
-  out.innerHTML = `
-    <div class="empty">
-      Không thể tìm kiếm qua máy chủ công khai.<br>
-      <button class="pill primary" style="margin-top:10px" onclick="document.getElementById('urlModal').classList.add('open')">🔗 Mở trực tiếp bằng Link YouTube</button>
-    </div>`;
-}
-
-function renderSearchResults(arr) {
-  const out = document.getElementById('results');
-  out.innerHTML = arr.length ? arr.map(x => itemHtml(x, 'result')).join('') : '<div class="empty">Không tìm thấy video nào.</div>';
-  document.getElementById('resultCount').textContent = arr.length + ' video';
-  
-  out.querySelectorAll('[data-play]').forEach(b => b.onclick = () => play(arr.find(x => x.id === b.dataset.play)));
-  out.querySelectorAll('[data-add]').forEach(b => b.onclick = () => addPlaylist(arr.find(x => x.id === b.dataset.play)));
-  out.querySelectorAll('[data-fav]').forEach(b => b.onclick = () => toggleFav(arr.find(x => x.id === b.dataset.play)));
-}
-
-function showView(v) {
-  document.querySelectorAll('.view').forEach(x => x.hidden = true);
-  document.getElementById('view-' + v).hidden = false;
-  document.querySelectorAll('.nav button').forEach(x => x.classList.toggle('active', x.dataset.view === v));
-  document.getElementById('sidebar').classList.remove('open');
-}
-
-// NẠP VÀ HIỂN THỊ TV KÊNH
-function renderTv() {
-  const el = document.getElementById('tvList');
-  el.innerHTML = state.tv.length ? state.tv.map((x, i) => `
-    <div class="item">
-      <div style="width:76px;height:43px;border-radius:8px;background:#202631;display:grid;place-items:center;font-size:20px;color:var(--accent)">📺</div>
-      <div style="min-width:0">
-        <div class="item-title">${esc(x.name)}</div>
-        <div class="item-sub" style="text-overflow:ellipsis;overflow:hidden;white-space:nowrap">${esc(x.url)}</div>
-      </div>
-      <button class="iconbtn" data-tv="${i}">▶</button>
-    </div>`).join('') : '<div class="empty">Chưa có kênh TV. Bấm "Nạp lại danh sách Kênh" ở trên.</div>';
-
-  el.querySelectorAll('[data-tv]').forEach(b => b.onclick = () => playTv(state.tv[+b.dataset.tv]));
-}
-
-async function loadM3u(isAuto = false) {
-  const url = document.getElementById('m3uUrl').value.trim() || DEFAULT_M3U_URL;
-  if (!url) return toast('Hãy nhập URL M3U');
-  
-  if (!isAuto) toast('Đang nạp danh sách kênh TV...');
-
-  try {
-    const r = await fetch(url);
-    if (!r.ok) throw Error('HTTP ' + r.status);
-    const txt = await r.text();
-    const lines = txt.split(/\r?\n/), arr = [];
-    
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].startsWith('#EXTINF')) {
-        const name = lines[i].split(',').slice(1).join(',').trim() || 'Kênh TV';
-        const u = lines.slice(i + 1).find(x => x && !x.startsWith('#'));
-        if (u) arr.push({ name, url: u.trim() });
-      }
-    }
-    
-    state.tv = arr.slice(0, 500);
-    state.tvUrl = url;
-    save();
-    renderAll();
-    if (!isAuto) toast('Đã nạp thành công ' + arr.length + ' kênh TV');
-  } catch (e) {
-    if (!isAuto) toast('Không nạp được M3U: ' + e.message);
-  }
-}
-
-// TÌM KIẾM BẰNG GIỌNG NÓI (VOICE SEARCH)
-function initVoiceSearch() {
-  const btn = document.getElementById('btnMic');
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  
-  if (!SpeechRecognition) {
-    btn.style.display = 'none';
-    return;
-  }
-
-  const recog = new SpeechRecognition();
-  recog.lang = 'vi-VN';
-
-  btn.onclick = () => {
-    btn.classList.add('listening');
-    toast('🎙️ Đang nghe... Hãy nói tên bài hát');
-    recog.start();
-  };
-
-  recog.onresult = (e) => {
-    btn.classList.remove('listening');
-    const text = e.results[0][0].transcript;
-    document.getElementById('searchInput').value = text;
-    search(text);
-  };
-
-  recog.onerror = () => {
-    btn.classList.remove('listening');
-    toast('Chưa nghe rõ giọng nói. Hãy thử lại!');
-  };
-
-  recog.onend = () => {
-    btn.classList.remove('listening');
-  };
-}
-
-// SỰ KIỆN GIAO DIỆN
-document.getElementById('searchForm').onsubmit = e => {
-  e.preventDefault();
-  search(document.getElementById('searchInput').value);
-};
-
-document.querySelectorAll('.nav button').forEach(b => b.onclick = () => showView(b.dataset.view));
-document.getElementById('menuBtn').onclick = () => document.getElementById('sidebar').classList.toggle('open');
-document.getElementById('settingsTop').onclick = () => showView('settings');
-document.getElementById('openUrlBtn').onclick = () => document.getElementById('urlModal').classList.add('open');
-
-document.getElementById('saveSettings').onclick = () => {
-  state.apiKey = document.getElementById('apiKey').value.trim();
-  state.proxyUrl = document.getElementById('proxyUrl').value.trim();
-  save();
-  toast('Đã lưu cài đặt');
-};
-
-document.getElementById('autoNextBtn').onclick = () => {
-  state.autoNext = !state.autoNext;
-  save();
-  renderAll();
-  toast(state.autoNext ? 'Đã BẬT tự động chuyển bài' : 'Đã TẮT tự động chuyển bài');
-};
-
-document.getElementById('clearPlaylist').onclick = document.getElementById('clearPlaylist2').onclick = () => {
-  state.playlist = [];
-  currentIndex = -1;
-  save();
-  renderAll();
-  toast('Đã xóa danh sách phát');
-};
-
-document.getElementById('clearHistory').onclick = () => {
-  state.history = [];
-  save();
-  renderAll();
-  toast('Đã xóa lịch sử');
-};
-
-document.getElementById('prevBtn').onclick = playPrev;
-document.getElementById('nextBtn').onclick = playNext;
-document.getElementById('playCurrent').onclick = () => current ? play(current, false) : toast('Chưa có video đang phát');
-document.getElementById('favCurrent').onclick = () => current && toggleFav(current);
-
-document.getElementById('loadM3u').onclick = () => loadM3u(false);
-document.getElementById('clearTv').onclick = () => {
-  state.tv = [];
-  save();
-  renderAll();
-  toast('Đã xóa cache TV');
-};
-
-document.getElementById('openManual').onclick = () => {
-  const id = vidFromUrl(document.getElementById('manualUrl').value);
-  if (!id) return toast('URL / Video ID không hợp lệ');
-  const x = { id, title: 'YouTube Video', thumb: ytThumb(id), channel: 'YouTube' };
-  document.getElementById('urlModal').classList.remove('open');
-  play(x);
-};
-document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => document.getElementById('urlModal').classList.remove('open'));
-
-document.getElementById('exportBtn').onclick = () => {
-  const backup = { format: 'trung-play-backup', version: 2, createdAt: new Date().toISOString(), storage: state };
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
-  a.download = 'trung-play-backup-' + new Date().toISOString().slice(0, 10) + '.json';
-  a.click();
-  URL.revokeObjectURL(a.href);
-  toast('Đã xuất file Backup');
-};
-
-document.getElementById('importBtn').onclick = () => document.getElementById('importFile').click();
-document.getElementById('importFile').onchange = async e => {
-  const f = e.target.files[0];
-  if (!f) return;
-  try {
-    const j = JSON.parse(await f.text());
-    if (j.format !== 'trung-play-backup' || !j.storage) throw Error('File không hợp lệ');
-    state = { ...defaults, ...j.storage };
-    save();
-    renderAll();
-    toast('Đã khôi phục dữ liệu từ Backup');
-  } catch (err) {
-    toast('Lỗi đọc file: ' + err.message);
-  }
-  e.target.value = '';
-};
-
-document.getElementById('resetBtn').onclick = () => {
-  if (confirm('Xóa toàn bộ dữ liệu ứng dụng trên thiết bị này?')) {
-    localStorage.removeItem(KEY);
-    state = loadState();
-    renderAll();
-    toast('Đã đặt lại ứng dụng');
-  }
-};
-
-// KHỞI TẠO BAN ĐẦU
-renderAll();
-initVoiceSearch();
-
-// Tự động nạp kênh TV lần đầu nếu chưa có danh sách
-if (!state.tv.length) {
-  loadM3u(true);
-}
-</script>
+<!-- APPLICATION LOGIC JS -->
+<script src="app.js" defer></script>
 </body>
 </html>
