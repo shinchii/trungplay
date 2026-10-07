@@ -381,7 +381,7 @@ function switchTab(tab) {
 }
 
 /* =========================================================================
-   4. TRÌNH PHÁT MEDIA CHÍNH (YOUTUBE & TV M3U8 STREAM)
+   4. TRÌNH PHÁT MEDIA CHÍNH (YOUTUBE EMBED & TV M3U8 STREAM)
    ========================================================================= */
 
 function destroyPlayers() {
@@ -393,7 +393,7 @@ function destroyPlayers() {
   if (wrap) wrap.innerHTML = '';
 }
 
-// PHÁT VIDEO YOUTUBE (TỐI ƯU 100% CẢ VERCEL VÀ DI ĐỘNG/CARPLAY)
+// PHÁT VIDEO YOUTUBE EMBED GIỮA TRANG
 function play(item, add = true) {
   let videoId = '';
   if (typeof item === 'string') {
@@ -416,7 +416,6 @@ function play(item, add = true) {
 
   const wrap = document.getElementById('playerWrap');
   const embedUrl = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1`;
-  const directUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
 
   wrap.innerHTML = `
     <iframe id="ytIframe" 
@@ -427,9 +426,7 @@ function play(item, add = true) {
     </iframe>`;
 
   document.getElementById('nowTitle').textContent = item.title || 'YouTube Video';
-  document.getElementById('nowSub').innerHTML = `
-    ${esc(item.channel || 'YouTube')} · ${esc(videoId)} 
-    <a href="${directUrl}" target="_blank" style="color:var(--accent);margin-left:10px;font-weight:600;text-decoration:none;background:rgba(255,54,80,0.15);padding:3px 10px;border-radius:6px">🔗 Mở trực tiếp YouTube</a>`;
+  document.getElementById('nowSub').textContent = item.channel ? (item.channel + ' · YouTube') : ('YouTube · ' + videoId);
 
   toast('Đang phát: ' + (item.title || videoId));
   renderAll();
@@ -570,7 +567,7 @@ function renderAll() {
 }
 
 /* =========================================================================
-   5. BỘ TÌM KIẾM ĐA KÊNH YOUTUBE (HOẠT ĐỘNG 100% TRÊN VERCEL)
+   5. BỘ TÌM KIẾM ĐA KÊNH YOUTUBE (CỰC NHẠY VÀ ỔN ĐỊNH TRÊN VERCEL)
    ========================================================================= */
 
 async function search(q) {
@@ -588,7 +585,7 @@ async function search(q) {
   const out = document.getElementById('results');
   if (out) out.innerHTML = '<div class="empty">🔍 Đang tìm kiếm video...</div>';
 
-  // 1. Ưu tiên Google API Key nếu có nhập
+  // 1. Ưu tiên Google API Key nếu người dùng có cài đặt
   if (state.apiKey) {
     try {
       const u = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=15&q=${encodeURIComponent(q)}&key=${encodeURIComponent(state.apiKey)}`;
@@ -601,31 +598,38 @@ async function search(q) {
           channel: x.snippet.channelTitle,
           thumb: x.snippet.thumbnails?.medium?.url || ytThumb(x.id.videoId)
         }));
-        renderSearchResults(arr);
-        return;
+        if (arr.length > 0) {
+          renderSearchResults(arr);
+          return;
+        }
       }
     } catch (e) {
       console.warn('Google API Key error:', e);
     }
   }
 
-  // 2. Các điểm cuối tìm kiếm công khai (Multi-endpoint fallback)
-  const publicApis = [
-    `https://invidious.drgns.space/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
-    `https://vid.puffyan.us/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
-    `https://inv.tux.pizza/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
-    `https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(q)}&filter=videos`
+  // 2. Các điểm cuối Invidious CORS ổn định nhất (Yewtu.be, PrivacyDev, NerdVPN)
+  const searchEndpoints = [
+    `https://yewtu.be/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
+    `https://invidious.privacydev.net/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
+    `https://invidious.nerdvpn.de/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
+    `https://api.piped.private.coffee/search?q=${encodeURIComponent(q)}&filter=videos`
   ];
 
-  for (const apiUrl of publicApis) {
+  for (const apiUrl of searchEndpoints) {
     try {
-      const res = await fetch(apiUrl, { signal: AbortSignal.timeout(3500) });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+      const res = await fetch(apiUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
       if (!res.ok) continue;
       const data = await res.json();
       let items = [];
 
       if (Array.isArray(data)) {
-        items = data.map(x => ({
+        items = data.filter(x => x.type === 'video' || x.videoId).map(x => ({
           id: x.videoId || x.id,
           title: x.title,
           channel: x.author || x.uploaderName || 'YouTube',
@@ -645,15 +649,15 @@ async function search(q) {
         return;
       }
     } catch (err) {
-      console.warn('Public API fallback error:', apiUrl, err);
+      console.warn('Search endpoint error:', apiUrl, err);
     }
   }
 
   if (out) {
     out.innerHTML = `
       <div class="empty">
-        Không tìm thấy kết quả tự động.<br>
-        <button class="pill primary" style="margin-top:10px" onclick="document.getElementById('urlModal').classList.add('open')">🔗 Mở bằng Link YouTube trực tiếp</button>
+        Không thể kết nối máy chủ tìm kiếm.<br>
+        Hãy dán đường Link bài hát YouTube vào ô tìm kiếm ở trên để phát ngay.
       </div>`;
   }
 }
@@ -785,29 +789,22 @@ function initVoiceSearch() {
    ========================================================================= */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Khởi tạo Firebase SDK
   initFirebase();
-
-  // Kiểm tra session đăng nhập
   checkPersistentSession();
 
-  // Tab Đăng nhập / Đăng ký
   const loginTabBtn = document.getElementById('tabLoginBtn');
   const regTabBtn = document.getElementById('tabRegBtn');
   if (loginTabBtn) loginTabBtn.onclick = () => switchTab('login');
   if (regTabBtn) regTabBtn.onclick = () => switchTab('reg');
 
-  // Submit Đăng nhập
   const btnDoLogin = document.getElementById('btnDoLogin');
   const loginPassInput = document.getElementById('loginPass');
   if (btnDoLogin) btnDoLogin.onclick = handleLogin;
   if (loginPassInput) loginPassInput.onkeydown = (e) => { if (e.key === 'Enter') handleLogin(); };
 
-  // Submit Đăng ký & VietQR
   const btnCreateQr = document.getElementById('btnCreateQr');
   if (btnCreateQr) btnCreateQr.onclick = handleRegister;
 
-  // Đăng xuất
   const btnLogout = document.getElementById('btnLogout');
   if (btnLogout) {
     btnLogout.onclick = () => {
@@ -818,7 +815,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // UI Navigation
   const searchForm = document.getElementById('searchForm');
   if (searchForm) {
     searchForm.onsubmit = e => {
