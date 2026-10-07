@@ -42,6 +42,16 @@ html, body {
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; border: 0; color: inherit; }
 
+/* HIỆU ỨNG VÒNG SÁNG CON LĂN MAZDA / MERCEDES / BMW (ROTARY FOCUS GLOW RING) */
+:focus-visible, button:focus-visible, .item:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 3px solid var(--accent) !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 25px rgba(255, 54, 80, 0.85) !important;
+  transform: scale(1.02);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  z-index: 10;
+}
+
 /* APP LAYOUT */
 .app {
   display: grid;
@@ -189,9 +199,11 @@ button { cursor: pointer; border: 0; color: inherit; }
 }
 
 .page { padding: 24px; max-width: 1450px; margin: auto; }
+
+/* BỐ CỤC DẠNG 1 CỘT DỌC TỐI ƯU CHO MÀN HÌNH XE Ô TÔ VỪA VÀ NHỎ */
 .hero {
   display: grid;
-  grid-template-columns: minmax(0,1.45fr) minmax(300px,.55fr);
+  grid-template-columns: 1fr;
   gap: 18px;
   margin-bottom: 20px;
 }
@@ -244,7 +256,7 @@ button { cursor: pointer; border: 0; color: inherit; }
 .pill.primary:hover { background: #ff5368; }
 .pill.active { background: rgba(255, 54, 80, 0.2); border-color: var(--accent); color: var(--accent); }
 
-.queue { padding: 18px; }
+.queue { padding: 18px; margin-top: 0px; }
 .section-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 13px; }
 .section-title h2 { font-size: 17px; margin: 0; }
 .muted { color: var(--muted); }
@@ -281,7 +293,7 @@ button { cursor: pointer; border: 0; color: inherit; }
 .iconbtn:hover, .iconbtn:active { background: #2b3440; color: #fff; }
 
 .content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-.panel { padding: 18px; }
+.panel { padding: 18px; margin-bottom: 18px; }
 .empty { padding: 25px 10px; color: #778292; text-align: center; }
 .setting { display: grid; gap: 7px; margin-bottom: 16px; }
 .setting label { font-weight: 650; }
@@ -333,17 +345,17 @@ button { cursor: pointer; border: 0; color: inherit; }
 .modal-back {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.8);
-  backdrop-filter: blur(10px);
+  background: rgba(0,0,0,.82);
+  backdrop-filter: blur(12px);
   display: none;
   place-items: center;
-  padding: 18px;
+  padding: 14px;
   z-index: 50;
 }
 .modal-back.open { display: grid; }
 .modal {
   width: min(720px, 100%);
-  max-height: 88vh;
+  max-height: 90vh;
   overflow: auto;
   background: #12161d;
   border: 1px solid #303744;
@@ -354,26 +366,30 @@ button { cursor: pointer; border: 0; color: inherit; }
 .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .modal h2 { margin: 0; font-size: 20px; }
 
-/* AUTHENTICATION MODAL (LOCK SCREEN & VIETQR) */
+/* AUTHENTICATION MODAL (HIỂN THỊ VIETQR CHÍNH GIỮA) */
 #authModal {
   z-index: 9999;
   background: rgba(5, 7, 10, 0.96);
   backdrop-filter: blur(24px);
+  overflow-y: auto;
 }
 .auth-box {
-  width: min(480px, 94%);
+  width: min(480px, 96%);
+  max-height: 92vh;
+  overflow-y: auto;
   background: #11151c;
   border: 1px solid #28303f;
   border-radius: 24px;
-  padding: 28px 22px;
+  padding: 24px 20px;
   box-shadow: 0 25px 80px rgba(0,0,0,0.9);
+  margin: auto;
 }
-.auth-head { text-align: center; margin-bottom: 20px; }
+.auth-head { text-align: center; margin-bottom: 16px; }
 .auth-head .logo-big {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 12px;
-  border-radius: 16px;
+  width: 50px;
+  height: 50px;
+  margin: 0 auto 10px;
+  border-radius: 14px;
   background: linear-gradient(145deg, #ff5368, #d90029);
   display: grid;
   place-items: center;
@@ -383,12 +399,12 @@ button { cursor: pointer; border: 0; color: inherit; }
   content: "";
   width: 0;
   height: 0;
-  border-top: 10px solid transparent;
-  border-bottom: 10px solid transparent;
-  border-left: 17px solid white;
-  margin-left: 4px;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+  border-left: 15px solid white;
+  margin-left: 3px;
 }
-.auth-head h1 { font-size: 22px; margin: 0 0 6px; }
+.auth-head h1 { font-size: 20px; margin: 0 0 4px; }
 .auth-head p { margin: 0; color: var(--muted); font-size: 13px; }
 
 .auth-tabs {
@@ -396,18 +412,18 @@ button { cursor: pointer; border: 0; color: inherit; }
   background: #090b0f;
   padding: 4px;
   border-radius: 14px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   border: 1px solid var(--line);
 }
 .auth-tabs button {
   flex: 1;
-  padding: 11px;
+  padding: 10px;
   border-radius: 10px;
   background: transparent;
   color: var(--muted);
   font-weight: 600;
   transition: all .2s;
-  min-height: 44px;
+  min-height: 42px;
 }
 .auth-tabs button.active {
   background: var(--accent);
@@ -415,19 +431,19 @@ button { cursor: pointer; border: 0; color: inherit; }
   box-shadow: 0 4px 15px rgba(255,54,80,0.3);
 }
 
-.auth-form { display: grid; gap: 14px; }
+.auth-form { display: grid; gap: 12px; }
 .btn-submit {
   width: 100%;
-  padding: 14px;
+  padding: 13px;
   border-radius: 13px;
   background: linear-gradient(135deg, #ff5368, #dc2626);
   color: #fff;
   font-weight: 700;
   font-size: 15px;
   box-shadow: 0 8px 25px rgba(239, 68, 68, 0.35);
-  margin-top: 6px;
+  margin-top: 4px;
   transition: all .2s;
-  min-height: 48px;
+  min-height: 46px;
 }
 .btn-submit:hover, .btn-submit:active {
   transform: translateY(-1px);
@@ -444,12 +460,12 @@ button { cursor: pointer; border: 0; color: inherit; }
   display: none;
 }
 
-/* VIETQR PAYMENT CONTAINER */
+/* VIETQR PAYMENT DISPLAY (HIỂN THỊ CHÍNH GIỮA) */
 .qr-container {
   display: none;
   text-align: center;
-  margin-top: 18px;
-  padding: 18px;
+  margin-top: 12px;
+  padding: 16px;
   background: #0a0d13;
   border: 1px solid #212936;
   border-radius: 18px;
@@ -457,19 +473,20 @@ button { cursor: pointer; border: 0; color: inherit; }
 }
 @keyframes qrFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .qr-img {
-  width: 210px;
-  height: 210px;
-  margin: 10px auto;
+  width: 190px;
+  height: 190px;
+  margin: 8px auto;
   border-radius: 12px;
   border: 3px solid #fff;
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
   background: #fff;
+  display: block;
 }
 .qr-info {
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.5;
   color: #d1d7e0;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 .qr-info strong { color: var(--accent); font-size: 14px; }
 .qr-status {
@@ -477,8 +494,8 @@ button { cursor: pointer; border: 0; color: inherit; }
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-top: 14px;
-  padding: 9px 12px;
+  margin-top: 12px;
+  padding: 8px 12px;
   border-radius: 10px;
   background: rgba(255, 184, 0, 0.1);
   border: 1px solid rgba(255, 184, 0, 0.25);
@@ -532,7 +549,8 @@ button { cursor: pointer; border: 0; color: inherit; }
   .item-title { font-size: 13px; }
   .controls { gap: 6px; }
   .pill { padding: 8px 10px; font-size: 12px; min-height: 36px; }
-  .auth-box { padding: 20px 16px; }
+  .auth-box { padding: 18px 14px; }
+  .qr-img { width: 170px; height: 170px; }
 }
 </style>
 </head>
@@ -546,16 +564,15 @@ button { cursor: pointer; border: 0; color: inherit; }
       <b>Trung Play</b>
     </div>
     <nav class="nav">
-      <button class="active" data-view="home"><span class="ico">⌂</span>Trang chủ</button>
-      <button data-view="favorites"><span class="ico">♥</span>Yêu thích</button>
-      <button data-view="history"><span class="ico">◷</span>Lịch sử</button>
-      <button data-view="playlist"><span class="ico">☷</span>Playlist</button>
-      <button data-view="tv"><span class="ico">📺</span>TV / Live</button>
-      <button data-view="settings"><span class="ico">⚙</span>Cài đặt</button>
+      <button class="active" data-view="home" tabindex="0"><span class="ico">⌂</span>Trang chủ</button>
+      <button data-view="favorites" tabindex="0"><span class="ico">♥</span>Yêu thích</button>
+      <button data-view="history" tabindex="0"><span class="ico">◷</span>Lịch sử</button>
+      <button data-view="playlist" tabindex="0"><span class="ico">☷</span>Playlist</button>
+      <button data-view="tv" tabindex="0"><span class="ico">📺</span>TV / Live</button>
+      <button data-view="settings" tabindex="0"><span class="ico">⚙</span>Cài đặt</button>
     </nav>
     <div class="side-foot">
-      APTV CarPlay v3.0<br>
-      Khóa 1 ĐT / 1 Thiết bị
+      APTV CarPlay v3.0
     </div>
   </aside>
 
@@ -564,22 +581,22 @@ button { cursor: pointer; border: 0; color: inherit; }
     <header class="topbar">
       <button class="mobile-menu" id="menuBtn">☰</button>
       <form class="search" id="searchForm">
-        <input id="searchInput" placeholder="Tìm nhạc YouTube..." autocomplete="off">
-        <button type="button" id="btnMic" class="btn-mic" title="Tìm bằng giọng nói">🎙️</button>
-        <button type="submit" title="Tìm kiếm">⌕</button>
+        <input id="searchInput" placeholder="Tìm nhạc YouTube..." autocomplete="off" tabindex="0">
+        <button type="button" id="btnMic" class="btn-mic" title="Tìm bằng giọng nói" tabindex="0">🎙️</button>
+        <button type="submit" title="Tìm kiếm" tabindex="0">⌕</button>
       </form>
       <div class="user-badge" id="userBadge" style="display:none">
         <span class="user-phone" id="badgePhone">0965512394</span>
       </div>
-      <button class="iconbtn" id="openUrlBtn" title="Mở Link YouTube">🔗</button>
-      <button class="iconbtn" id="settingsTop" title="Cài đặt">⚙</button>
+      <button class="iconbtn" id="openUrlBtn" title="Mở Link YouTube" tabindex="0">🔗</button>
+      <button class="iconbtn" id="settingsTop" title="Cài đặt" tabindex="0">⚙</button>
     </header>
 
     <div class="page">
       <!-- VIEW: TRANG CHỦ -->
       <section id="view-home" class="view">
         <div class="hero">
-          <!-- PLAYER CARD -->
+          <!-- 1. TRÌNH PHÁT VIDEO CHÍNH (FULL WIDTH TRÊN CÙNG) -->
           <div class="player-card">
             <div class="player-wrap" id="playerWrap">
               <div class="empty-player">
@@ -593,16 +610,16 @@ button { cursor: pointer; border: 0; color: inherit; }
               <div class="now-title" id="nowTitle">Chưa có media đang phát</div>
               <div class="now-sub" id="nowSub">Danh sách phát sẽ hiển thị ở đây.</div>
               <div class="controls">
-                <button class="pill" id="prevBtn">⏮ Trước</button>
-                <button class="pill primary" id="playCurrent">▶ Mở lại</button>
-                <button class="pill" id="nextBtn">Sau ⏭</button>
-                <button class="pill" id="autoNextBtn">🔄 Tự phát: Bật</button>
-                <button class="pill" id="favCurrent">♡ Yêu thích</button>
+                <button class="pill" id="prevBtn" tabindex="0">⏮ Trước</button>
+                <button class="pill primary" id="playCurrent" tabindex="0">▶ Mở lại</button>
+                <button class="pill" id="nextBtn" tabindex="0">Sau ⏭</button>
+                <button class="pill" id="autoNextBtn" tabindex="0">🔄 Tự phát: Bật</button>
+                <button class="pill" id="favCurrent" tabindex="0">♡ Yêu thích</button>
               </div>
             </div>
           </div>
 
-          <!-- QUEUE / SEARCH RESULTS -->
+          <!-- 2. KẾT QUẢ TÌM KIẾM (HIỂN THỊ TRỰC TIẾP PHÍA DƯỚI TRÌNH PHÁT) -->
           <div class="panel queue">
             <div class="section-title">
               <h2>Kết quả tìm kiếm</h2>
@@ -614,11 +631,11 @@ button { cursor: pointer; border: 0; color: inherit; }
           </div>
         </div>
 
-        <!-- CURRENT PLAYLIST PANEL -->
+        <!-- 3. CURRENT PLAYLIST PANEL -->
         <div class="panel">
           <div class="section-title">
             <h2>Playlist hiện tại</h2>
-            <button class="pill" id="clearPlaylist">Xóa hết</button>
+            <button class="pill" id="clearPlaylist" tabindex="0">Xóa hết</button>
           </div>
           <div id="playlistList" class="list">
             <div class="empty">Playlist đang trống. Hãy bấm nút ＋ ở danh sách tìm kiếm để thêm vào.</div>
@@ -639,7 +656,7 @@ button { cursor: pointer; border: 0; color: inherit; }
         <div class="panel">
           <div class="section-title">
             <h2>Lịch sử xem</h2>
-            <button class="pill" id="clearHistory">Xóa lịch sử</button>
+            <button class="pill" id="clearHistory" tabindex="0">Xóa lịch sử</button>
           </div>
           <div id="historyList" class="list"></div>
         </div>
@@ -650,7 +667,7 @@ button { cursor: pointer; border: 0; color: inherit; }
         <div class="panel">
           <div class="section-title">
             <h2>Danh sách phát (Playlist)</h2>
-            <button class="pill" id="clearPlaylist2">Xóa hết</button>
+            <button class="pill" id="clearPlaylist2" tabindex="0">Xóa hết</button>
           </div>
           <div id="playlistList2" class="list"></div>
         </div>
@@ -665,12 +682,12 @@ button { cursor: pointer; border: 0; color: inherit; }
           </div>
           <div class="setting">
             <label>URL danh sách M3U</label>
-            <input class="field" id="m3uUrl" placeholder="https://raw.githubusercontent.com/iptv-org/iptv/master/streams/vn.m3u">
+            <input class="field" id="m3uUrl" placeholder="https://raw.githubusercontent.com/iptv-org/iptv/master/streams/vn.m3u" tabindex="0">
             <small>Đã hỗ trợ phát stream .m3u8 trực tiếp trên tất cả trình duyệt.</small>
           </div>
           <div class="controls">
-            <button class="pill primary" id="loadM3u">⚡ Nạp lại danh sách Kênh</button>
-            <button class="pill" id="clearTv">Xóa danh sách Kênh</button>
+            <button class="pill primary" id="loadM3u" tabindex="0">⚡ Nạp lại danh sách Kênh</button>
+            <button class="pill" id="clearTv" tabindex="0">Xóa danh sách Kênh</button>
           </div>
           <div id="tvList" class="list" style="margin-top:16px"></div>
         </div>
@@ -689,19 +706,19 @@ button { cursor: pointer; border: 0; color: inherit; }
               <label>Hạn sử dụng gói cước</label>
               <input class="field" id="accExpire" readonly>
             </div>
-            <button class="pill" id="btnLogout" style="color:#ff5368">Đăng xuất tài khoản</button>
+            <button class="pill" id="btnLogout" style="color:#ff5368" tabindex="0">Đăng xuất tài khoản</button>
           </div>
 
           <div class="panel">
             <div class="section-title"><h2>Sao lưu & Khôi phục</h2></div>
             <p class="muted">Xuất danh sách yêu thích, lịch sử ra file JSON.</p>
             <div class="controls">
-              <button class="pill primary" id="exportBtn">📥 Xuất file Backup</button>
-              <button class="pill" id="importBtn">📤 Nhập file Backup</button>
+              <button class="pill primary" id="exportBtn" tabindex="0">📥 Xuất file Backup</button>
+              <button class="pill" id="importBtn" tabindex="0">📤 Nhập file Backup</button>
               <input type="file" id="importFile" accept="application/json" hidden>
             </div>
             <hr style="border:0;border-top:1px solid var(--line);margin:20px 0">
-            <button class="pill" id="resetBtn" style="color:#ff6b7d">Đặt lại ứng dụng ban đầu</button>
+            <button class="pill" id="resetBtn" style="color:#ff6b7d" tabindex="0">Đặt lại ứng dụng ban đầu</button>
           </div>
         </div>
       </section>
@@ -711,11 +728,11 @@ button { cursor: pointer; border: 0; color: inherit; }
 
 <!-- MOBILE BOTTOM NAVIGATION BAR -->
 <nav class="mobile-nav">
-  <button class="active" data-view="home"><span class="ico">⌂</span><span>Trang chủ</span></button>
-  <button data-view="favorites"><span class="ico">♥</span><span>Yêu thích</span></button>
-  <button data-view="playlist"><span class="ico">☷</span><span>Playlist</span></button>
-  <button data-view="tv"><span class="ico">📺</span><span>TV Live</span></button>
-  <button data-view="settings"><span class="ico">⚙</span><span>Cài đặt</span></button>
+  <button class="active" data-view="home" tabindex="0"><span class="ico">⌂</span><span>Trang chủ</span></button>
+  <button data-view="favorites" tabindex="0"><span class="ico">♥</span><span>Yêu thích</span></button>
+  <button data-view="playlist" tabindex="0"><span class="ico">☷</span><span>Playlist</span></button>
+  <button data-view="tv" tabindex="0"><span class="ico">📺</span><span>TV Live</span></button>
+  <button data-view="settings" tabindex="0"><span class="ico">⚙</span><span>Cài đặt</span></button>
 </nav>
 
 <!-- MODAL MỞ LINK TRỰC TIẾP -->
@@ -723,13 +740,13 @@ button { cursor: pointer; border: 0; color: inherit; }
   <div class="modal">
     <div class="modal-head">
       <h2>Mở YouTube Link hoặc Video ID</h2>
-      <button class="iconbtn" data-close>×</button>
+      <button class="iconbtn" data-close tabindex="0">×</button>
     </div>
     <div class="setting">
       <label>Dán link YouTube (ví dụ: https://www.youtube.com/watch?v=...)</label>
-      <input class="field" id="manualUrl" placeholder="https://youtu.be/...">
+      <input class="field" id="manualUrl" placeholder="https://youtu.be/..." tabindex="0">
     </div>
-    <button class="pill primary" id="openManual">Phát Video ngay</button>
+    <button class="pill primary" id="openManual" tabindex="0">Phát Video ngay</button>
   </div>
 </div>
 
@@ -739,13 +756,13 @@ button { cursor: pointer; border: 0; color: inherit; }
     <div class="auth-head">
       <div class="logo-big"></div>
       <h1>Trung Play CarPlay</h1>
-      <p>Mỗi tài khoản chỉ được liên kết 1 thiết bị sử dụng</p>
+      <p>Hệ thống giải trí cao cấp dành cho ô tô</p>
     </div>
 
     <!-- TABS -->
     <div class="auth-tabs">
-      <button class="active" id="tabLoginBtn">ĐĂNG NHẬP</button>
-      <button id="tabRegBtn">ĐĂNG KÝ TÀI KHOẢN</button>
+      <button class="active" id="tabLoginBtn" tabindex="0">ĐĂNG NHẬP</button>
+      <button id="tabRegBtn" tabindex="0">ĐĂNG KÝ TÀI KHOẢN</button>
     </div>
 
     <!-- ERROR MSG -->
@@ -755,36 +772,38 @@ button { cursor: pointer; border: 0; color: inherit; }
     <div id="formLogin" class="auth-form">
       <div class="setting" style="margin-bottom:8px">
         <label>Số điện thoại đăng ký</label>
-        <input class="field" id="loginPhone" type="tel" placeholder="Ví dụ: 0965512394" autocomplete="username">
+        <input class="field" id="loginPhone" type="tel" placeholder="Ví dụ: 0965512394" autocomplete="username" tabindex="0">
       </div>
       <div class="setting" style="margin-bottom:8px">
         <label>Mật khẩu</label>
-        <input class="field" id="loginPass" type="password" placeholder="Nhập mật khẩu" autocomplete="current-password">
+        <input class="field" id="loginPass" type="password" placeholder="Nhập mật khẩu" autocomplete="current-password" tabindex="0">
       </div>
-      <button class="btn-submit" id="btnDoLogin">ĐĂNG NHẬP NGAY</button>
+      <button class="btn-submit" id="btnDoLogin" tabindex="0">ĐĂNG NHẬP NGAY</button>
     </div>
 
     <!-- TAB 2: FORM ĐĂNG KÝ (MẶC ĐỊNH CHỌN GÓI 100K) -->
     <div id="formReg" class="auth-form" style="display:none">
-      <div class="setting" style="margin-bottom:8px">
-        <label>Số điện thoại của bạn</label>
-        <input class="field" id="regPhone" type="tel" placeholder="Ví dụ: 0965512394">
+      <div id="regInputsArea">
+        <div class="setting" style="margin-bottom:8px">
+          <label>Số điện thoại của bạn</label>
+          <input class="field" id="regPhone" type="tel" placeholder="Ví dụ: 0965512394" tabindex="0">
+        </div>
+        <div class="setting" style="margin-bottom:8px">
+          <label>Tạo mật khẩu</label>
+          <input class="field" id="regPass" type="password" placeholder="Tạo mật khẩu đăng nhập" tabindex="0">
+        </div>
+        <div class="setting" style="margin-bottom:8px">
+          <label>Chọn Gói cước Dịch vụ</label>
+          <select class="field" id="regPlan" tabindex="0">
+            <option value="7" data-price="20000">Gói Dùng thử: 20.000 VNĐ (7 ngày)</option>
+            <option value="365" data-price="100000" selected>Gói 1 Năm (Khuyên dùng): 100.000 VNĐ (365 ngày)</option>
+            <option value="3650" data-price="300000">Gói Vĩnh viễn: 300.000 VNĐ (10 năm)</option>
+          </select>
+        </div>
+        <button class="btn-submit" id="btnCreateQr" tabindex="0">⚡ TẠO MÃ THANH TOÁN QR</button>
       </div>
-      <div class="setting" style="margin-bottom:8px">
-        <label>Tạo mật khẩu</label>
-        <input class="field" id="regPass" type="password" placeholder="Tạo mật khẩu đăng nhập">
-      </div>
-      <div class="setting" style="margin-bottom:8px">
-        <label>Chọn Gói cước Dịch vụ</label>
-        <select class="field" id="regPlan">
-          <option value="7" data-price="20000">Gói Dùng thử: 20.000 VNĐ (7 ngày)</option>
-          <option value="365" data-price="100000" selected>Gói 1 Năm (Khuyên dùng): 100.000 VNĐ (365 ngày)</option>
-          <option value="3650" data-price="300000">Gói Vĩnh viễn: 300.000 VNĐ (10 năm)</option>
-        </select>
-      </div>
-      <button class="btn-submit" id="btnCreateQr">⚡ TẠO MÃ THANH TOÁN QR</button>
 
-      <!-- VIETQR DISPLAY CONTAINER -->
+      <!-- VIETQR DISPLAY CONTAINER (CHÍNH GIỮA) -->
       <div class="qr-container" id="qrContainer">
         <div style="font-weight:700;font-size:15px;color:#fff">Quét mã VietQR TPBank để kích hoạt</div>
         <img class="qr-img" id="qrImage" src="" alt="Mã VietQR TPBank">

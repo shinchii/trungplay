@@ -1,7 +1,7 @@
 /* =========================================================================
    APTV CARPLAY & WEB STREAM - MAIN LOGIC (app.js)
    Firebase Firestore Project ID: trungplay-12c60
-   Tối ưu 100% chạy trên Vercel, CarPlay, Mobile & Desktop
+   Tối ưu 100% cho Xe Dùng Con Lăn (Mazda / Mercedes / BMW) & Cảm Ứng
    ========================================================================= */
 
 // 1. CẤU HÌNH FIREBASE FIRESTORE PROJECT
@@ -235,7 +235,7 @@ async function handleLogin() {
 
     // Khóa 1 thiết bị
     if (userData.device_id && userData.device_id !== "" && userData.device_id !== currentDevId) {
-      return showAuthError('⚠️ Tài khoản này đã liên kết với 1 thiết bị khác! Mỗi tài khoản chỉ dùng trên 1 thiết bị.');
+      return showAuthError('⚠️ Tài khoản này đã liên kết với 1 thiết bị khác!');
     }
 
     if (!userData.device_id || userData.device_id === "") {
@@ -325,18 +325,22 @@ function triggerQrGenerationForPhone(phone, price) {
   listenRealtimeStatus(phone);
 }
 
+// HIỂN THỊ MÃ VIETQR CHÍNH GIỮA MÀN HÌNH (DÀNH CHO XE KHÔNG CÓ CẢM ỨNG / CON LĂN)
 function displayQrCode(qrUrl, price, contentText) {
   const qrContainer = document.getElementById('qrContainer');
   const qrImg = document.getElementById('qrImage');
   const qrAmountText = document.getElementById('qrAmountText');
   const qrContentText = document.getElementById('qrContentText');
+  const regInputsArea = document.getElementById('regInputsArea');
 
   if (qrImg) qrImg.src = qrUrl;
   if (qrAmountText) qrAmountText.textContent = price.toLocaleString('vi-VN') + ' VNĐ';
   if (qrContentText) qrContentText.textContent = contentText;
+
   if (qrContainer) {
     qrContainer.style.display = 'block';
-    qrContainer.scrollIntoView({ behavior: 'smooth' });
+    // Đẩy khung VietQR lên chính giữa màn hình modal
+    qrContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 }
 
@@ -393,7 +397,6 @@ function destroyPlayers() {
   if (wrap) wrap.innerHTML = '';
 }
 
-// PHÁT VIDEO YOUTUBE EMBED GIỮA TRANG
 function play(item, add = true) {
   let videoId = '';
   if (typeof item === 'string') {
@@ -444,7 +447,6 @@ function playPrev() {
   play(state.playlist[i]);
 }
 
-// PHÁT KÊNH TV STREAM (M3U8)
 function playTv(ch) {
   destroyPlayers();
   showView('home');
@@ -505,16 +507,16 @@ function itemHtml(item, kind = 'result') {
   const fav = state.favorites.some(x => x.id === item.id);
   const isPlaying = current && current.id === item.id;
   return `
-    <div class="item ${isPlaying ? 'active-play' : ''}" data-play-id="${esc(item.id)}">
+    <div class="item ${isPlaying ? 'active-play' : ''}" data-play-id="${esc(item.id)}" tabindex="0">
       <img class="thumb" src="${esc(item.thumb || ytThumb(item.id))}" loading="lazy">
       <div style="min-width:0;cursor:pointer">
         <div class="item-title" title="${esc(item.title || 'YouTube video')}">${esc(item.title || 'YouTube video')}</div>
         <div class="item-sub">${esc(item.channel || 'YouTube')} · ${kind === 'history' ? 'Đã xem' : 'Video'}</div>
       </div>
       <div class="actions">
-        <button class="iconbtn" data-play="${esc(item.id)}" title="Phát ngay">▶</button>
-        <button class="iconbtn" data-add="${esc(item.id)}" title="Thêm playlist">＋</button>
-        <button class="iconbtn" data-fav="${esc(item.id)}" title="${fav ? 'Bỏ yêu thích' : 'Yêu thích'}">${fav ? '♥' : '♡'}</button>
+        <button class="iconbtn" data-play="${esc(item.id)}" title="Phát ngay" tabindex="0">▶</button>
+        <button class="iconbtn" data-add="${esc(item.id)}" title="Thêm playlist" tabindex="0">＋</button>
+        <button class="iconbtn" data-fav="${esc(item.id)}" title="${fav ? 'Bỏ yêu thích' : 'Yêu thích'}" tabindex="0">${fav ? '♥' : '♡'}</button>
       </div>
     </div>`;
 }
@@ -567,14 +569,13 @@ function renderAll() {
 }
 
 /* =========================================================================
-   5. BỘ TÌM KIẾM ĐA KÊNH YOUTUBE (CỰC NHẠY VÀ ỔN ĐỊNH TRÊN VERCEL)
+   5. BỘ TÌM KIẾM ĐA KÊNH YOUTUBE & TỰ ĐỘNG CUỘN CON LĂN (ROTARY FOCUS)
    ========================================================================= */
 
 async function search(q) {
   q = (q || '').trim();
   if (!q) return;
 
-  // Nếu người dùng dán Link YouTube hoặc Video ID trực tiếp vào ô tìm kiếm
   const directVid = vidFromUrl(q);
   if (directVid) {
     const item = { id: directVid, title: 'YouTube Video (' + directVid + ')', thumb: ytThumb(directVid), channel: 'YouTube' };
@@ -585,7 +586,6 @@ async function search(q) {
   const out = document.getElementById('results');
   if (out) out.innerHTML = '<div class="empty">🔍 Đang tìm kiếm video...</div>';
 
-  // 1. Ưu tiên Google API Key nếu người dùng có cài đặt
   if (state.apiKey) {
     try {
       const u = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=15&q=${encodeURIComponent(q)}&key=${encodeURIComponent(state.apiKey)}`;
@@ -608,7 +608,6 @@ async function search(q) {
     }
   }
 
-  // 2. Các điểm cuối Invidious CORS ổn định nhất (Yewtu.be, PrivacyDev, NerdVPN)
   const searchEndpoints = [
     `https://yewtu.be/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
     `https://invidious.privacydev.net/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
@@ -705,13 +704,13 @@ function renderTv() {
   const el = document.getElementById('tvList');
   if (!el) return;
   el.innerHTML = state.tv.length ? state.tv.map((x, i) => `
-    <div class="item">
+    <div class="item" tabindex="0">
       <div style="width:76px;height:43px;border-radius:8px;background:#202631;display:grid;place-items:center;font-size:20px;color:var(--accent)">📺</div>
       <div style="min-width:0">
         <div class="item-title">${esc(x.name)}</div>
         <div class="item-sub" style="text-overflow:ellipsis;overflow:hidden;white-space:nowrap">${esc(x.url)}</div>
       </div>
-      <button class="iconbtn" data-tv="${i}">▶</button>
+      <button class="iconbtn" data-tv="${i}" tabindex="0">▶</button>
     </div>`).join('') : '<div class="empty">Chưa có kênh TV. Bấm "Nạp lại danh sách Kênh" ở trên.</div>';
 
   el.querySelectorAll('[data-tv]').forEach(b => b.onclick = () => playTv(state.tv[+b.dataset.tv]));
@@ -784,6 +783,15 @@ function initVoiceSearch() {
   };
 }
 
+// BỎ TỰ ĐỘNG CUỘN VỚI CON LĂN ĐIỀU KHIỂN (MAZDA / MERCEDES / BMW)
+function initRotaryKnobScroll() {
+  document.addEventListener('focusin', (e) => {
+    if (e.target && typeof e.target.scrollIntoView === 'function') {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
+}
+
 /* =========================================================================
    6. BẮT SỰ KIỆN NÚT BẤM VÀ KHỞI TẠO ỨNG DỤNG
    ========================================================================= */
@@ -791,6 +799,7 @@ function initVoiceSearch() {
 document.addEventListener('DOMContentLoaded', () => {
   initFirebase();
   checkPersistentSession();
+  initRotaryKnobScroll();
 
   const loginTabBtn = document.getElementById('tabLoginBtn');
   const regTabBtn = document.getElementById('tabRegBtn');
