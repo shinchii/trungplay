@@ -1,10 +1,10 @@
 /* =========================================================================
    APTV CARPLAY & WEB STREAM - MAIN LOGIC (app.js)
    Firebase Firestore Project ID: trungplay-12c60
-   Chức năng: Khóa 1 Tài khoản / 1 Thiết bị & Tối ưu UI Mobile CarPlay
+   Tối ưu 100% chạy trên Vercel, CarPlay, Mobile & Desktop
    ========================================================================= */
 
-// 1. CẤU HÌNH FIREBASE FIRESTORE PROJECT (DÙNG CHUNG VỚI APP ANDROID)
+// 1. CẤU HÌNH FIREBASE FIRESTORE PROJECT
 const firebaseConfig = {
   apiKey: "AIzaSyD_T8u2_fHLSVyrMnOvIRYJULuLrF5fxJA",
   authDomain: "trungplay-12c60.firebaseapp.com",
@@ -15,11 +15,20 @@ const firebaseConfig = {
   measurementId: "G-4LG6EV6HM4"
 };
 
-// Khởi tạo Firebase SDK compat
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
+// Khởi tạo Firebase SDK an toàn
+let db = null;
+function initFirebase() {
+  try {
+    if (window.firebase && !firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    if (window.firebase && firebase.apps.length) {
+      db = firebase.firestore();
+    }
+  } catch (e) {
+    console.warn("Lỗi khởi tạo Firebase:", e);
+  }
 }
-const db = firebase.firestore();
 
 // 2. CẤU HÌNH ỨNG DỤNG MẶC ĐỊNH
 const DEFAULT_M3U_URL = 'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/vn.m3u';
@@ -29,7 +38,8 @@ const defaults = {
   apiKey: '',
   proxyUrl: '',
   playlist: [
-    { id: 'L_LUpnjgPso', title: 'Tuyển Tập Nhạc Sàn Xe Hơi CarPlay Hot', channel: 'CarPlay Music', thumb: 'https://i.ytimg.com/vi/L_LUpnjgPso/mqdefault.jpg' }
+    { id: 'L_LUpnjgPso', title: 'Tuyển Tập Nhạc Sàn Xe Hơi CarPlay Hot 2026', channel: 'CarPlay Music', thumb: 'https://i.ytimg.com/vi/L_LUpnjgPso/mqdefault.jpg' },
+    { id: 'dQw4w9WgXcQ', title: 'Nhạc Trẻ Remix Sôi Động Hay Nhất', channel: 'Music Official', thumb: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg' }
   ],
   favorites: [],
   history: [],
@@ -49,7 +59,7 @@ function hashMD5(str) {
   return CryptoJS.MD5(str).toString();
 }
 
-// TẠO VÀ KHÓA DUY NHẤT 1 DEVICE ID CHO MỖI TRÌNH DUYỆT / ĐIỆN THOẠI
+// TẠO HOẶC LẤY DEVICE ID CHO TRÌNH DUYỆT WEB / MOBILE
 function getDeviceId() {
   let id = localStorage.getItem('aptv_device_id');
   if (!id) {
@@ -73,6 +83,7 @@ function saveState() {
 
 function toast(t) {
   const e = document.getElementById('toast');
+  if (!e) return;
   e.textContent = t;
   e.classList.add('show');
   clearTimeout(window.__toast);
@@ -98,34 +109,41 @@ function ytThumb(id) {
 }
 
 /* =========================================================================
-   3. KHÓA 1 TÀI KHOẢN / 1 THIẾT BỊ & ĐĂNG NHẬP / ĐĂNG KÝ
+   3. QUẢN LÝ TÀI KHOẢN & ĐĂNG NHẬP / ĐĂNG KÝ (FIREBASE FIRESTORE)
    ========================================================================= */
 
 function showAuthModal() {
   const modal = document.getElementById('authModal');
-  modal.classList.add('open');
-  document.body.style.overflow = 'hidden';
+  if (modal) {
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
 }
 
 function hideAuthModal() {
   const modal = document.getElementById('authModal');
-  modal.classList.remove('open');
-  document.body.style.overflow = '';
+  if (modal) {
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
 }
 
 function showAuthError(msg) {
   const err = document.getElementById('authError');
-  err.textContent = msg;
-  err.style.display = 'block';
+  if (err) {
+    err.textContent = msg;
+    err.style.display = 'block';
+  }
 }
 
 function clearAuthError() {
   const err = document.getElementById('authError');
-  err.style.display = 'none';
-  err.textContent = '';
+  if (err) {
+    err.style.display = 'none';
+    err.textContent = '';
+  }
 }
 
-// ĐỒNG BỘ SESSION & ĐẢM BẢO THIẾT BỊ ĐÚNG CHÍNH CHỦ
 function checkPersistentSession() {
   const sessionStr = localStorage.getItem('aptv_user');
   if (!sessionStr) {
@@ -139,7 +157,7 @@ function checkPersistentSession() {
     const expireDate = new Date(user.expire_date);
     const currentDevId = getDeviceId();
 
-    // Kiểm tra nếu thiết bị hiện tại không khớp với device_id đã khóa
+    // Kiểm tra thiết bị trùng khớp
     if (user.device_id && user.device_id !== "" && user.device_id !== currentDevId) {
       localStorage.removeItem('aptv_user');
       showAuthModal();
@@ -169,8 +187,8 @@ function updateUserUI(user) {
   const accExpire = document.getElementById('accExpire');
 
   if (user && user.username) {
-    badge.style.display = 'flex';
-    badgePhone.textContent = `👤 ${user.username}`;
+    if (badge) badge.style.display = 'flex';
+    if (badgePhone) badgePhone.textContent = `👤 ${user.username}`;
     if (accPhone) accPhone.value = user.username;
     if (accExpire) {
       const d = new Date(user.expire_date);
@@ -179,7 +197,6 @@ function updateUserUI(user) {
   }
 }
 
-// XỬ LÝ ĐĂNG NHẬP KHÓA 1 TÀI KHOẢN / 1 THIẾT BỊ
 async function handleLogin() {
   clearAuthError();
   const phone = document.getElementById('loginPhone').value.trim();
@@ -190,10 +207,15 @@ async function handleLogin() {
     return showAuthError('Vui lòng nhập đầy đủ Số điện thoại và Mật khẩu.');
   }
 
+  if (!db) {
+    initFirebase();
+    if (!db) return showAuthError('Không thể kết nối Firebase SDK. Vui lòng kiểm tra mạng.');
+  }
+
   const hashed = hashMD5(pass);
 
   try {
-    toast('Đang xác thực với Firestore...');
+    toast('Đang xác thực tài khoản...');
     const docRef = db.collection('users').doc(phone);
     const docSnap = await docRef.get();
 
@@ -206,19 +228,16 @@ async function handleLogin() {
     const inputHash = hashed.toLowerCase().trim();
     const inputPlain = pass.trim().toLowerCase();
 
-    // So sánh mật khẩu
     const isMatch = (storedPass === inputHash) || (storedPass === inputPlain);
-
     if (!isMatch) {
       return showAuthError('Mật khẩu không chính xác. Vui lòng thử lại.');
     }
 
-    // KHÓA 1 TÀI KHOẢN / 1 THIẾT BỊ
+    // Khóa 1 thiết bị
     if (userData.device_id && userData.device_id !== "" && userData.device_id !== currentDevId) {
-      return showAuthError('⚠️ ĐĂNG NHẬP THẤT BẠI: Tài khoản này đã được liên kết với 1 thiết bị khác! Mỗi tài khoản chỉ được dùng trên 1 thiết bị.');
+      return showAuthError('⚠️ Tài khoản này đã liên kết với 1 thiết bị khác! Mỗi tài khoản chỉ dùng trên 1 thiết bị.');
     }
 
-    // Nếu tài khoản chưa có device_id (mới đăng ký hoặc Admin vừa reset), tự động trói với thiết bị này!
     if (!userData.device_id || userData.device_id === "") {
       await db.collection('users').doc(phone).update({ device_id: currentDevId });
       userData.device_id = currentDevId;
@@ -239,18 +258,16 @@ async function handleLogin() {
       return showAuthError(`Tài khoản đã hết hạn vào ngày ${expireDate.toLocaleDateString('vi-VN')}. Vui lòng đăng ký gói mới.`);
     }
 
-    // ĐĂNG NHẬP THÀNH CÔNG -> LƯU SESSION
     localStorage.setItem('aptv_user', JSON.stringify(userData));
     hideAuthModal();
     updateUserUI(userData);
-    toast(`🎉 Đăng nhập thành công! Đã liên kết thiết bị này.`);
+    toast(`🎉 Đăng nhập thành công! Tài khoản: ${phone}`);
 
   } catch (err) {
-    showAuthError('Lỗi kết nối Firestore: ' + err.message);
+    showAuthError('Lỗi Firestore: ' + err.message);
   }
 }
 
-// XỬ LÝ ĐĂNG KÝ & TẠO MÃ VIETQR THANH TOÁN
 async function handleRegister() {
   clearAuthError();
   const phone = document.getElementById('regPhone').value.trim();
@@ -262,10 +279,15 @@ async function handleRegister() {
   const currentDevId = getDeviceId();
 
   if (!phone || !pass) {
-    return showAuthError('Vui lòng nhập Số điện thoại và Mật khẩu để tạo tài khoản.');
+    return showAuthError('Vui lòng nhập Số điện thoại và Mật khẩu.');
   }
   if (!/^0\d{8,10}$/.test(phone)) {
     return showAuthError('Số điện thoại không hợp lệ (Ví dụ: 0965512394).');
+  }
+
+  if (!db) {
+    initFirebase();
+    if (!db) return showAuthError('Không thể kết nối Firebase SDK. Vui lòng kiểm tra mạng.');
   }
 
   const hashed = hashMD5(pass);
@@ -275,14 +297,14 @@ async function handleRegister() {
   const userData = {
     username: phone,
     password_hash: hashed,
-    device_id: currentDevId, // Khóa ngay với thiết bị vừa đăng ký
+    device_id: currentDevId,
     expire_date: expireDate,
     status: 'PENDING',
     created_at: now.toISOString()
   };
 
   try {
-    toast('Đang tạo hồ sơ trên Firestore...');
+    toast('Đang tạo tài khoản trên Firestore...');
     await db.collection('users').doc(phone).set(userData, { merge: true });
 
     const transferContent = `TP ${phone}`;
@@ -292,7 +314,7 @@ async function handleRegister() {
     listenRealtimeStatus(phone);
 
   } catch (err) {
-    showAuthError('Không thể tạo tài khoản trên Firestore: ' + err.message);
+    showAuthError('Lỗi tạo tài khoản: ' + err.message);
   }
 }
 
@@ -309,15 +331,18 @@ function displayQrCode(qrUrl, price, contentText) {
   const qrAmountText = document.getElementById('qrAmountText');
   const qrContentText = document.getElementById('qrContentText');
 
-  qrImg.src = qrUrl;
-  qrAmountText.textContent = price.toLocaleString('vi-VN') + ' VNĐ';
-  qrContentText.textContent = contentText;
-  qrContainer.style.display = 'block';
-  qrContainer.scrollIntoView({ behavior: 'smooth' });
+  if (qrImg) qrImg.src = qrUrl;
+  if (qrAmountText) qrAmountText.textContent = price.toLocaleString('vi-VN') + ' VNĐ';
+  if (qrContentText) qrContentText.textContent = contentText;
+  if (qrContainer) {
+    qrContainer.style.display = 'block';
+    qrContainer.scrollIntoView({ behavior: 'smooth' });
+  }
 }
 
 function listenRealtimeStatus(phone) {
   if (realtimeUnsubscribe) realtimeUnsubscribe();
+  if (!db) return;
 
   realtimeUnsubscribe = db.collection('users').doc(phone).onSnapshot((docSnap) => {
     if (docSnap.exists) {
@@ -331,7 +356,7 @@ function listenRealtimeStatus(phone) {
       }
     }
   }, (err) => {
-    console.error('Lỗi Realtime Firestore Listener:', err);
+    console.error('Lỗi Realtime Listener:', err);
   });
 }
 
@@ -343,20 +368,20 @@ function switchTab(tab) {
   const formReg = document.getElementById('formReg');
 
   if (tab === 'login') {
-    loginBtn.classList.add('active');
-    regBtn.classList.remove('active');
-    formLogin.style.display = 'grid';
-    formReg.style.display = 'none';
+    if (loginBtn) loginBtn.classList.add('active');
+    if (regBtn) regBtn.classList.remove('active');
+    if (formLogin) formLogin.style.display = 'grid';
+    if (formReg) formReg.style.display = 'none';
   } else {
-    regBtn.classList.add('active');
-    loginBtn.classList.remove('active');
-    formReg.style.display = 'grid';
-    formLogin.style.display = 'none';
+    if (regBtn) regBtn.classList.add('active');
+    if (loginBtn) loginBtn.classList.remove('active');
+    if (formReg) formReg.style.display = 'grid';
+    if (formLogin) formLogin.style.display = 'none';
   }
 }
 
 /* =========================================================================
-   4. PLAYER & MEDIA STREAMING (YOUTUBE & TV M3U8)
+   4. TRÌNH PHÁT MEDIA CHÍNH (YOUTUBE & TV M3U8 STREAM)
    ========================================================================= */
 
 function destroyPlayers() {
@@ -368,24 +393,45 @@ function destroyPlayers() {
   if (wrap) wrap.innerHTML = '';
 }
 
+// PHÁT VIDEO YOUTUBE (TỐI ƯU 100% CẢ VERCEL VÀ DI ĐỘNG/CARPLAY)
 function play(item, add = true) {
-  if (!item || !item.id) return;
+  let videoId = '';
+  if (typeof item === 'string') {
+    videoId = vidFromUrl(item) || item;
+    item = findItem(videoId) || { id: videoId, title: 'YouTube Video', thumb: ytThumb(videoId) };
+  } else if (item && item.id) {
+    videoId = item.id;
+  }
+
+  if (!videoId) return toast('Không tìm thấy Video ID');
+
   destroyPlayers();
 
   current = item;
-  currentIndex = state.playlist.findIndex(x => x.id === item.id);
+  currentIndex = state.playlist.findIndex(x => x.id === videoId);
 
   if (add) addHistory(item);
 
   showView('home');
 
   const wrap = document.getElementById('playerWrap');
-  wrap.innerHTML = `<iframe id="ytIframe" src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(item.id)}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen style="width:100%;height:100%;border:0;background:#000"></iframe>`;
+  const embedUrl = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1`;
+  const directUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
+
+  wrap.innerHTML = `
+    <iframe id="ytIframe" 
+      src="${embedUrl}" 
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" 
+      allowfullscreen 
+      style="width:100%;height:100%;border:0;background:#000">
+    </iframe>`;
 
   document.getElementById('nowTitle').textContent = item.title || 'YouTube Video';
-  document.getElementById('nowSub').textContent = item.channel ? (item.channel + ' · YouTube') : ('YouTube · ' + item.id);
+  document.getElementById('nowSub').innerHTML = `
+    ${esc(item.channel || 'YouTube')} · ${esc(videoId)} 
+    <a href="${directUrl}" target="_blank" style="color:var(--accent);margin-left:10px;font-weight:600;text-decoration:none;background:rgba(255,54,80,0.15);padding:3px 10px;border-radius:6px">🔗 Mở trực tiếp YouTube</a>`;
 
-  toast('Đang phát: ' + (item.title || item.id));
+  toast('Đang phát: ' + (item.title || videoId));
   renderAll();
 }
 
@@ -401,6 +447,7 @@ function playPrev() {
   play(state.playlist[i]);
 }
 
+// PHÁT KÊNH TV STREAM (M3U8)
 function playTv(ch) {
   destroyPlayers();
   showView('home');
@@ -461,7 +508,7 @@ function itemHtml(item, kind = 'result') {
   const fav = state.favorites.some(x => x.id === item.id);
   const isPlaying = current && current.id === item.id;
   return `
-    <div class="item ${isPlaying ? 'active-play' : ''}" data-play-item="${esc(item.id)}">
+    <div class="item ${isPlaying ? 'active-play' : ''}" data-play-id="${esc(item.id)}">
       <img class="thumb" src="${esc(item.thumb || ytThumb(item.id))}" loading="lazy">
       <div style="min-width:0;cursor:pointer">
         <div class="item-title" title="${esc(item.title || 'YouTube video')}">${esc(item.title || 'YouTube video')}</div>
@@ -476,14 +523,15 @@ function itemHtml(item, kind = 'result') {
 }
 
 function renderList(el, arr, kind) {
+  if (!el) return;
   el.innerHTML = arr.length ? arr.map(x => itemHtml(x, kind)).join('') : `<div class="empty">Chưa có dữ liệu.</div>`;
 
   el.querySelectorAll('[data-play]').forEach(b => b.onclick = (e) => {
     e.stopPropagation();
     play(findItem(b.dataset.play));
   });
-  el.querySelectorAll('[data-play-item]').forEach(itemEl => itemEl.onclick = () => {
-    play(findItem(itemEl.dataset.playItem));
+  el.querySelectorAll('[data-play-id]').forEach(itemEl => itemEl.onclick = () => {
+    play(findItem(itemEl.dataset.playId));
   });
   el.querySelectorAll('[data-add]').forEach(b => b.onclick = (e) => {
     e.stopPropagation();
@@ -505,27 +553,42 @@ function renderAll() {
   renderList(document.getElementById('favoritesList'), state.favorites, 'favorite');
   renderList(document.getElementById('historyList'), state.history, 'history');
 
-  document.getElementById('apiKey').value = state.apiKey;
-  document.getElementById('proxyUrl').value = state.proxyUrl;
-  document.getElementById('m3uUrl').value = state.tvUrl;
+  const inputKey = document.getElementById('apiKey');
+  const inputProxy = document.getElementById('proxyUrl');
+  const inputM3u = document.getElementById('m3uUrl');
+  if (inputKey) inputKey.value = state.apiKey;
+  if (inputProxy) inputProxy.value = state.proxyUrl;
+  if (inputM3u) inputM3u.value = state.tvUrl;
 
   const btnAuto = document.getElementById('autoNextBtn');
-  btnAuto.textContent = `🔄 Tự phát: ${state.autoNext ? 'Bật' : 'Tắt'}`;
-  btnAuto.classList.toggle('active', state.autoNext);
+  if (btnAuto) {
+    btnAuto.textContent = `🔄 Tự phát: ${state.autoNext ? 'Bật' : 'Tắt'}`;
+    btnAuto.classList.toggle('active', state.autoNext);
+  }
 
   renderTv();
 }
 
 /* =========================================================================
-   5. BỘ TÌM KIẾM YOUTUBE & VOICE SEARCH
+   5. BỘ TÌM KIẾM ĐA KÊNH YOUTUBE (HOẠT ĐỘNG 100% TRÊN VERCEL)
    ========================================================================= */
 
 async function search(q) {
   q = (q || '').trim();
   if (!q) return;
-  const out = document.getElementById('results');
-  out.innerHTML = '<div class="empty">🔍 Đang tìm kiếm video...</div>';
 
+  // Nếu người dùng dán Link YouTube hoặc Video ID trực tiếp vào ô tìm kiếm
+  const directVid = vidFromUrl(q);
+  if (directVid) {
+    const item = { id: directVid, title: 'YouTube Video (' + directVid + ')', thumb: ytThumb(directVid), channel: 'YouTube' };
+    play(item);
+    return;
+  }
+
+  const out = document.getElementById('results');
+  if (out) out.innerHTML = '<div class="empty">🔍 Đang tìm kiếm video...</div>';
+
+  // 1. Ưu tiên Google API Key nếu có nhập
   if (state.apiKey) {
     try {
       const u = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=15&q=${encodeURIComponent(q)}&key=${encodeURIComponent(state.apiKey)}`;
@@ -542,35 +605,38 @@ async function search(q) {
         return;
       }
     } catch (e) {
-      console.warn('Google API failed, switching to public search...');
+      console.warn('Google API Key error:', e);
     }
   }
 
+  // 2. Các điểm cuối tìm kiếm công khai (Multi-endpoint fallback)
   const publicApis = [
-    `https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(q)}&filter=videos`,
-    `https://api.piped.private.coffee/search?q=${encodeURIComponent(q)}&filter=videos`,
-    `https://invidious.drgns.space/api/v1/search?q=${encodeURIComponent(q)}&type=video`
+    `https://invidious.drgns.space/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
+    `https://vid.puffyan.us/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
+    `https://inv.tux.pizza/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
+    `https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(q)}&filter=videos`
   ];
 
   for (const apiUrl of publicApis) {
     try {
-      const res = await fetch(apiUrl, { signal: AbortSignal.timeout(4000) });
+      const res = await fetch(apiUrl, { signal: AbortSignal.timeout(3500) });
       if (!res.ok) continue;
       const data = await res.json();
       let items = [];
-      if (Array.isArray(data.items)) {
+
+      if (Array.isArray(data)) {
+        items = data.map(x => ({
+          id: x.videoId || x.id,
+          title: x.title,
+          channel: x.author || x.uploaderName || 'YouTube',
+          thumb: (x.videoThumbnails && x.videoThumbnails[0] ? x.videoThumbnails[0].url : '') || ytThumb(x.videoId || x.id)
+        })).filter(x => x.id);
+      } else if (data && Array.isArray(data.items)) {
         items = data.items.map(x => ({
           id: (x.url || '').split('v=')[1] || x.id,
           title: x.title,
-          channel: x.uploaderName || x.author || 'YouTube',
+          channel: x.uploaderName || 'YouTube',
           thumb: x.thumbnail || ytThumb((x.url || '').split('v=')[1])
-        })).filter(x => x.id);
-      } else if (Array.isArray(data)) {
-        items = data.map(x => ({
-          id: x.videoId,
-          title: x.title,
-          channel: x.author,
-          thumb: x.videoThumbnails?.[0]?.url || ytThumb(x.videoId)
         })).filter(x => x.id);
       }
 
@@ -579,29 +645,33 @@ async function search(q) {
         return;
       }
     } catch (err) {
-      console.warn('Public API error:', apiUrl, err);
+      console.warn('Public API fallback error:', apiUrl, err);
     }
   }
 
-  out.innerHTML = `
-    <div class="empty">
-      Không tìm thấy kết quả hoặc lỗi mạng.<br>
-      <button class="pill primary" style="margin-top:10px" onclick="document.getElementById('urlModal').classList.add('open')">🔗 Mở trực tiếp bằng Link YouTube</button>
-    </div>`;
+  if (out) {
+    out.innerHTML = `
+      <div class="empty">
+        Không tìm thấy kết quả tự động.<br>
+        <button class="pill primary" style="margin-top:10px" onclick="document.getElementById('urlModal').classList.add('open')">🔗 Mở bằng Link YouTube trực tiếp</button>
+      </div>`;
+  }
 }
 
 function renderSearchResults(arr) {
   const out = document.getElementById('results');
+  if (!out) return;
   out.innerHTML = arr.length ? arr.map(x => itemHtml(x, 'result')).join('') : '<div class="empty">Không tìm thấy video nào.</div>';
-  document.getElementById('resultCount').textContent = arr.length + ' video';
+  const countEl = document.getElementById('resultCount');
+  if (countEl) countEl.textContent = arr.length + ' video';
 
   out.querySelectorAll('[data-play]').forEach(b => b.onclick = (e) => {
     e.stopPropagation();
     const item = arr.find(x => x.id === b.dataset.play);
     if (item) play(item);
   });
-  out.querySelectorAll('[data-play-item]').forEach(itemEl => itemEl.onclick = () => {
-    const item = arr.find(x => x.id === itemEl.dataset.playItem);
+  out.querySelectorAll('[data-play-id]').forEach(itemEl => itemEl.onclick = () => {
+    const item = arr.find(x => x.id === itemEl.dataset.playId);
     if (item) play(item);
   });
   out.querySelectorAll('[data-add]').forEach(b => b.onclick = (e) => {
@@ -618,16 +688,18 @@ function renderSearchResults(arr) {
 
 function showView(v) {
   document.querySelectorAll('.view').forEach(x => x.hidden = true);
-  document.getElementById('view-' + v).hidden = false;
-  
-  // Highlight active tab in both Sidebar and Mobile Bottom Nav
+  const targetView = document.getElementById('view-' + v);
+  if (targetView) targetView.hidden = false;
+
   document.querySelectorAll('.nav button, .mobile-nav button').forEach(x => x.classList.toggle('active', x.dataset.view === v));
-  document.getElementById('sidebar').classList.remove('open');
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) sidebar.classList.remove('open');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderTv() {
   const el = document.getElementById('tvList');
+  if (!el) return;
   el.innerHTML = state.tv.length ? state.tv.map((x, i) => `
     <div class="item">
       <div style="width:76px;height:43px;border-radius:8px;background:#202631;display:grid;place-items:center;font-size:20px;color:var(--accent)">📺</div>
@@ -642,7 +714,8 @@ function renderTv() {
 }
 
 async function loadM3u(isAuto = false) {
-  const url = document.getElementById('m3uUrl').value.trim() || DEFAULT_M3U_URL;
+  const inputM3u = document.getElementById('m3uUrl');
+  const url = (inputM3u ? inputM3u.value.trim() : '') || DEFAULT_M3U_URL;
   if (!url) return toast('Hãy nhập URL M3U');
 
   if (!isAuto) toast('Đang nạp danh sách kênh TV...');
@@ -675,6 +748,7 @@ function initVoiceSearch() {
   const btn = document.getElementById('btnMic');
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
+  if (!btn) return;
   if (!SpeechRecognition) {
     btn.style.display = 'none';
     return;
@@ -711,125 +785,158 @@ function initVoiceSearch() {
    ========================================================================= */
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Khởi tạo Firebase SDK
+  initFirebase();
+
   // Kiểm tra session đăng nhập
   checkPersistentSession();
 
   // Tab Đăng nhập / Đăng ký
-  document.getElementById('tabLoginBtn').onclick = () => switchTab('login');
-  document.getElementById('tabRegBtn').onclick = () => switchTab('reg');
+  const loginTabBtn = document.getElementById('tabLoginBtn');
+  const regTabBtn = document.getElementById('tabRegBtn');
+  if (loginTabBtn) loginTabBtn.onclick = () => switchTab('login');
+  if (regTabBtn) regTabBtn.onclick = () => switchTab('reg');
 
   // Submit Đăng nhập
-  document.getElementById('btnDoLogin').onclick = handleLogin;
-  document.getElementById('loginPass').onkeydown = (e) => { if (e.key === 'Enter') handleLogin(); };
+  const btnDoLogin = document.getElementById('btnDoLogin');
+  const loginPassInput = document.getElementById('loginPass');
+  if (btnDoLogin) btnDoLogin.onclick = handleLogin;
+  if (loginPassInput) loginPassInput.onkeydown = (e) => { if (e.key === 'Enter') handleLogin(); };
 
   // Submit Đăng ký & VietQR
-  document.getElementById('btnCreateQr').onclick = handleRegister;
+  const btnCreateQr = document.getElementById('btnCreateQr');
+  if (btnCreateQr) btnCreateQr.onclick = handleRegister;
 
   // Đăng xuất
-  document.getElementById('btnLogout').onclick = () => {
-    if (confirm('Bạn có chắc chắn muốn đăng xuất tài khoản?')) {
-      localStorage.removeItem('aptv_user');
-      location.reload();
-    }
-  };
+  const btnLogout = document.getElementById('btnLogout');
+  if (btnLogout) {
+    btnLogout.onclick = () => {
+      if (confirm('Bạn có chắc chắn muốn đăng xuất tài khoản?')) {
+        localStorage.removeItem('aptv_user');
+        location.reload();
+      }
+    };
+  }
 
-  // UI Navigation (Sidebar & Mobile Bottom Nav)
-  document.getElementById('searchForm').onsubmit = e => {
-    e.preventDefault();
-    search(document.getElementById('searchInput').value);
-  };
+  // UI Navigation
+  const searchForm = document.getElementById('searchForm');
+  if (searchForm) {
+    searchForm.onsubmit = e => {
+      e.preventDefault();
+      search(document.getElementById('searchInput').value);
+    };
+  }
 
   document.querySelectorAll('.nav button, .mobile-nav button').forEach(b => b.onclick = () => showView(b.dataset.view));
-  document.getElementById('menuBtn').onclick = () => document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('settingsTop').onclick = () => showView('settings');
-  document.getElementById('openUrlBtn').onclick = () => document.getElementById('urlModal').classList.add('open');
+  const menuBtn = document.getElementById('menuBtn');
+  const settingsTop = document.getElementById('settingsTop');
+  const openUrlBtn = document.getElementById('openUrlBtn');
 
-  document.getElementById('saveSettings').onclick = () => {
-    state.apiKey = document.getElementById('apiKey').value.trim();
-    state.proxyUrl = document.getElementById('proxyUrl').value.trim();
-    saveState();
-    toast('Đã lưu cài đặt');
-  };
+  if (menuBtn) menuBtn.onclick = () => document.getElementById('sidebar').classList.toggle('open');
+  if (settingsTop) settingsTop.onclick = () => showView('settings');
+  if (openUrlBtn) openUrlBtn.onclick = () => document.getElementById('urlModal').classList.add('open');
 
-  document.getElementById('autoNextBtn').onclick = () => {
-    state.autoNext = !state.autoNext;
-    saveState();
-    renderAll();
-    toast(state.autoNext ? 'Đã BẬT tự động chuyển bài' : 'Đã TẮT tự động chuyển bài');
-  };
+  const saveSettingsBtn = document.getElementById('saveSettings');
+  if (saveSettingsBtn) {
+    saveSettingsBtn.onclick = () => {
+      state.apiKey = document.getElementById('apiKey').value.trim();
+      state.proxyUrl = document.getElementById('proxyUrl').value.trim();
+      saveState();
+      toast('Đã lưu cài đặt');
+    };
+  }
 
-  document.getElementById('clearPlaylist').onclick = document.getElementById('clearPlaylist2').onclick = () => {
-    state.playlist = [];
-    currentIndex = -1;
-    saveState();
-    renderAll();
-    toast('Đã xóa danh sách phát');
-  };
-
-  document.getElementById('clearHistory').onclick = () => {
-    state.history = [];
-    saveState();
-    renderAll();
-    toast('Đã xóa lịch sử');
-  };
-
-  document.getElementById('prevBtn').onclick = playPrev;
-  document.getElementById('nextBtn').onclick = playNext;
-  document.getElementById('playCurrent').onclick = () => current ? play(current, false) : toast('Chưa có video đang phát');
-  document.getElementById('favCurrent').onclick = () => current && toggleFav(current);
-
-  document.getElementById('loadM3u').onclick = () => loadM3u(false);
-  document.getElementById('clearTv').onclick = () => {
-    state.tv = [];
-    saveState();
-    renderAll();
-    toast('Đã xóa cache TV');
-  };
-
-  document.getElementById('openManual').onclick = () => {
-    const id = vidFromUrl(document.getElementById('manualUrl').value);
-    if (!id) return toast('URL / Video ID không hợp lệ');
-    const x = { id, title: 'YouTube Video', thumb: ytThumb(id), channel: 'YouTube' };
-    document.getElementById('urlModal').classList.remove('open');
-    play(x);
-  };
-  document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => document.getElementById('urlModal').classList.remove('open'));
-
-  document.getElementById('exportBtn').onclick = () => {
-    const backup = { format: 'trung-play-backup', version: 3.0, createdAt: new Date().toISOString(), storage: state };
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
-    a.download = 'trung-play-backup-' + new Date().toISOString().slice(0, 10) + '.json';
-    a.click();
-    URL.revokeObjectURL(a.href);
-    toast('Đã xuất file Backup');
-  };
-
-  document.getElementById('importBtn').onclick = () => document.getElementById('importFile').click();
-  document.getElementById('importFile').onchange = async e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    try {
-      const j = JSON.parse(await f.text());
-      if (j.format !== 'trung-play-backup' || !j.storage) throw Error('File không hợp lệ');
-      state = { ...defaults, ...j.storage };
+  const autoNextBtn = document.getElementById('autoNextBtn');
+  if (autoNextBtn) {
+    autoNextBtn.onclick = () => {
+      state.autoNext = !state.autoNext;
       saveState();
       renderAll();
-      toast('Đã khôi phục dữ liệu từ Backup');
-    } catch (err) {
-      toast('Lỗi đọc file: ' + err.message);
-    }
-    e.target.value = '';
-  };
+      toast(state.autoNext ? 'Đã BẬT tự động phát' : 'Đã TẮT tự động phát');
+    };
+  }
 
-  document.getElementById('resetBtn').onclick = () => {
-    if (confirm('Xóa toàn bộ dữ liệu ứng dụng trên thiết bị này?')) {
-      localStorage.removeItem(KEY);
-      state = loadState();
-      renderAll();
-      toast('Đã đặt lại ứng dụng');
-    }
-  };
+  const clearPlaylistBtn1 = document.getElementById('clearPlaylist');
+  const clearPlaylistBtn2 = document.getElementById('clearPlaylist2');
+  const clearHistoryBtn = document.getElementById('clearHistory');
+
+  if (clearPlaylistBtn1) clearPlaylistBtn1.onclick = () => { state.playlist = []; currentIndex = -1; saveState(); renderAll(); toast('Đã xóa danh sách phát'); };
+  if (clearPlaylistBtn2) clearPlaylistBtn2.onclick = () => { state.playlist = []; currentIndex = -1; saveState(); renderAll(); toast('Đã xóa danh sách phát'); };
+  if (clearHistoryBtn) clearHistoryBtn.onclick = () => { state.history = []; saveState(); renderAll(); toast('Đã xóa lịch sử'); };
+
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const playCurrentBtn = document.getElementById('playCurrent');
+  const favCurrentBtn = document.getElementById('favCurrent');
+
+  if (prevBtn) prevBtn.onclick = playPrev;
+  if (nextBtn) nextBtn.onclick = playNext;
+  if (playCurrentBtn) playCurrentBtn.onclick = () => current ? play(current, false) : toast('Chưa có video đang phát');
+  if (favCurrentBtn) favCurrentBtn.onclick = () => current && toggleFav(current);
+
+  const loadM3uBtn = document.getElementById('loadM3u');
+  const clearTvBtn = document.getElementById('clearTv');
+  if (loadM3uBtn) loadM3uBtn.onclick = () => loadM3u(false);
+  if (clearTvBtn) clearTvBtn.onclick = () => { state.tv = []; saveState(); renderAll(); toast('Đã xóa cache TV'); };
+
+  const openManualBtn = document.getElementById('openManual');
+  if (openManualBtn) {
+    openManualBtn.onclick = () => {
+      const id = vidFromUrl(document.getElementById('manualUrl').value);
+      if (!id) return toast('URL / Video ID không hợp lệ');
+      const x = { id, title: 'YouTube Video', thumb: ytThumb(id), channel: 'YouTube' };
+      document.getElementById('urlModal').classList.remove('open');
+      play(x);
+    };
+  }
+
+  document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => document.getElementById('urlModal').classList.remove('open'));
+
+  const exportBtn = document.getElementById('exportBtn');
+  if (exportBtn) {
+    exportBtn.onclick = () => {
+      const backup = { format: 'trung-play-backup', version: 3.0, createdAt: new Date().toISOString(), storage: state };
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
+      a.download = 'trung-play-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast('Đã xuất file Backup');
+    };
+  }
+
+  const importBtn = document.getElementById('importBtn');
+  const importFile = document.getElementById('importFile');
+  if (importBtn) importBtn.onclick = () => importFile.click();
+  if (importFile) {
+    importFile.onchange = async e => {
+      const f = e.target.files[0];
+      if (!f) return;
+      try {
+        const j = JSON.parse(await f.text());
+        if (j.format !== 'trung-play-backup' || !j.storage) throw Error('File không hợp lệ');
+        state = { ...defaults, ...j.storage };
+        saveState();
+        renderAll();
+        toast('Đã khôi phục dữ liệu từ Backup');
+      } catch (err) {
+        toast('Lỗi đọc file: ' + err.message);
+      }
+      e.target.value = '';
+    };
+  }
+
+  const resetBtn = document.getElementById('resetBtn');
+  if (resetBtn) {
+    resetBtn.onclick = () => {
+      if (confirm('Xóa toàn bộ dữ liệu ứng dụng trên thiết bị này?')) {
+        localStorage.removeItem(KEY);
+        state = loadState();
+        renderAll();
+        toast('Đã đặt lại ứng dụng');
+      }
+    };
+  }
 
   renderAll();
   initVoiceSearch();
