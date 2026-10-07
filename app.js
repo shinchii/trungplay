@@ -191,7 +191,15 @@ async function handleLogin() {
     }
 
     const userData = docSnap.data();
-    if (userData.password_hash !== hashed) {
+    const storedPass = (userData.password_hash || userData.passwordHash || userData.password || '').toString().trim().toLowerCase();
+    const inputHash = hashed.toLowerCase().trim();
+    const inputPlain = pass.trim().toLowerCase();
+
+    // So sánh linh hoạt: Khớp MD5 (viết hoa/thường từ Android) HOẶC khớp Mật khẩu thô (nếu gõ trực tiếp trên Firebase)
+    const isMatch = (storedPass === inputHash) || (storedPass === inputPlain);
+
+    if (!isMatch) {
+      console.warn('Mật khẩu không khớp. Giá trị trên Firestore:', storedPass, '| Giá trị nhập:', inputHash);
       return showAuthError('Mật khẩu không chính xác. Vui lòng thử lại.');
     }
 
