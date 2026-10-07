@@ -1,7 +1,7 @@
 /* =========================================================================
    APTV CARPLAY & WEB STREAM - MAIN LOGIC (app.js)
    Firebase Firestore Project ID: trungplay-12c60
-   VietQR TPBank Account: 15940510182 (DOAN QUANG TRUNG)
+   Chức năng: Khóa 1 Tài khoản / 1 Thiết bị & Tối ưu UI Mobile CarPlay
    ========================================================================= */
 
 // 1. CẤU HÌNH FIREBASE FIRESTORE PROJECT (DÙNG CHUNG VỚI APP ANDROID)
@@ -28,7 +28,9 @@ const KEY = 'trungplay_v2_data';
 const defaults = {
   apiKey: '',
   proxyUrl: '',
-  playlist: [],
+  playlist: [
+    { id: 'L_LUpnjgPso', title: 'Tuyển Tập Nhạc Sàn Xe Hơi CarPlay Hot', channel: 'CarPlay Music', thumb: 'https://i.ytimg.com/vi/L_LUpnjgPso/mqdefault.jpg' }
+  ],
   favorites: [],
   history: [],
   tv: [],
@@ -39,7 +41,6 @@ const defaults = {
 let state = loadState();
 let current = null;
 let currentIndex = -1;
-let ytPlayer = null;
 let hlsPlayer = null;
 let realtimeUnsubscribe = null;
 
@@ -48,11 +49,11 @@ function hashMD5(str) {
   return CryptoJS.MD5(str).toString();
 }
 
-// TẠO HOẶC LẤY DEVICE ID CHO TRÌNH DUYỆT WEB
+// TẠO VÀ KHÓA DUY NHẤT 1 DEVICE ID CHO MỖI TRÌNH DUYỆT / ĐIỆN THOẠI
 function getDeviceId() {
   let id = localStorage.getItem('aptv_device_id');
   if (!id) {
-    id = 'WEB_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+    id = 'DEV_' + Math.random().toString(36).substr(2, 8) + '_' + Date.now().toString(36);
     localStorage.setItem('aptv_device_id', id);
   }
   return id;
@@ -97,7 +98,7 @@ function ytThumb(id) {
 }
 
 /* =========================================================================
-   3. QUẢN LÝ TÀI KHOẢN & ĐĂNG NHẬP / ĐĂNG KÝ THANH TOÁN VIETQR
+   3. KHÓA 1 TÀI KHOẢN / 1 THIẾT BỊ & ĐĂNG NHẬP / ĐĂNG KÝ
    ========================================================================= */
 
 function showAuthModal() {
@@ -124,7 +125,7 @@ function clearAuthError() {
   err.textContent = '';
 }
 
-// ĐỒNG BỘ SESSION ĐĂNG NHẬP VỚI LOCALSTORAGE ('aptv_user')
+// ĐỒNG BỘ SESSION & ĐẢM BẢO THIẾT BỊ ĐÚNG CHÍNH CHỦ
 function checkPersistentSession() {
   const sessionStr = localStorage.getItem('aptv_user');
   if (!sessionStr) {
@@ -136,6 +137,15 @@ function checkPersistentSession() {
     const user = JSON.parse(sessionStr);
     const now = new Date();
     const expireDate = new Date(user.expire_date);
+    const currentDevId = getDeviceId();
+
+    // Kiểm tra nếu thiết bị hiện tại không khớp với device_id đã khóa
+    if (user.device_id && user.device_id !== "" && user.device_id !== currentDevId) {
+      localStorage.removeItem('aptv_user');
+      showAuthModal();
+      showAuthError('Tài khoản này đã bị khóa trên 1 thiết bị khác!');
+      return false;
+    }
 
     if (user.status === 'ACTIVE' && expireDate > now) {
       hideAuthModal();
@@ -169,11 +179,12 @@ function updateUserUI(user) {
   }
 }
 
-// XỬ LÝ ĐĂNG NHẬP
+// XỬ LÝ ĐĂNG NHẬP KHÓA 1 TÀI KHOẢN / 1 THIẾT BỊ
 async function handleLogin() {
   clearAuthError();
   const phone = document.getElementById('loginPhone').value.trim();
   const pass = document.getElementById('loginPass').value.trim();
+  const currentDevId = getDeviceId();
 
   if (!phone || !pass) {
     return showAuthError('Vui lòng nhập đầy đủ Số điện thoại và Mật khẩu.');
@@ -195,12 +206,22 @@ async function handleLogin() {
     const inputHash = hashed.toLowerCase().trim();
     const inputPlain = pass.trim().toLowerCase();
 
-    // So sánh linh hoạt: Khớp MD5 (viết hoa/thường từ Android) HOẶC khớp Mật khẩu thô (nếu gõ trực tiếp trên Firebase)
+    // So sánh mật khẩu
     const isMatch = (storedPass === inputHash) || (storedPass === inputPlain);
 
     if (!isMatch) {
-      console.warn('Mật khẩu không khớp. Giá trị trên Firestore:', storedPass, '| Giá trị nhập:', inputHash);
       return showAuthError('Mật khẩu không chính xác. Vui lòng thử lại.');
+    }
+
+    // KHÓA 1 TÀI KHOẢN / 1 THIẾT BỊ
+    if (userData.device_id && userData.device_id !== "" && userData.device_id !== currentDevId) {
+      return showAuthError('⚠️ ĐĂNG NHẬP THẤT BẠI: Tài khoản này đã được liên kết với 1 thiết bị khác! Mỗi tài khoản chỉ được dùng trên 1 thiết bị.');
+    }
+
+    // Nếu tài khoản chưa có device_id (mới đăng ký hoặc Admin vừa reset), tự động trói với thiết bị này!
+    if (!userData.device_id || userData.device_id === "") {
+      await db.collection('users').doc(phone).update({ device_id: currentDevId });
+      userData.device_id = currentDevId;
     }
 
     const now = new Date();
@@ -208,7 +229,6 @@ async function handleLogin() {
 
     if (userData.status !== 'ACTIVE') {
       showAuthError('Tài khoản đang chờ kích hoạt. Vui lòng quét mã VietQR để thanh toán.');
-      // Hiển thị khung VietQR cho tài khoản này
       switchTab('reg');
       document.getElementById('regPhone').value = phone;
       triggerQrGenerationForPhone(phone, 100000);
@@ -219,11 +239,11 @@ async function handleLogin() {
       return showAuthError(`Tài khoản đã hết hạn vào ngày ${expireDate.toLocaleDateString('vi-VN')}. Vui lòng đăng ký gói mới.`);
     }
 
-    // ĐĂNG NHẬP THÀNH CÔNG
+    // ĐĂNG NHẬP THÀNH CÔNG -> LƯU SESSION
     localStorage.setItem('aptv_user', JSON.stringify(userData));
     hideAuthModal();
     updateUserUI(userData);
-    toast(`🎉 Đăng nhập thành công! Tài khoản: ${phone}`);
+    toast(`🎉 Đăng nhập thành công! Đã liên kết thiết bị này.`);
 
   } catch (err) {
     showAuthError('Lỗi kết nối Firestore: ' + err.message);
@@ -239,6 +259,7 @@ async function handleRegister() {
   const planDays = parseInt(planSelect.value);
   const selectedOpt = planSelect.options[planSelect.selectedIndex];
   const price = parseInt(selectedOpt.getAttribute('data-price') || '100000');
+  const currentDevId = getDeviceId();
 
   if (!phone || !pass) {
     return showAuthError('Vui lòng nhập Số điện thoại và Mật khẩu để tạo tài khoản.');
@@ -254,7 +275,7 @@ async function handleRegister() {
   const userData = {
     username: phone,
     password_hash: hashed,
-    device_id: getDeviceId(),
+    device_id: currentDevId, // Khóa ngay với thiết bị vừa đăng ký
     expire_date: expireDate,
     status: 'PENDING',
     created_at: now.toISOString()
@@ -262,17 +283,12 @@ async function handleRegister() {
 
   try {
     toast('Đang tạo hồ sơ trên Firestore...');
-    // Tạo document ID = Số điện thoại trong collection 'users'
     await db.collection('users').doc(phone).set(userData, { merge: true });
 
-    // Tạo mã VietQR TPBank chuẩn API
     const transferContent = `TP ${phone}`;
     const qrUrl = `https://img.vietqr.io/image/TPB-15940510182-compact2.png?amount=${price}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent("DOAN QUANG TRUNG")}`;
 
-    // Hiển thị VietQR UI
     displayQrCode(qrUrl, price, transferContent);
-
-    // Lắng nghe realtime Firestore status thay đổi sang 'ACTIVE'
     listenRealtimeStatus(phone);
 
   } catch (err) {
@@ -300,7 +316,6 @@ function displayQrCode(qrUrl, price, contentText) {
   qrContainer.scrollIntoView({ behavior: 'smooth' });
 }
 
-// LẮNG NGHE THỜI GIAN THỰC DOCUMENT TRÊN FIRESTORE (DÙNG CHO CHẾ ĐỘ DUYỆT TỰ ĐỘNG WEBHOOK SEPAY/CASSO)
 function listenRealtimeStatus(phone) {
   if (realtimeUnsubscribe) realtimeUnsubscribe();
 
@@ -346,18 +361,15 @@ function switchTab(tab) {
 
 function destroyPlayers() {
   if (hlsPlayer) {
-    hlsPlayer.destroy();
+    try { hlsPlayer.destroy(); } catch(e){}
     hlsPlayer = null;
   }
-  if (ytPlayer && typeof ytPlayer.destroy === 'function') {
-    try { ytPlayer.destroy(); } catch (e) {}
-    ytPlayer = null;
-  }
-  document.getElementById('playerWrap').innerHTML = '<div id="playerContainer"></div>';
+  const wrap = document.getElementById('playerWrap');
+  if (wrap) wrap.innerHTML = '';
 }
 
 function play(item, add = true) {
-  if (!item?.id) return;
+  if (!item || !item.id) return;
   destroyPlayers();
 
   current = item;
@@ -365,39 +377,16 @@ function play(item, add = true) {
 
   if (add) addHistory(item);
 
+  showView('home');
+
+  const wrap = document.getElementById('playerWrap');
+  wrap.innerHTML = `<iframe id="ytIframe" src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(item.id)}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen style="width:100%;height:100%;border:0;background:#000"></iframe>`;
+
   document.getElementById('nowTitle').textContent = item.title || 'YouTube Video';
   document.getElementById('nowSub').textContent = item.channel ? (item.channel + ' · YouTube') : ('YouTube · ' + item.id);
 
-  if (window.YT && window.YT.Player) {
-    ytPlayer = new YT.Player('playerContainer', {
-      height: '100%',
-      width: '100%',
-      videoId: item.id,
-      playerVars: {
-        autoplay: 1,
-        rel: 0,
-        modestbranding: 1,
-        playsinline: 1
-      },
-      events: {
-        'onStateChange': onYtStateChange
-      }
-    });
-  } else {
-    document.getElementById('playerWrap').innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(item.id)}?autoplay=1&rel=0&modestbranding=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
-  }
-
   toast('Đang phát: ' + (item.title || item.id));
   renderAll();
-}
-
-function onYtStateChange(event) {
-  if (event.data === 0) {
-    if (state.autoNext && state.playlist.length > 0) {
-      toast('Tự động chuyển bài tiếp theo...');
-      playNext();
-    }
-  }
 }
 
 function playNext() {
@@ -419,7 +408,7 @@ function playTv(ch) {
 
   const src = state.proxyUrl ? state.proxyUrl + encodeURIComponent(ch.url) : ch.url;
   const wrap = document.getElementById('playerWrap');
-  wrap.innerHTML = `<video id="tvVideo" controls autoplay playsinline style="width:100%;height:100%;background:#000"></video>`;
+  wrap.innerHTML = `<video id="tvVideo" controls autoplay playsinline style="width:100%;height:100%;background:#000;object-fit:contain"></video>`;
   const video = document.getElementById('tvVideo');
 
   if (window.Hls && Hls.isSupported() && (src.includes('.m3u8') || !video.canPlayType('application/vnd.apple.mpegurl'))) {
@@ -472,9 +461,9 @@ function itemHtml(item, kind = 'result') {
   const fav = state.favorites.some(x => x.id === item.id);
   const isPlaying = current && current.id === item.id;
   return `
-    <div class="item ${isPlaying ? 'active-play' : ''}">
+    <div class="item ${isPlaying ? 'active-play' : ''}" data-play-item="${esc(item.id)}">
       <img class="thumb" src="${esc(item.thumb || ytThumb(item.id))}" loading="lazy">
-      <div style="min-width:0">
+      <div style="min-width:0;cursor:pointer">
         <div class="item-title" title="${esc(item.title || 'YouTube video')}">${esc(item.title || 'YouTube video')}</div>
         <div class="item-sub">${esc(item.channel || 'YouTube')} · ${kind === 'history' ? 'Đã xem' : 'Video'}</div>
       </div>
@@ -488,9 +477,22 @@ function itemHtml(item, kind = 'result') {
 
 function renderList(el, arr, kind) {
   el.innerHTML = arr.length ? arr.map(x => itemHtml(x, kind)).join('') : `<div class="empty">Chưa có dữ liệu.</div>`;
-  el.querySelectorAll('[data-play]').forEach(b => b.onclick = () => play(findItem(b.dataset.play)));
-  el.querySelectorAll('[data-add]').forEach(b => b.onclick = () => addPlaylist(findItem(b.dataset.play)));
-  el.querySelectorAll('[data-fav]').forEach(b => b.onclick = () => toggleFav(findItem(b.dataset.fav)));
+
+  el.querySelectorAll('[data-play]').forEach(b => b.onclick = (e) => {
+    e.stopPropagation();
+    play(findItem(b.dataset.play));
+  });
+  el.querySelectorAll('[data-play-item]').forEach(itemEl => itemEl.onclick = () => {
+    play(findItem(itemEl.dataset.playItem));
+  });
+  el.querySelectorAll('[data-add]').forEach(b => b.onclick = (e) => {
+    e.stopPropagation();
+    addPlaylist(findItem(b.dataset.add));
+  });
+  el.querySelectorAll('[data-fav]').forEach(b => b.onclick = (e) => {
+    e.stopPropagation();
+    toggleFav(findItem(b.dataset.fav));
+  });
 }
 
 function findItem(id) {
@@ -508,7 +510,7 @@ function renderAll() {
   document.getElementById('m3uUrl').value = state.tvUrl;
 
   const btnAuto = document.getElementById('autoNextBtn');
-  btnAuto.textContent = `🔄 Tự phát tiếp: ${state.autoNext ? 'Bật' : 'Tắt'}`;
+  btnAuto.textContent = `🔄 Tự phát: ${state.autoNext ? 'Bật' : 'Tắt'}`;
   btnAuto.classList.toggle('active', state.autoNext);
 
   renderTv();
@@ -593,16 +595,35 @@ function renderSearchResults(arr) {
   out.innerHTML = arr.length ? arr.map(x => itemHtml(x, 'result')).join('') : '<div class="empty">Không tìm thấy video nào.</div>';
   document.getElementById('resultCount').textContent = arr.length + ' video';
 
-  out.querySelectorAll('[data-play]').forEach(b => b.onclick = () => play(arr.find(x => x.id === b.dataset.play)));
-  out.querySelectorAll('[data-add]').forEach(b => b.onclick = () => addPlaylist(arr.find(x => x.id === b.dataset.play)));
-  out.querySelectorAll('[data-fav]').forEach(b => b.onclick = () => toggleFav(arr.find(x => x.id === b.dataset.play)));
+  out.querySelectorAll('[data-play]').forEach(b => b.onclick = (e) => {
+    e.stopPropagation();
+    const item = arr.find(x => x.id === b.dataset.play);
+    if (item) play(item);
+  });
+  out.querySelectorAll('[data-play-item]').forEach(itemEl => itemEl.onclick = () => {
+    const item = arr.find(x => x.id === itemEl.dataset.playItem);
+    if (item) play(item);
+  });
+  out.querySelectorAll('[data-add]').forEach(b => b.onclick = (e) => {
+    e.stopPropagation();
+    const item = arr.find(x => x.id === b.dataset.add);
+    if (item) addPlaylist(item);
+  });
+  out.querySelectorAll('[data-fav]').forEach(b => b.onclick = (e) => {
+    e.stopPropagation();
+    const item = arr.find(x => x.id === b.dataset.fav);
+    if (item) toggleFav(item);
+  });
 }
 
 function showView(v) {
   document.querySelectorAll('.view').forEach(x => x.hidden = true);
   document.getElementById('view-' + v).hidden = false;
-  document.querySelectorAll('.nav button').forEach(x => x.classList.toggle('active', x.dataset.view === v));
+  
+  // Highlight active tab in both Sidebar and Mobile Bottom Nav
+  document.querySelectorAll('.nav button, .mobile-nav button').forEach(x => x.classList.toggle('active', x.dataset.view === v));
   document.getElementById('sidebar').classList.remove('open');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderTv() {
@@ -686,7 +707,7 @@ function initVoiceSearch() {
 }
 
 /* =========================================================================
-   6. BẮT SỰ KIỆN NÚT BẤM VÀ KHỞI TẠOỨNG DỤNG
+   6. BẮT SỰ KIỆN NÚT BẤM VÀ KHỞI TẠO ỨNG DỤNG
    ========================================================================= */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -712,13 +733,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // UI Navigation
+  // UI Navigation (Sidebar & Mobile Bottom Nav)
   document.getElementById('searchForm').onsubmit = e => {
     e.preventDefault();
     search(document.getElementById('searchInput').value);
   };
 
-  document.querySelectorAll('.nav button').forEach(b => b.onclick = () => showView(b.dataset.view));
+  document.querySelectorAll('.nav button, .mobile-nav button').forEach(b => b.onclick = () => showView(b.dataset.view));
   document.getElementById('menuBtn').onclick = () => document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('settingsTop').onclick = () => showView('settings');
   document.getElementById('openUrlBtn').onclick = () => document.getElementById('urlModal').classList.add('open');
@@ -775,7 +796,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => document.getElementById('urlModal').classList.remove('open'));
 
   document.getElementById('exportBtn').onclick = () => {
-    const backup = { format: 'trung-play-backup', version: 2.5, createdAt: new Date().toISOString(), storage: state };
+    const backup = { format: 'trung-play-backup', version: 3.0, createdAt: new Date().toISOString(), storage: state };
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
     a.download = 'trung-play-backup-' + new Date().toISOString().slice(0, 10) + '.json';

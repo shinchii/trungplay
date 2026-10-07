@@ -16,9 +16,6 @@
 <!-- HLS.js cho Stream M3U8 -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
-<!-- YouTube IFrame API -->
-<script src="https://www.youtube.com/iframe_api"></script>
-
 <style>
 :root {
   --bg: #090b0f;
@@ -33,13 +30,14 @@
   --shadow: 0 18px 50px rgba(0,0,0,.45);
   --r: 18px;
 }
-* { box-sizing: border-box; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body {
   margin: 0;
   min-height: 100%;
   background: radial-gradient(1000px 600px at 80% -10%, rgba(255,54,80,.15), transparent 60%), var(--bg);
   color: var(--text);
   font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overscroll-behavior-y: none;
 }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; border: 0; color: inherit; }
@@ -49,6 +47,7 @@ button { cursor: pointer; border: 0; color: inherit; }
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr);
   min-height: 100vh;
+  padding-bottom: 0px;
 }
 .sidebar {
   position: sticky;
@@ -96,6 +95,7 @@ button { cursor: pointer; border: 0; color: inherit; }
   color: #c7ced9;
   text-align: left;
   transition: all .2s;
+  min-height: 44px;
 }
 .nav button:hover, .nav button.active {
   background: #1b2029;
@@ -119,10 +119,10 @@ button { cursor: pointer; border: 0; color: inherit; }
   z-index: 15;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 22px;
+  gap: 10px;
+  padding: 12px 20px;
   border-bottom: 1px solid rgba(39,45,56,.75);
-  background: rgba(9, 11, 15, .84);
+  background: rgba(9, 11, 15, .88);
   backdrop-filter: blur(20px);
 }
 .mobile-menu { display: none; }
@@ -137,16 +137,19 @@ button { cursor: pointer; border: 0; color: inherit; }
   border-radius: 14px;
   overflow: hidden;
   transition: border-color .2s;
+  height: 44px;
 }
 .search:focus-within { border-color: var(--accent); }
 .search input {
   flex: 1;
   min-width: 0;
-  padding: 12px 14px;
+  padding: 0 14px;
+  height: 100%;
   background: transparent;
   border: 0;
   outline: 0;
   color: #fff;
+  font-size: 14px;
 }
 .search button {
   padding: 0 14px;
@@ -160,7 +163,7 @@ button { cursor: pointer; border: 0; color: inherit; }
 .search button:hover { color: #fff; }
 .btn-mic {
   color: var(--accent) !important;
-  font-size: 15px !important;
+  font-size: 16px !important;
 }
 .btn-mic.listening {
   animation: micPulse 1.2s infinite;
@@ -182,6 +185,7 @@ button { cursor: pointer; border: 0; color: inherit; }
   color: var(--good);
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .page { padding: 24px; max-width: 1450px; margin: auto; }
@@ -215,7 +219,7 @@ button { cursor: pointer; border: 0; color: inherit; }
   place-items: center;
   text-align: center;
   color: #778292;
-  padding: 40px;
+  padding: 30px;
 }
 .empty-player strong { display: block; color: #dce2eb; font-size: 20px; margin-bottom: 8px; }
 
@@ -227,12 +231,13 @@ button { cursor: pointer; border: 0; color: inherit; }
   background: #202631;
   border: 1px solid #2c3441;
   border-radius: 11px;
-  padding: 9px 13px;
+  padding: 10px 14px;
   transition: all .2s;
   font-size: 13px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-height: 40px;
 }
 .pill:hover { background: #29313d; }
 .pill.primary { background: var(--accent); color: #fff; border-color: transparent; }
@@ -246,7 +251,7 @@ button { cursor: pointer; border: 0; color: inherit; }
 .list { display: grid; gap: 8px; }
 .item {
   display: grid;
-  grid-template-columns: 76px minmax(0,1fr) auto;
+  grid-template-columns: 80px minmax(0,1fr) auto;
   gap: 12px;
   align-items: center;
   padding: 9px;
@@ -254,24 +259,26 @@ button { cursor: pointer; border: 0; color: inherit; }
   border-radius: 13px;
   background: #131820;
   transition: all .2s;
+  min-height: 58px;
 }
-.item:hover { border-color: #303845; background: #181f2a; }
+.item:hover, .item:active { border-color: #303845; background: #181f2a; }
 .item.active-play { border-color: var(--accent); background: rgba(255, 54, 80, 0.1); }
-.thumb { width: 76px; height: 43px; object-fit: cover; border-radius: 8px; background: #222; }
-.item-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #f3f4f6; }
+.thumb { width: 80px; height: 45px; object-fit: cover; border-radius: 8px; background: #222; }
+.item-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #f3f4f6; font-size: 14px; }
 .item-sub { font-size: 11px; color: #8792a1; margin-top: 3px; }
-.actions { display: flex; gap: 5px; }
+.actions { display: flex; gap: 6px; }
 .iconbtn {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   background: #202631;
   color: #b9c2ce;
   display: grid;
   place-items: center;
   transition: all .2s;
+  font-size: 15px;
 }
-.iconbtn:hover { background: #2b3440; color: #fff; }
+.iconbtn:hover, .iconbtn:active { background: #2b3440; color: #fff; }
 
 .content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .panel { padding: 18px; }
@@ -281,21 +288,53 @@ button { cursor: pointer; border: 0; color: inherit; }
 .setting small { color: var(--muted); }
 .field {
   width: 100%;
-  padding: 11px 12px;
+  padding: 12px 14px;
   border: 1px solid var(--line);
-  border-radius: 11px;
+  border-radius: 12px;
   background: #0e1218;
   color: #fff;
   outline: none;
+  font-size: 14px;
+  min-height: 44px;
 }
 .field:focus { border-color: #485263; }
+
+/* MOBILE BOTTOM NAVIGATION BAR */
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: rgba(10, 13, 18, 0.95);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  z-index: 1000;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: center;
+}
+.mobile-nav button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 100%;
+  background: transparent;
+  color: #838e9e;
+  font-size: 10px;
+  font-weight: 600;
+}
+.mobile-nav button .ico { font-size: 18px; }
+.mobile-nav button.active { color: var(--accent); }
 
 /* MODALS */
 .modal-back {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.75);
-  backdrop-filter: blur(8px);
+  background: rgba(0,0,0,.8);
+  backdrop-filter: blur(10px);
   display: none;
   place-items: center;
   padding: 18px;
@@ -310,7 +349,7 @@ button { cursor: pointer; border: 0; color: inherit; }
   border: 1px solid #303744;
   border-radius: 20px;
   padding: 24px;
-  box-shadow: 0 30px 100px rgba(0,0,0,.7);
+  box-shadow: 0 30px 100px rgba(0,0,0,.8);
 }
 .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .modal h2 { margin: 0; font-size: 20px; }
@@ -318,21 +357,18 @@ button { cursor: pointer; border: 0; color: inherit; }
 /* AUTHENTICATION MODAL (LOCK SCREEN & VIETQR) */
 #authModal {
   z-index: 9999;
-  background: rgba(5, 7, 10, 0.94);
-  backdrop-filter: blur(20px);
+  background: rgba(5, 7, 10, 0.96);
+  backdrop-filter: blur(24px);
 }
 .auth-box {
   width: min(480px, 94%);
   background: #11151c;
   border: 1px solid #28303f;
   border-radius: 24px;
-  padding: 28px 24px;
-  box-shadow: 0 25px 80px rgba(0,0,0,0.8);
+  padding: 28px 22px;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.9);
 }
-.auth-head {
-  text-align: center;
-  margin-bottom: 22px;
-}
+.auth-head { text-align: center; margin-bottom: 20px; }
 .auth-head .logo-big {
   width: 56px;
   height: 56px;
@@ -365,12 +401,13 @@ button { cursor: pointer; border: 0; color: inherit; }
 }
 .auth-tabs button {
   flex: 1;
-  padding: 10px;
+  padding: 11px;
   border-radius: 10px;
   background: transparent;
   color: var(--muted);
   font-weight: 600;
   transition: all .2s;
+  min-height: 44px;
 }
 .auth-tabs button.active {
   background: var(--accent);
@@ -381,8 +418,8 @@ button { cursor: pointer; border: 0; color: inherit; }
 .auth-form { display: grid; gap: 14px; }
 .btn-submit {
   width: 100%;
-  padding: 13px;
-  border-radius: 12px;
+  padding: 14px;
+  border-radius: 13px;
   background: linear-gradient(135deg, #ff5368, #dc2626);
   color: #fff;
   font-weight: 700;
@@ -390,12 +427,12 @@ button { cursor: pointer; border: 0; color: inherit; }
   box-shadow: 0 8px 25px rgba(239, 68, 68, 0.35);
   margin-top: 6px;
   transition: all .2s;
+  min-height: 48px;
 }
-.btn-submit:hover {
+.btn-submit:hover, .btn-submit:active {
   transform: translateY(-1px);
   box-shadow: 0 12px 30px rgba(239, 68, 68, 0.45);
 }
-.btn-submit:active { transform: scale(0.98); }
 
 .error-msg {
   color: #ff5368;
@@ -420,8 +457,8 @@ button { cursor: pointer; border: 0; color: inherit; }
 }
 @keyframes qrFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .qr-img {
-  width: 220px;
-  height: 220px;
+  width: 210px;
+  height: 210px;
   margin: 10px auto;
   border-radius: 12px;
   border: 3px solid #fff;
@@ -476,42 +513,33 @@ button { cursor: pointer; border: 0; color: inherit; }
 }
 .toast.show { opacity: 1; transform: none; }
 
+/* OPTIMIZATIONS FOR MOBILE (< 900px) */
 @media(max-width:900px) {
-  .app { grid-template-columns: 1fr; }
-  .sidebar {
-    position: fixed;
-    left: 0;
-    transform: translateX(-100%);
-    transition: .25s;
-    width: 270px;
-    box-shadow: 30px 0 80px rgba(0,0,0,.5);
-  }
-  .sidebar.open { transform: none; }
-  .mobile-menu {
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 11px;
-    background: #171c24;
-    font-size: 18px;
-  }
-  .hero { grid-template-columns: 1fr; }
+  .app { grid-template-columns: 1fr; padding-bottom: 60px; }
+  .sidebar { display: none; }
+  .mobile-menu { display: none; }
+  .mobile-nav { display: grid; }
+  .hero { grid-template-columns: 1fr; gap: 14px; }
   .content-grid { grid-template-columns: 1fr; }
+  .page { padding: 12px; }
+  .toast { bottom: 72px; right: 12px; left: 12px; text-align: center; }
 }
 @media(max-width:600px) {
-  .topbar { padding: 10px 14px; }
-  .page { padding: 12px; }
-  .hero { gap: 12px; }
-  .item { grid-template-columns: 62px minmax(0,1fr) auto; gap: 9px; }
-  .thumb { width: 62px; height: 36px; }
+  .topbar { padding: 10px 12px; }
+  .user-badge { display: none !important; }
+  .item { grid-template-columns: 70px minmax(0,1fr) auto; gap: 10px; padding: 8px; }
+  .thumb { width: 70px; height: 40px; }
+  .item-title { font-size: 13px; }
+  .controls { gap: 6px; }
+  .pill { padding: 8px 10px; font-size: 12px; min-height: 36px; }
+  .auth-box { padding: 20px 16px; }
 }
 </style>
 </head>
 <body>
 
 <div class="app">
-  <!-- SIDEBAR NAVIGATION -->
+  <!-- SIDEBAR NAVIGATION (DESKTOP) -->
   <aside class="sidebar" id="sidebar">
     <div class="brand">
       <div class="logo"></div>
@@ -526,8 +554,8 @@ button { cursor: pointer; border: 0; color: inherit; }
       <button data-view="settings"><span class="ico">⚙</span>Cài đặt</button>
     </nav>
     <div class="side-foot">
-      APTV CarPlay v2.5<br>
-      Firebase Firestore Sync
+      APTV CarPlay v3.0<br>
+      Khóa 1 ĐT / 1 Thiết bị
     </div>
   </aside>
 
@@ -536,14 +564,14 @@ button { cursor: pointer; border: 0; color: inherit; }
     <header class="topbar">
       <button class="mobile-menu" id="menuBtn">☰</button>
       <form class="search" id="searchForm">
-        <input id="searchInput" placeholder="Tìm video YouTube hoặc tên bài hát..." autocomplete="off">
+        <input id="searchInput" placeholder="Tìm nhạc YouTube..." autocomplete="off">
         <button type="button" id="btnMic" class="btn-mic" title="Tìm bằng giọng nói">🎙️</button>
         <button type="submit" title="Tìm kiếm">⌕</button>
       </form>
       <div class="user-badge" id="userBadge" style="display:none">
         <span class="user-phone" id="badgePhone">0965512394</span>
       </div>
-      <button class="iconbtn" id="openUrlBtn" title="Mở Link YouTube trực tiếp">🔗</button>
+      <button class="iconbtn" id="openUrlBtn" title="Mở Link YouTube">🔗</button>
       <button class="iconbtn" id="settingsTop" title="Cài đặt">⚙</button>
     </header>
 
@@ -565,10 +593,10 @@ button { cursor: pointer; border: 0; color: inherit; }
               <div class="now-title" id="nowTitle">Chưa có media đang phát</div>
               <div class="now-sub" id="nowSub">Danh sách phát sẽ hiển thị ở đây.</div>
               <div class="controls">
-                <button class="pill" id="prevBtn">⏮ Bài trước</button>
+                <button class="pill" id="prevBtn">⏮ Trước</button>
                 <button class="pill primary" id="playCurrent">▶ Mở lại</button>
-                <button class="pill" id="nextBtn">Bài sau ⏭</button>
-                <button class="pill" id="autoNextBtn">🔄 Tự phát tiếp: Bật</button>
+                <button class="pill" id="nextBtn">Sau ⏭</button>
+                <button class="pill" id="autoNextBtn">🔄 Tự phát: Bật</button>
                 <button class="pill" id="favCurrent">♡ Yêu thích</button>
               </div>
             </div>
@@ -666,7 +694,7 @@ button { cursor: pointer; border: 0; color: inherit; }
 
           <div class="panel">
             <div class="section-title"><h2>Sao lưu & Khôi phục</h2></div>
-            <p class="muted">Xuất danh sách yêu thích, lịch sử và cài đặt ra file JSON để chuyển sang thiết bị khác.</p>
+            <p class="muted">Xuất danh sách yêu thích, lịch sử ra file JSON.</p>
             <div class="controls">
               <button class="pill primary" id="exportBtn">📥 Xuất file Backup</button>
               <button class="pill" id="importBtn">📤 Nhập file Backup</button>
@@ -680,6 +708,15 @@ button { cursor: pointer; border: 0; color: inherit; }
     </div>
   </main>
 </div>
+
+<!-- MOBILE BOTTOM NAVIGATION BAR -->
+<nav class="mobile-nav">
+  <button class="active" data-view="home"><span class="ico">⌂</span><span>Trang chủ</span></button>
+  <button data-view="favorites"><span class="ico">♥</span><span>Yêu thích</span></button>
+  <button data-view="playlist"><span class="ico">☷</span><span>Playlist</span></button>
+  <button data-view="tv"><span class="ico">📺</span><span>TV Live</span></button>
+  <button data-view="settings"><span class="ico">⚙</span><span>Cài đặt</span></button>
+</nav>
 
 <!-- MODAL MỞ LINK TRỰC TIẾP -->
 <div class="modal-back" id="urlModal">
@@ -702,7 +739,7 @@ button { cursor: pointer; border: 0; color: inherit; }
     <div class="auth-head">
       <div class="logo-big"></div>
       <h1>Trung Play CarPlay</h1>
-      <p>Vui lòng đăng nhập tài khoản để tiếp tục sử dụng</p>
+      <p>Mỗi tài khoản chỉ được liên kết 1 thiết bị sử dụng</p>
     </div>
 
     <!-- TABS -->
