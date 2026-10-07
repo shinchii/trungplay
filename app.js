@@ -21,27 +21,27 @@ const appState = {
 
 // 100% Guaranteed Embedding-Allowed Vietnamese VOD Music Videos
 const defaultTracks = [
-  { id: 'DWcJFNfaw9c', title: 'Sơn Tùng M-TP | Hãy Trao Cho Anh ft. Snoop Dogg', channel: 'Sơn Tùng M-TP', thumb: 'https://img.youtube.com/vi/DWcJFNfaw9c/mqdefault.jpg' },
-  { id: 'L3wKzyIN1yk', title: 'Sơn Tùng M-TP | Chúng Ta Của Tương Lai (Official Music Video)', channel: 'Sơn Tùng M-TP', thumb: 'https://img.youtube.com/vi/L3wKzyIN1yk/mqdefault.jpg' },
-  { id: 'knW7-J7LBwc', title: 'Sơn Tùng M-TP | Lạc Trôi (Official Music Video)', channel: 'Sơn Tùng M-TP', thumb: 'https://img.youtube.com/vi/knW7-J7LBwc/mqdefault.jpg' },
-  { id: 'ab0r_zLz29U', title: 'Sơn Tùng M-TP | Muộn Rồi Mà Sao Còn (Official Music Video)', channel: 'Sơn Tùng M-TP', thumb: 'https://img.youtube.com/vi/ab0r_zLz29U/mqdefault.jpg' },
-  { id: '5qap5aO4i9A', title: 'Tuyển Tập Nhạc Lofi Chill Lái Xe Tiếng Việt Nhẹ Nhàng', channel: 'Lofi Vibe Việt', thumb: 'https://img.youtube.com/vi/5qap5aO4i9A/mqdefault.jpg' },
-  { id: '3w6p83B3n1w', title: 'Nhạc Trẻ Remix Vinahouse Cực Phiêu Cho Xe Ô Tô', channel: 'Nhạc Xe Ô Tô', thumb: 'https://img.youtube.com/vi/3w6p83B3n1w/mqdefault.jpg' },
-  { id: '7wtfhZwyrcc', title: 'Bolero Trữ Tình Chọn Lọc Tiếng Hát Hay Nhất Cho Bác Tài', channel: 'Bolero Tuyển Chọn', thumb: 'https://img.youtube.com/vi/7wtfhZwyrcc/mqdefault.jpg' },
-  { id: 'kXYiU_JCYtU', title: 'Nhạc Acoustic Chill Nhẹ Nhàng Thư Giãn Cực êm', channel: 'Acoustic Vibe', thumb: 'https://img.youtube.com/vi/kXYiU_JCYtU/mqdefault.jpg' }
+  { id: 'DWcJFNfaw9c', title: 'Sơn Tùng M-TP | Hãy Trao Cho Anh ft. Snoop Dogg', channel: 'Sơn Tùng M-TP', thumb: 'https://i.ytimg.com/vi/DWcJFNfaw9c/hqdefault.jpg' },
+  { id: 'L3wKzyIN1yk', title: 'Sơn Tùng M-TP | Chúng Ta Của Tương Lai (Official Music Video)', channel: 'Sơn Tùng M-TP', thumb: 'https://i.ytimg.com/vi/L3wKzyIN1yk/hqdefault.jpg' },
+  { id: 'knW7-J7LBwc', title: 'Sơn Tùng M-TP | Lạc Trôi (Official Music Video)', channel: 'Sơn Tùng M-TP', thumb: 'https://i.ytimg.com/vi/knW7-J7LBwc/hqdefault.jpg' },
+  { id: 'ab0r_zLz29U', title: 'Sơn Tùng M-TP | Muộn Rồi Mà Sao Còn (Official Music Video)', channel: 'Sơn Tùng M-TP', thumb: 'https://i.ytimg.com/vi/ab0r_zLz29U/hqdefault.jpg' },
+  { id: '5qap5aO4i9A', title: 'Tuyển Tập Nhạc Lofi Chill Lái Xe Tiếng Việt Nhẹ Nhàng', channel: 'Lofi Vibe Việt', thumb: 'https://i.ytimg.com/vi/5qap5aO4i9A/hqdefault.jpg' },
+  { id: '3w6p83B3n1w', title: 'Nhạc Trẻ Remix Vinahouse Cực Phiêu Cho Xe Ô Tô', channel: 'Nhạc Xe Ô Tô', thumb: 'https://i.ytimg.com/vi/3w6p83B3n1w/hqdefault.jpg' },
+  { id: '7wtfhZwyrcc', title: 'Bolero Trữ Tình Chọn Lọc Tiếng Hát Hay Nhất Cho Bác Tài', channel: 'Bolero Tuyển Chọn', thumb: 'https://i.ytimg.com/vi/7wtfhZwyrcc/hqdefault.jpg' },
+  { id: 'kXYiU_JCYtU', title: 'Nhạc Acoustic Chill Nhẹ Nhàng Thư Giãn Cực êm', channel: 'Acoustic Vibe', thumb: 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg' }
 ];
 
 // Rich Search Database for Vietnamese Artists & Categories
 const songDatabase = [
-  { keywords: ['sơn tùng', 'son tung', 'tùng sơn', 'tung son', 'm-tp', 'hãy trao cho anh', 'lạc trôi', 'chúng ta của tương lai'], id: 'L3wKzyIN1yk', title: 'Sơn Tùng M-TP | Chúng Ta Của Tương Lai', channel: 'Sơn Tùng M-TP', thumb: 'https://img.youtube.com/vi/L3wKzyIN1yk/mqdefault.jpg' },
-  { keywords: ['sơn tùng', 'son tung', 'tùng sơn', 'tung son', 'm-tp', 'hãy trao cho anh'], id: 'DWcJFNfaw9c', title: 'Sơn Tùng M-TP | Hãy Trao Cho Anh ft. Snoop Dogg', channel: 'Sơn Tùng M-TP', thumb: 'https://img.youtube.com/vi/DWcJFNfaw9c/mqdefault.jpg' },
-  { keywords: ['sơn tùng', 'son tung', 'lạc trôi', 'lac troi'], id: 'knW7-J7LBwc', title: 'Sơn Tùng M-TP | Lạc Trôi', channel: 'Sơn Tùng M-TP', thumb: 'https://img.youtube.com/vi/knW7-J7LBwc/mqdefault.jpg' },
-  { keywords: ['sơn tùng', 'son tung', 'muộn rồi mà sao còn'], id: 'ab0r_zLz29U', title: 'Sơn Tùng M-TP | Muộn Rồi Mà Sao Còn', channel: 'Sơn Tùng M-TP', thumb: 'https://img.youtube.com/vi/ab0r_zLz29U/mqdefault.jpg' },
-  { keywords: ['remix', 'vinahouse', 'nhạc trẻ', 'sôi động'], id: '3w6p83B3n1w', title: 'Nhạc Trẻ Remix Vinahouse Cực Phiêu 2026', channel: 'Nhạc Xe Ô Tô', thumb: 'https://img.youtube.com/vi/3w6p83B3n1w/mqdefault.jpg' },
-  { keywords: ['remix', 'tiktok', 'hot'], id: '1ZYbU85hi60', title: 'Nhạc Trẻ HOT TikTok Remix Năng Lượng Cho Bác Tài', channel: 'TikTok Remix', thumb: 'https://img.youtube.com/vi/1ZYbU85hi60/mqdefault.jpg' },
-  { keywords: ['bolero', 'trữ tình', 'nhạc vàng'], id: '7wtfhZwyrcc', title: 'Bolero Trữ Tình Chọn Lọc Tiếng Hát Hay Nhất', channel: 'Bolero Tuyển Chọn', thumb: 'https://img.youtube.com/vi/7wtfhZwyrcc/mqdefault.jpg' },
-  { keywords: ['lofi', 'chill', 'lái xe'], id: '5qap5aO4i9A', title: 'Tuyển Tập Lofi Tiếng Việt Nhẹ Nhàng Thư Giãn', channel: 'Lofi Vibe Việt', thumb: 'https://img.youtube.com/vi/5qap5aO4i9A/mqdefault.jpg' },
-  { keywords: ['acoustic', 'guitar', 'cà phê'], id: 'kXYiU_JCYtU', title: 'Nhạc Acoustic Chill Nhẹ Nhàng Thư Giãn', channel: 'Acoustic Vibe', thumb: 'https://img.youtube.com/vi/kXYiU_JCYtU/mqdefault.jpg' }
+  { keywords: ['sơn tùng', 'son tung', 'tùng sơn', 'tung son', 'm-tp', 'hãy trao cho anh', 'chúng ta của tương lai'], id: 'L3wKzyIN1yk', title: 'Sơn Tùng M-TP | Chúng Ta Của Tương Lai', channel: 'Sơn Tùng M-TP', thumb: 'https://i.ytimg.com/vi/L3wKzyIN1yk/hqdefault.jpg' },
+  { keywords: ['sơn tùng', 'son tung', 'tùng sơn', 'tung son', 'm-tp', 'hãy trao cho anh'], id: 'DWcJFNfaw9c', title: 'Sơn Tùng M-TP | Hãy Trao Cho Anh ft. Snoop Dogg', channel: 'Sơn Tùng M-TP', thumb: 'https://i.ytimg.com/vi/DWcJFNfaw9c/hqdefault.jpg' },
+  { keywords: ['sơn tùng', 'son tung', 'tùng sơn', 'tung son', 'lạc trôi', 'lac troi'], id: 'knW7-J7LBwc', title: 'Sơn Tùng M-TP | Lạc Trôi (Official MV)', channel: 'Sơn Tùng M-TP', thumb: 'https://i.ytimg.com/vi/knW7-J7LBwc/hqdefault.jpg' },
+  { keywords: ['sơn tùng', 'son tung', 'tùng sơn', 'tung son', 'muộn rồi mà sao còn'], id: 'ab0r_zLz29U', title: 'Sơn Tùng M-TP | Muộn Rồi Mà Sao Còn', channel: 'Sơn Tùng M-TP', thumb: 'https://i.ytimg.com/vi/ab0r_zLz29U/hqdefault.jpg' },
+  { keywords: ['remix', 'vinahouse', 'nhạc trẻ', 'sôi động'], id: '3w6p83B3n1w', title: 'Nhạc Trẻ Remix Vinahouse Cực Phiêu 2026', channel: 'Nhạc Xe Ô Tô', thumb: 'https://i.ytimg.com/vi/3w6p83B3n1w/hqdefault.jpg' },
+  { keywords: ['remix', 'tiktok', 'hot'], id: '1ZYbU85hi60', title: 'Nhạc Trẻ HOT TikTok Remix Năng Lượng Cho Bác Tài', channel: 'TikTok Remix', thumb: 'https://i.ytimg.com/vi/1ZYbU85hi60/hqdefault.jpg' },
+  { keywords: ['bolero', 'trữ tình', 'nhạc vàng'], id: '7wtfhZwyrcc', title: 'Bolero Trữ Tình Chọn Lọc Tiếng Hát Hay Nhất', channel: 'Bolero Tuyển Chọn', thumb: 'https://i.ytimg.com/vi/7wtfhZwyrcc/hqdefault.jpg' },
+  { keywords: ['lofi', 'chill', 'lái xe'], id: '5qap5aO4i9A', title: 'Tuyển Tập Lofi Tiếng Việt Nhẹ Nhàng Thư Giãn', channel: 'Lofi Vibe Việt', thumb: 'https://i.ytimg.com/vi/5qap5aO4i9A/hqdefault.jpg' },
+  { keywords: ['acoustic', 'guitar', 'cà phê'], id: 'kXYiU_JCYtU', title: 'Nhạc Acoustic Chill Nhẹ Nhàng Thư Giãn', channel: 'Acoustic Vibe', thumb: 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg' }
 ];
 
 // IPTV Live TV Channels List (HLS .m3u8 Streams)
@@ -233,18 +233,18 @@ function loadVideo(videoId, title, channel = 'TRUNG PLAY') {
   updateNowPlayingUI(title, channel);
   updateFavoriteButtonState();
 
-  // Load standard non-livestream VOD iframe embed
-  DOM.ytIframePlayer.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&enablejsapi=1&rel=0`;
+  // Load standard non-livestream VOD iframe embed with playsinline
+  DOM.ytIframePlayer.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&enablejsapi=1&rel=0&playsinline=1`;
   DOM.btnPlayPause.innerHTML = '<i class="fa-solid fa-pause"></i>';
 }
 
 function playYouTubeSearchPlaylist(query) {
-  appState.currentVideoTitle = `Tìm kiếm: "${query}"`;
-  appState.currentChannel = 'YouTube Search Results';
+  appState.currentVideoTitle = `Kết Quả Tìm Kiếm: "${query}"`;
+  appState.currentChannel = 'YouTube Live Search Embed';
   updateNowPlayingUI(appState.currentVideoTitle, appState.currentChannel);
 
   // Embed YouTube's Native Search Playlist directly into Player!
-  DOM.ytIframePlayer.src = `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(query)}&autoplay=1`;
+  DOM.ytIframePlayer.src = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(query)}&autoplay=1&playsinline=1`;
   appState.isPlaying = true;
   DOM.btnPlayPause.innerHTML = '<i class="fa-solid fa-pause"></i>';
 }
@@ -361,7 +361,7 @@ async function handleSearchSubmit() {
     return;
   }
 
-  DOM.searchResultsList.innerHTML = `<div style="text-align:center; padding:25px; color:var(--tp-cyan);"><i class="fa-solid fa-spinner fa-spin"></i> Đang tìm kiếm bài hát "${query}"...</div>`;
+  DOM.searchResultsList.innerHTML = `<div style="text-align:center; padding:25px; color:var(--tp-cyan);"><i class="fa-solid fa-spinner fa-spin"></i> Đang kết nối bài hát "${query}"...</div>`;
 
   let searchResults = [];
 
@@ -376,7 +376,7 @@ async function handleSearchSubmit() {
             id: item.id.videoId,
             title: item.snippet.title,
             channel: item.snippet.channelTitle,
-            thumb: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url || `https://img.youtube.com/vi/${item.id.videoId}/mqdefault.jpg`
+            thumb: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url || `https://i.ytimg.com/vi/${item.id.videoId}/hqdefault.jpg`
           }));
         }
       }
@@ -394,19 +394,18 @@ async function handleSearchSubmit() {
     }
   }
 
-  // 4. Default Search Option: Native YouTube Search Embed Trigger + Curated Track list
-  if (searchResults.length === 0) {
-    searchResults = [
-      {
-        id: `SEARCH:${query}`,
-        title: `Phát Kết Quả Tìm Kiếm Trực Tiếp: "${query}"`,
-        channel: 'Tự động phát kết quả YouTube',
-        thumb: 'https://img.youtube.com/vi/DWcJFNfaw9c/mqdefault.jpg',
-        isSearchPlaylist: true
-      },
-      ...defaultTracks
-    ];
-  }
+  // 4. Always provide the Instant Native YouTube Search Player Option at top!
+  searchResults = [
+    {
+      id: `SEARCH:${query}`,
+      title: `Phát Trực Tiếp Tất Cả Kết Quả Tìm Cho: "${query}"`,
+      channel: 'YouTube Native Direct Search',
+      thumb: 'https://i.ytimg.com/vi/DWcJFNfaw9c/hqdefault.jpg',
+      isSearchPlaylist: true
+    },
+    ...searchResults,
+    ...defaultTracks.filter(t => !searchResults.some(s => s.id === t.id))
+  ];
 
   renderListItems(DOM.searchResultsList, searchResults, true, query);
 }
@@ -451,13 +450,13 @@ function renderListItems(container, tracks, isModal = false, searchQuery = '') {
 
     if (t.isSearchPlaylist) {
       return `
-        <div class="media-item active" onclick="playYouTubeSearchPlaylist('${searchQuery.replace(/'/g, "\\'")}') ; closeAllModals();" style="border: 2px solid var(--tp-cyan);">
+        <div class="media-item active" onclick="playYouTubeSearchPlaylist('${searchQuery.replace(/'/g, "\\'")}') ; closeAllModals();" style="border: 2px solid var(--tp-cyan); background: rgba(0,229,255,0.15);">
           <div class="media-thumb" style="background: var(--tp-cyan); display:flex; align-items:center; justify-content:center; color:#070a12; font-size:24px;">
             <i class="fa-solid fa-play"></i>
           </div>
           <div class="media-info">
             <div class="media-name" style="color:var(--tp-cyan); font-weight:800;">${t.title}</div>
-            <div class="media-channel">${t.channel} • YouTube Direct Search Embed</div>
+            <div class="media-channel">Phát luồng kết quả tìm kiếm tự động từ YouTube</div>
           </div>
         </div>
       `;
@@ -466,7 +465,7 @@ function renderListItems(container, tracks, isModal = false, searchQuery = '') {
     return `
       <div class="media-item ${isActive ? 'active' : ''}" onclick="selectTrack('${t.id}', '${safeTitle}', '${safeChannel}')">
         <div class="media-thumb">
-          <img src="${t.thumb}" alt="${t.title}" loading="lazy" onerror="this.src='https://img.youtube.com/vi/${t.id}/hqdefault.jpg'">
+          <img src="${t.thumb}" alt="${t.title}" loading="lazy" onerror="this.src='https://i.ytimg.com/vi/${t.id}/hqdefault.jpg'">
         </div>
         <div class="media-info">
           <div class="media-name">${t.title}</div>
@@ -534,7 +533,7 @@ function isFavorite(id) {
 }
 
 function toggleCurrentFavorite() {
-  toggleFavoriteTrack(appState.currentVideoId, appState.currentVideoTitle, appState.currentChannel, `https://img.youtube.com/vi/${appState.currentVideoId}/mqdefault.jpg`);
+  toggleFavoriteTrack(appState.currentVideoId, appState.currentVideoTitle, appState.currentChannel, `https://i.ytimg.com/vi/${appState.currentVideoId}/hqdefault.jpg`);
 }
 
 window.toggleFavoriteTrack = function(id, title, channel, thumb) {

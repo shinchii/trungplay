@@ -99,8 +99,8 @@
       <!-- PLAYER CARD -->
       <div class="player-card">
         <div class="player-viewport">
-          <!-- 100% Guaranteed Working Non-livestream VOD Embed -->
-          <iframe id="ytIframePlayer" src="https://www.youtube-nocookie.com/embed/DWcJFNfaw9c?autoplay=1&enablejsapi=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+          <!-- 100% Guaranteed Working Non-livestream VOD Embed with playsinline -->
+          <iframe id="ytIframePlayer" src="https://www.youtube.com/embed/DWcJFNfaw9c?enablejsapi=1&rel=0&playsinline=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
         </div>
 
         <div class="player-controls">
@@ -165,7 +165,7 @@
     <div id="iptvPane" class="tab-pane">
       <div class="player-card">
         <div class="player-viewport">
-          <video id="iptvPlayer" controls autoplay playsinline></video>
+          <video id="iptvPlayer" controls playsinline></video>
         </div>
 
         <div class="now-playing-info">
