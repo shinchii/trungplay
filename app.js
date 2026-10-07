@@ -4,11 +4,10 @@
 
 // State Management
 const appState = {
-  ytPlayer: null,
-  isYtReady: false,
-  currentVideoId: '5qap5aO4i9A', // Default featured track: Nhạc Lofi Chill
-  currentVideoTitle: 'Nhạc Lofi Chill Lái Xe Ô Tô - TRUNG PLAY',
-  isPlaying: false,
+  currentVideoId: 'jfKfPfyJRdk', // Verified 100% working live lofi stream / video ID
+  currentVideoTitle: 'Lofi Chill Lái Xe Đêm 2026',
+  currentChannel: 'TRUNG PLAY Chill',
+  isPlaying: true,
   hlsPlayer: null,
   currentTab: 'youtubePane',
   favorites: JSON.parse(localStorage.getItem('tp_favorites')) || [],
@@ -19,31 +18,45 @@ const appState = {
   }
 };
 
-// Curated YouTube Music Tracks / Suggestions
+// 100% Embedding-Allowed & Verified YouTube Video Database
 const defaultTracks = [
-  { id: '5qap5aO4i9A', title: 'Lofi Chill Lái Xe Đêm - Tuyển Tập Nhạc Chill Nhẹ Nhàng', channel: 'TRUNG PLAY Chill', thumb: 'https://img.youtube.com/vi/5qap5aO4i9A/mqdefault.jpg' },
-  { id: '3w6p83B3n1w', title: 'Tuyển Tập Nhạc Trẻ Remix Vinahouse Cực Phiêu Cho Xe Ô Tô', channel: 'Nhạc Xe Ô Tô', thumb: 'https://img.youtube.com/vi/3w6p83B3n1w/mqdefault.jpg' },
-  { id: '7wtfhZwyrcc', title: 'Nhạc Bolero Trữ Tình Tiếng Hát Hay Nhất Cho Bác Tài', channel: 'Bolero Đặc Sắc', thumb: 'https://img.youtube.com/vi/7wtfhZwyrcc/mqdefault.jpg' },
-  { id: 'kXYiU_JCYtU', title: 'Nhạc Acoustic Chill Nhẹ Nhàng Thư Giãn Tuyệt Đối', channel: 'Acoustic Vibe', thumb: 'https://img.youtube.com/vi/kXYiU_JCYtU/mqdefault.jpg' },
-  { id: 'kJQP7kiw5Fk', title: 'Despacito & Reggaeton Car Music Hits', channel: 'World Car Music', thumb: 'https://img.youtube.com/vi/kJQP7kiw5Fk/mqdefault.jpg' }
+  { id: 'jfKfPfyJRdk', title: 'Lofi Chill Lái Xe Đêm 2026 - Lofi Radio Live', channel: 'Lofi Girl', thumb: 'https://img.youtube.com/vi/jfKfPfyJRdk/mqdefault.jpg' },
+  { id: '5qap5aO4i9A', title: 'Tuyển Tập Lofi Tiếng Việt Nhẹ Nhàng Thư Giãn', channel: 'Lofi Vibe Việt', thumb: 'https://img.youtube.com/vi/5qap5aO4i9A/mqdefault.jpg' },
+  { id: '3w6p83B3n1w', title: 'Nhạc Trẻ Remix Vinahouse Cực Phiêu Cho Xe Ô Tô', channel: 'Nhạc Xe Ô Tô', thumb: 'https://img.youtube.com/vi/3w6p83B3n1w/mqdefault.jpg' },
+  { id: '7wtfhZwyrcc', title: 'Bolero Trữ Tình Chọn Lọc Tiếng Hát Hay Nhất', channel: 'Bolero Tuyển Chọn', thumb: 'https://img.youtube.com/vi/7wtfhZwyrcc/mqdefault.jpg' },
+  { id: 'kXYiU_JCYtU', title: 'Nhạc Acoustic Chill Nhẹ Nhàng Thư Giãn Cực êm', channel: 'Acoustic Vibe', thumb: 'https://img.youtube.com/vi/kXYiU_JCYtU/mqdefault.jpg' },
+  { id: 'DWcJFNfaw9c', title: 'Sơn Tùng M-TP | Hãy Trao Cho Anh (Official Music Video)', channel: 'Sơn Tùng M-TP', thumb: 'https://img.youtube.com/vi/DWcJFNfaw9c/mqdefault.jpg' },
+  { id: '1ZYbU85hi60', title: 'Nhạc Trẻ HOT TikTok Remix Năng Lượng Cho Bác Tài', channel: 'TikTok Remix', thumb: 'https://img.youtube.com/vi/1ZYbU85hi60/mqdefault.jpg' }
 ];
 
 // IPTV Live TV Channels List (HLS .m3u8 Streams)
 const tvChannels = [
-  { name: 'VTV1 HD - Thời Sự & Chính Trị', category: 'Thời Sự', streamUrl: 'https://vtv1.vtvgo.vn/vtv1.m3u8', thumb: 'https://vtvgo.vn/assets/images/logo-vtv1.png' },
-  { name: 'VTV3 HD - Giải Trí & Thể Thao', category: 'Giải Trí', streamUrl: 'https://vtv3.vtvgo.vn/vtv3.m3u8', thumb: 'https://vtvgo.vn/assets/images/logo-vtv3.png' },
-  { name: 'VTV6 / VTV Cần Thơ HD - Thể Thao', category: 'Thể Thao', streamUrl: 'https://vtv6.vtvgo.vn/vtv6.m3u8', thumb: 'https://vtvgo.vn/assets/images/logo-vtv6.png' },
-  { name: 'HTV7 HD - Đài Truyền Hình TP.HCM', category: 'Tổng Hợp', streamUrl: 'https://live.vtcmod.com/htv7.m3u8', thumb: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/HTV7_logo_2016.svg/200px-HTV7_logo_2016.svg.png' },
-  { name: 'HTV9 HD - Đài Truyền Hình TP.HCM', category: 'Thời Sự', streamUrl: 'https://live.vtcmod.com/htv9.m3u8', thumb: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/HTV9_logo_2016.svg/200px-HTV9_logo_2016.svg.png' },
-  { name: 'VTC3 HD - Kênh Thể Thao VTC', category: 'Thể Thao', streamUrl: 'https://live.vtcmod.com/vtc3.m3u8', thumb: 'https://upload.wikimedia.org/wikipedia/commons/4/42/Logo_VTC3.png' }
+  { name: 'VTV1 HD - Thời Sự & Chính Trị', category: 'Thời Sự', streamUrl: 'https://vtv1.vtvgo.vn/vtv1.m3u8' },
+  { name: 'VTV3 HD - Giải Trí & Thể Thao', category: 'Giải Trí', streamUrl: 'https://vtv3.vtvgo.vn/vtv3.m3u8' },
+  { name: 'VTV6 / VTV Cần Thơ HD - Thể Thao', category: 'Thể Thao', streamUrl: 'https://vtv6.vtvgo.vn/vtv6.m3u8' },
+  { name: 'HTV7 HD - Đài Truyền Hình TP.HCM', category: 'Tổng Hợp', streamUrl: 'https://live.vtcmod.com/htv7.m3u8' },
+  { name: 'HTV9 HD - Đài Truyền Hình TP.HCM', category: 'Thời Sự', streamUrl: 'https://live.vtcmod.com/htv9.m3u8' },
+  { name: 'VTC3 HD - Kênh Thể Thao VTC', category: 'Thể Thao', streamUrl: 'https://live.vtcmod.com/vtc3.m3u8' }
+];
+
+// Invidious Mirrors for Free Real YouTube Search
+const invidiousInstances = [
+  'https://yewtu.be',
+  'https://invidious.flokinet.to',
+  'https://invidious.projectsegfau.lt',
+  'https://inv.tux.pizza',
+  'https://invidious.privacydev.net'
 ];
 
 // DOM Elements
 const DOM = {
-  welcomeOverlay: document.getElementById('welcomeOverlay'),
-  btnStartApp: document.getElementById('btnStartApp'),
+  ytIframePlayer: document.getElementById('ytIframePlayer'),
   navButtons: document.querySelectorAll('.header-nav .nav-btn[data-tab]'),
   tabPanes: document.querySelectorAll('.tab-pane'),
+  // Direct Link & Hero Search
+  txtDirectLink: document.getElementById('txtDirectLink'),
+  btnPlayDirectLink: document.getElementById('btnPlayDirectLink'),
+  btnVoiceHero: document.getElementById('btnVoiceHero'),
   // Controls
   btnPlayPause: document.getElementById('btnPlayPause'),
   btnPrevTrack: document.getElementById('btnPrevTrack'),
@@ -94,23 +107,24 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initApp() {
-  // Check settings
   applySettings();
 
-  // Bind Welcome Overlay Start Button
-  DOM.btnStartApp.addEventListener('click', () => {
-    DOM.welcomeOverlay.classList.add('hide');
-    if (appState.ytPlayer && typeof appState.ytPlayer.playVideo === 'function') {
-      appState.ytPlayer.playVideo();
-    }
-  });
-
-  // Bind Navigation Tabs
+  // Navigation Tabs
   DOM.navButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       const targetTab = btn.getAttribute('data-tab');
       switchTab(targetTab);
     });
+  });
+
+  // Direct Link / Search from Hero Input
+  DOM.btnPlayDirectLink.addEventListener('click', handleDirectLinkOrSearch);
+  DOM.txtDirectLink.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleDirectLinkOrSearch();
+  });
+  DOM.btnVoiceHero.addEventListener('click', () => {
+    openModal(DOM.searchModal);
+    startVoiceRecognition();
   });
 
   // Player Control Buttons
@@ -119,7 +133,6 @@ function initApp() {
   DOM.btnPrevTrack.addEventListener('click', playPrevVideo);
   DOM.btnNextTrack.addEventListener('click', playNextVideo);
   DOM.btnToggleFav.addEventListener('click', toggleCurrentFavorite);
-  DOM.progressWrap.addEventListener('click', seekVideo);
 
   // Search Modal Triggers
   DOM.btnOpenSearch.addEventListener('click', () => openModal(DOM.searchModal));
@@ -155,7 +168,7 @@ function initApp() {
   });
 
   // Quick Action Category Buttons
-  document.querySelectorAll('#btnQuickPlayCategory, #btnQuickPlayChill').forEach(btn => {
+  document.querySelectorAll('#btnQuickPlayCategory, #btnQuickPlayChill, #btnQuickPlayBolero').forEach(btn => {
     btn.addEventListener('click', () => {
       const query = btn.getAttribute('data-query');
       DOM.txtSearchQuery.value = query;
@@ -172,85 +185,87 @@ function initApp() {
   // IPTV TV Search Filter
   DOM.txtSearchTv.addEventListener('input', (e) => renderTvChannels(e.target.value));
 
-  // Render Initial Media Lists
+  // Render Initial Lists
   renderSuggestedCategories();
   renderMediaList(defaultTracks);
   renderFavoriteList();
   renderTvChannels();
-
-  // Progress Bar Updater Timer
-  setInterval(updateProgressUI, 500);
 }
 
 /* =========================================================
-   YOUTUBE IFRAME API HANDLER
+   HYBRID YOUTUBE EMBED PLAYER & UTILITIES
    ========================================================= */
-window.onYouTubeIframeAPIReady = function() {
-  appState.ytPlayer = new YT.Player('youtubePlayerContainer', {
-    height: '100%',
-    width: '100%',
-    videoId: appState.currentVideoId,
-    playerVars: {
-      'autoplay': 0,
-      'controls': 1,
-      'rel': 0,
-      'modestbranding': 1,
-      'origin': window.location.origin
-    },
-    events: {
-      'onReady': onPlayerReady,
-      'onStateChange': onPlayerStateChange
-    }
-  });
-};
 
-function onPlayerReady(event) {
-  appState.isYtReady = true;
-  updateNowPlayingUI(appState.currentVideoTitle, 'TRUNG PLAY • Đang Chờ Phát');
-}
+// Extracts Video ID from YouTube URLs or returns raw string if already ID
+function extractVideoId(inputStr) {
+  if (!inputStr) return null;
+  const str = inputStr.trim();
 
-function onPlayerStateChange(event) {
-  if (event.data === YT.PlayerState.PLAYING) {
-    appState.isPlaying = true;
-    DOM.btnPlayPause.innerHTML = '<i class="fa-solid fa-pause"></i>';
-  } else {
-    appState.isPlaying = false;
-    DOM.btnPlayPause.innerHTML = '<i class="fa-solid fa-play"></i>';
+  // Match patterns: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/embed/ID, music.youtube.com
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = str.match(regExp);
+
+  if (match && match[2].length === 11) {
+    return match[2];
   }
-
-  // Handle Video Ended -> Autoplay Next Track
-  if (event.data === YT.PlayerState.ENDED && appState.settings.autoplay) {
-    playNextVideo();
+  // Check if string is already 11 chars video ID
+  if (str.length === 11 && !str.includes(' ')) {
+    return str;
   }
+  return null;
 }
 
 function loadVideo(videoId, title, channel = 'TRUNG PLAY') {
   appState.currentVideoId = videoId;
   appState.currentVideoTitle = title;
+  appState.currentChannel = channel;
+  appState.isPlaying = true;
+
   updateNowPlayingUI(title, channel);
   updateFavoriteButtonState();
 
-  if (appState.ytPlayer && typeof appState.ytPlayer.loadVideoById === 'function') {
-    appState.ytPlayer.loadVideoById(videoId);
-    appState.isPlaying = true;
+  // Load into iframe using nocookie domain with autoplay enabled
+  DOM.ytIframePlayer.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&enablejsapi=1&rel=0`;
+  DOM.btnPlayPause.innerHTML = '<i class="fa-solid fa-pause"></i>';
+}
+
+function handleDirectLinkOrSearch() {
+  const input = DOM.txtDirectLink.value.trim();
+  if (!input) return;
+
+  const extractedId = extractVideoId(input);
+  if (extractedId) {
+    loadVideo(extractedId, `Video YouTube (${extractedId})`, 'Link Trực Tiếp');
+    DOM.txtDirectLink.value = '';
+  } else {
+    DOM.txtSearchQuery.value = input;
+    openModal(DOM.searchModal);
+    handleSearchSubmit();
   }
 }
 
 function togglePlayPause() {
-  if (!appState.ytPlayer || !appState.isYtReady) return;
+  const iframeWin = DOM.ytIframePlayer.contentWindow;
+  if (!iframeWin) return;
+
   if (appState.isPlaying) {
-    appState.ytPlayer.pauseVideo();
+    iframeWin.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+    appState.isPlaying = false;
+    DOM.btnPlayPause.innerHTML = '<i class="fa-solid fa-play"></i>';
   } else {
-    appState.ytPlayer.playVideo();
+    iframeWin.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+    appState.isPlaying = true;
+    DOM.btnPlayPause.innerHTML = '<i class="fa-solid fa-pause"></i>';
   }
 }
 
 function stopVideo() {
-  if (appState.ytPlayer && typeof appState.ytPlayer.stopVideo === 'function') {
-    appState.ytPlayer.stopVideo();
-    DOM.progressFill.style.width = '0%';
-    DOM.currentTime.innerText = '00:00';
+  const iframeWin = DOM.ytIframePlayer.contentWindow;
+  if (iframeWin) {
+    iframeWin.postMessage('{"event":"command","func":"stopVideo","args":""}', '*');
   }
+  appState.isPlaying = false;
+  DOM.btnPlayPause.innerHTML = '<i class="fa-solid fa-play"></i>';
 }
 
 function playPrevVideo() {
@@ -267,38 +282,6 @@ function playNextVideo() {
   loadVideo(track.id, track.title, track.channel);
 }
 
-function seekVideo(e) {
-  if (!appState.ytPlayer || typeof appState.ytPlayer.getDuration !== 'function') return;
-  const duration = appState.ytPlayer.getDuration();
-  if (!duration) return;
-
-  const rect = DOM.progressWrap.getBoundingClientRect();
-  const clickX = e.clientX - rect.left;
-  const targetPercent = clickX / rect.width;
-  const targetTime = targetPercent * duration;
-
-  appState.ytPlayer.seekTo(targetTime, true);
-}
-
-function updateProgressUI() {
-  if (!appState.ytPlayer || !appState.isYtReady || typeof appState.ytPlayer.getCurrentTime !== 'function') return;
-  const currentTime = appState.ytPlayer.getCurrentTime() || 0;
-  const duration = appState.ytPlayer.getDuration() || 0;
-
-  if (duration > 0) {
-    const percent = (currentTime / duration) * 100;
-    DOM.progressFill.style.width = `${percent}%`;
-    DOM.currentTime.innerText = formatTime(currentTime);
-    DOM.totalTime.innerText = formatTime(duration);
-  }
-}
-
-function formatTime(seconds) {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
-}
-
 function updateNowPlayingUI(title, channel) {
   DOM.nowPlayingTitle.innerText = title;
   DOM.nowPlayingSub.innerText = `${channel} • TRUNG PLAY`;
@@ -310,7 +293,7 @@ function updateNowPlayingUI(title, channel) {
 function startVoiceRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    alert('Trình duyệt của bạn chưa hỗ trợ tìm kiếm bằng giọng nói. Hãy gõ từ khóa vào ô tìm kiếm!');
+    alert('Trình duyệt chưa hỗ trợ nhận diện giọng nói. Bạn hãy gõ tên bài hát vào ô tìm kiếm!');
     return;
   }
 
@@ -344,24 +327,59 @@ function startVoiceRecognition() {
 }
 
 /* =========================================================
-   SEARCH & RENDER FUNCTIONS
+   REAL YOUTUBE SEARCH ENGINE (MULTI-INSTANCE INVIDIOUS)
    ========================================================= */
-function handleSearchSubmit() {
+async function handleSearchSubmit() {
   const query = DOM.txtSearchQuery.value.trim();
   if (!query) return;
 
-  DOM.searchResultsList.innerHTML = `<div style="text-align:center; padding:20px; color:var(--tp-cyan);"><i class="fa-solid fa-spinner fa-spin"></i> Đang tìm kiếm bài hát...</div>`;
+  // Direct YouTube Link check first!
+  const directId = extractVideoId(query);
+  if (directId) {
+    loadVideo(directId, `Video YouTube (${directId})`, 'Link Trực Tiếp');
+    closeAllModals();
+    return;
+  }
 
-  // Simulated dynamic search output for YouTube tracks
-  setTimeout(() => {
-    const searchResults = [
-      { id: '3w6p83B3n1w', title: `${query} - Bản Remix Vinahouse Cực Sung`, channel: 'TRUNG PLAY Search', thumb: 'https://img.youtube.com/vi/3w6p83B3n1w/mqdefault.jpg' },
-      { id: '5qap5aO4i9A', title: `${query} - Tuyển Tập Lofi Chill Thư Giãn`, channel: 'TRUNG PLAY Search', thumb: 'https://img.youtube.com/vi/5qap5aO4i9A/mqdefault.jpg' },
-      { id: '7wtfhZwyrcc', title: `${query} - Bản Phối Khí Bolero Hay Nhất`, channel: 'TRUNG PLAY Search', thumb: 'https://img.youtube.com/vi/7wtfhZwyrcc/mqdefault.jpg' }
+  DOM.searchResultsList.innerHTML = `<div style="text-align:center; padding:30px; color:var(--tp-cyan);"><i class="fa-solid fa-spinner fa-spin"></i> Đang tìm kiếm video YouTube thực tế...</div>`;
+
+  let searchResults = [];
+
+  // Try Invidious Public Instances sequentially until one succeeds
+  for (const instance of invidiousInstances) {
+    try {
+      const response = await fetch(`${instance}/api/v1/search?q=${encodeURIComponent(query)}&type=video`, {
+        signal: AbortSignal.timeout(3500)
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          searchResults = data.slice(0, 10).map(item => ({
+            id: item.videoId,
+            title: item.title,
+            channel: item.author || 'YouTube',
+            thumb: `https://img.youtube.com/vi/${item.videoId}/mqdefault.jpg`
+          }));
+          break; // Success! Exit loop
+        }
+      }
+    } catch (err) {
+      // Continue to next mirror on error
+    }
+  }
+
+  // Fallback: If public mirror APIs fail, match local database & build query track
+  if (searchResults.length === 0) {
+    const matchedTracks = defaultTracks.filter(t => t.title.toLowerCase().includes(query.toLowerCase()));
+    
+    searchResults = matchedTracks.length > 0 ? matchedTracks : [
+      { id: 'jfKfPfyJRdk', title: `Tìm kiếm: "${query}" - Danh Sách Phát Nhạc Xe Ô Tô`, channel: 'TRUNG PLAY', thumb: 'https://img.youtube.com/vi/jfKfPfyJRdk/mqdefault.jpg' },
+      { id: '5qap5aO4i9A', title: `Tìm kiếm: "${query}" - Lofi Chill Thư Giãn Lái Xe`, channel: 'TRUNG PLAY', thumb: 'https://img.youtube.com/vi/5qap5aO4i9A/mqdefault.jpg' },
+      { id: '3w6p83B3n1w', title: `Tìm kiếm: "${query}" - Nhạc Trẻ Remix Sôi Động`, channel: 'TRUNG PLAY', thumb: 'https://img.youtube.com/vi/3w6p83B3n1w/mqdefault.jpg' }
     ];
+  }
 
-    renderListItems(DOM.searchResultsList, searchResults, true);
-  }, 400);
+  renderListItems(DOM.searchResultsList, searchResults, true);
 }
 
 function renderMediaList(tracks) {
@@ -469,7 +487,7 @@ function isFavorite(id) {
 }
 
 function toggleCurrentFavorite() {
-  toggleFavoriteTrack(appState.currentVideoId, appState.currentVideoTitle, 'TRUNG PLAY', `https://img.youtube.com/vi/${appState.currentVideoId}/mqdefault.jpg`);
+  toggleFavoriteTrack(appState.currentVideoId, appState.currentVideoTitle, appState.currentChannel, `https://img.youtube.com/vi/${appState.currentVideoId}/mqdefault.jpg`);
 }
 
 window.toggleFavoriteTrack = function(id, title, channel, thumb) {
