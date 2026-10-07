@@ -54,12 +54,61 @@ let currentIndex = -1;
 let hlsPlayer = null;
 let realtimeUnsubscribe = null;
 
+// HÀM CHUYỂN ĐỔI NGÀY HẾT HẠN CHUẨN XÁC KHÔNG BAO GIỜ LỖI F5
+function parseExpireDate(raw) {
+  if (!raw) return new Date(0);
+  if (raw instanceof Date) return isNaN(raw.getTime()) ? new Date(0) : raw;
+
+  if (typeof raw === 'object') {
+    if (typeof raw.toDate === 'function') return raw.toDate();
+    if (typeof raw.seconds === 'number') return new Date(raw.seconds * 1000);
+    if (typeof raw._seconds === 'number') return new Date(raw._seconds * 1000);
+  }
+
+  if (typeof raw === 'number') {
+    return new Date(raw < 1e11 ? raw * 1000 : raw);
+  }
+
+  if (typeof raw === 'string') {
+    let str = raw.trim();
+    if (!str) return new Date(0);
+
+    if (/^\d+$/.test(str)) {
+      const num = parseFloat(str);
+      return new Date(num < 1e11 ? num * 1000 : num);
+    }
+
+    const viMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/);
+    if (viMatch) {
+      const [, day, month, year, hh = '00', mm = '00', ss = '00'] = viMatch;
+      const isoStr = `${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}T${hh.padStart(2,'0')}:${mm.padStart(2,'0')}:${ss.padStart(2,'0')}`;
+      const d = new Date(isoStr);
+      if (!isNaN(d.getTime())) return d;
+    }
+
+    if (str.includes(' ') && !str.includes('T')) {
+      str = str.replace(' ', 'T');
+    }
+
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  return new Date(0);
+}
+
+function getAccountExpireDate(user) {
+  if (!user) return new Date(0);
+  const raw = user.expire_date || user.expireDate || user.expire || user.expired_at || user.expireTime;
+  return parseExpireDate(raw);
+}
+
 // HÀM BĂM MD5 MẬT KHẨU
 function hashMD5(str) {
   return CryptoJS.MD5(str).toString();
 }
 
-// TẠO HOẶC LẤY DEVICE ID CHO TRÌNH DUYỆT WEB / MOBILE
+// TẠO VÀ KHÓA DUY NHẤT 1 DEVICE ID CHO MỖI TRÌNH DUYỆT / ĐIỆN THOẠI
 function getDeviceId() {
   let id = localStorage.getItem('aptv_device_id');
   if (!id) {
@@ -122,10 +171,12 @@ function showAuthModal() {
 
 function hideAuthModal() {
   const modal = document.getElementById('authModal');
-  if (modal) {
-    modal.classList.remove('open');
-    document.body.style.overflow = '';
-  }
+  const qrModal = document.getElementById('qrModal');
+  const accountModal = document.getElementById('accountModal');
+  if (modal) modal.classList.remove('open');
+  if (qrModal) qrModal.classList.remove('open');
+  if (accountModal) accountModal.classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 function showAuthError(msg) {
@@ -144,6 +195,7 @@ function clearAuthError() {
   }
 }
 
+// ĐỒNG BỘ SESSION CHÍNH XÁC KHÔNG BỊ LỖI F5 HẾT HẠN
 function checkPersistentSession() {
   const sessionStr = localStorage.getItem('aptv_user');
   if (!sessionStr) {
@@ -152,9 +204,9 @@ function checkPersistentSession() {
   }
 
   try {
-    const user = JSON.parse(sessionStr);
+    let user = JSON.parse(sessionStr);
     const now = new Date();
-    const expireDate = new Date(user.expire_date);
+    let expireDate = getAccountExpireDate(user);
     const currentDevId = getDeviceId();
 
     // Kiểm tra thiết bị trùng khớp
@@ -165,9 +217,15 @@ function checkPersistentSession() {
       return false;
     }
 
+    // Nếu status là ACTIVE nhưng expireDate không đọc được, fallback 1 năm tránh báo nhầm hết hạn F5
+    if (user.status === 'ACTIVE' && expireDate.getTime() === 0) {
+      expireDate = new Date(now.getTime() + 365 * 86400000);
+    }
+
     if (user.status === 'ACTIVE' && expireDate > now) {
       hideAuthModal();
       updateUserUI(user);
+      syncUserFromFirestore(user.username || user.phone);
       return true;
     } else {
       showAuthModal();
@@ -180,21 +238,99 @@ function checkPersistentSession() {
   }
 }
 
+async function syncUserFromFirestore(phone) {
+  if (!phone || !db) return;
+  try {
+    const docSnap = await db.collection('users').doc(phone).get();
+    if (docSnap.exists) {
+      const liveData = docSnap.data();
+      const currentDevId = getDeviceId();
+
+      if (liveData.device_id && liveData.device_id !== "" && liveData.device_id !== currentDevId) {
+        localStorage.removeItem('aptv_user');
+        showAuthModal();
+        showAuthError('Tài khoản này đã được đăng nhập ở thiết bị khác!');
+        return;
+      }
+
+      const liveExpire = getAccountExpireDate(liveData);
+      const now = new Date();
+
+      if (liveData.status === 'ACTIVE' && (liveExpire > now || liveExpire.getTime() === 0)) {
+        liveData.username = liveData.username || phone;
+        liveData.expire_date = liveExpire.getTime() > 0 ? liveExpire.toISOString() : new Date(now.getTime() + 365 * 86400000).toISOString();
+        localStorage.setItem('aptv_user', JSON.stringify(liveData));
+        updateUserUI(liveData);
+      } else if (liveData.status !== 'ACTIVE' || liveExpire <= now) {
+        localStorage.removeItem('aptv_user');
+        showAuthModal();
+        showAuthError(liveData.status !== 'ACTIVE' ? 'Tài khoản đang chờ thanh toán (PENDING).' : 'Tài khoản đã hết hạn sử dụng.');
+      }
+    }
+  } catch (e) {
+    console.warn("Background user sync warning:", e);
+  }
+}
+
 function updateUserUI(user) {
+  if (!user) return;
+  const username = user.username || user.phone || 'Tài khoản';
+  const expireDate = getAccountExpireDate(user);
+  const expireStr = expireDate.getTime() > 0 ? (expireDate.toLocaleDateString('vi-VN') + ' ' + expireDate.toLocaleTimeString('vi-VN')) : 'Không xác định';
+  const statusStr = user.status === 'ACTIVE' ? '🟢 Đã kích hoạt' : '🟡 Chờ kích hoạt';
+  const devId = user.device_id || getDeviceId();
+
+  // Topbar Badge
   const badge = document.getElementById('userBadge');
   const badgePhone = document.getElementById('badgePhone');
-  const accPhone = document.getElementById('accPhone');
-  const accExpire = document.getElementById('accExpire');
+  if (badge) badge.style.display = 'flex';
+  if (badgePhone) badgePhone.textContent = `👤 ${username}`;
 
-  if (user && user.username) {
-    if (badge) badge.style.display = 'flex';
-    if (badgePhone) badgePhone.textContent = `👤 ${user.username}`;
-    if (accPhone) accPhone.value = user.username;
-    if (accExpire) {
-      const d = new Date(user.expire_date);
-      accExpire.value = d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN');
-    }
+  // Sidebar User Card
+  const sideCard = document.getElementById('sideUserCard');
+  const sidePhone = document.getElementById('sideUserPhone');
+  const sideSub = document.getElementById('sideUserSub');
+  if (sideCard) sideCard.style.display = 'block';
+  if (sidePhone) sidePhone.textContent = username;
+  if (sideSub) sideSub.textContent = `${statusStr} | Hạn: ${expireStr.split(' ')[0]}`;
+
+  // Settings View Fields
+  const accPhone = document.getElementById('accPhone');
+  const accStatus = document.getElementById('accStatus');
+  const accExpire = document.getElementById('accExpire');
+  if (accPhone) accPhone.value = username;
+  if (accStatus) accStatus.value = statusStr;
+  if (accExpire) accExpire.value = expireStr;
+
+  // Account Modal Fields
+  const accModalPhone = document.getElementById('accModalPhone');
+  const accModalStatus = document.getElementById('accModalStatus');
+  const accModalExpire = document.getElementById('accModalExpire');
+  const accModalDevId = document.getElementById('accModalDevId');
+  if (accModalPhone) accModalPhone.value = username;
+  if (accModalStatus) accModalStatus.value = statusStr;
+  if (accModalExpire) accModalExpire.value = expireStr;
+  if (accModalDevId) accModalDevId.value = devId;
+}
+
+function showQrForCurrentUser() {
+  let phone = '';
+  const sessionStr = localStorage.getItem('aptv_user');
+  if (sessionStr) {
+    try {
+      const u = JSON.parse(sessionStr);
+      phone = u.username || u.phone || '';
+    } catch(e){}
   }
+  if (!phone) {
+    phone = (document.getElementById('loginPhone')?.value || document.getElementById('regPhone')?.value || '').trim();
+  }
+  if (!phone) {
+    phone = '0965512394';
+  }
+  const price = 100000;
+  triggerQrGenerationForPhone(phone, price);
+  toast('Đã mở Mã VietQR chuyển khoản!');
 }
 
 async function handleLogin() {
@@ -244,7 +380,7 @@ async function handleLogin() {
     }
 
     const now = new Date();
-    const expireDate = new Date(userData.expire_date);
+    const expireDate = getAccountExpireDate(userData);
 
     if (userData.status !== 'ACTIVE') {
       showAuthError('Tài khoản đang chờ kích hoạt. Vui lòng quét mã VietQR để thanh toán.');
@@ -258,6 +394,8 @@ async function handleLogin() {
       return showAuthError(`Tài khoản đã hết hạn vào ngày ${expireDate.toLocaleDateString('vi-VN')}. Vui lòng đăng ký gói mới.`);
     }
 
+    // ĐĂNG NHẬP THÀNH CÔNG -> LƯU SESSION CHUẨN ISO STRING
+    userData.expire_date = expireDate.toISOString();
     localStorage.setItem('aptv_user', JSON.stringify(userData));
     hideAuthModal();
     updateUserUI(userData);
@@ -325,22 +463,19 @@ function triggerQrGenerationForPhone(phone, price) {
   listenRealtimeStatus(phone);
 }
 
-// HIỂN THỊ MÃ VIETQR CHÍNH GIỮA MÀN HÌNH (DÀNH CHO XE KHÔNG CÓ CẢM ỨNG / CON LĂN)
+// HIỂN THỊ POPUP VIETQR CHÍNH GIỮA MÀN HÌNH (#qrModal)
 function displayQrCode(qrUrl, price, contentText) {
-  const qrContainer = document.getElementById('qrContainer');
+  const qrModal = document.getElementById('qrModal');
   const qrImg = document.getElementById('qrImage');
   const qrAmountText = document.getElementById('qrAmountText');
   const qrContentText = document.getElementById('qrContentText');
-  const regInputsArea = document.getElementById('regInputsArea');
 
   if (qrImg) qrImg.src = qrUrl;
   if (qrAmountText) qrAmountText.textContent = price.toLocaleString('vi-VN') + ' VNĐ';
   if (qrContentText) qrContentText.textContent = contentText;
 
-  if (qrContainer) {
-    qrContainer.style.display = 'block';
-    // Đẩy khung VietQR lên chính giữa màn hình modal
-    qrContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (qrModal) {
+    qrModal.classList.add('open');
   }
 }
 
@@ -353,6 +488,8 @@ function listenRealtimeStatus(phone) {
       const data = docSnap.data();
       if (data.status === 'ACTIVE') {
         if (realtimeUnsubscribe) realtimeUnsubscribe();
+        const d = parseExpireDate(data.expire_date);
+        data.expire_date = d.toISOString();
         localStorage.setItem('aptv_user', JSON.stringify(data));
         hideAuthModal();
         updateUserUI(data);
@@ -783,7 +920,6 @@ function initVoiceSearch() {
   };
 }
 
-// BỎ TỰ ĐỘNG CUỘN VỚI CON LĂN ĐIỀU KHIỂN (MAZDA / MERCEDES / BMW)
 function initRotaryKnobScroll() {
   document.addEventListener('focusin', (e) => {
     if (e.target && typeof e.target.scrollIntoView === 'function') {
@@ -814,15 +950,43 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnCreateQr = document.getElementById('btnCreateQr');
   if (btnCreateQr) btnCreateQr.onclick = handleRegister;
 
-  const btnLogout = document.getElementById('btnLogout');
-  if (btnLogout) {
-    btnLogout.onclick = () => {
-      if (confirm('Bạn có chắc chắn muốn đăng xuất tài khoản?')) {
-        localStorage.removeItem('aptv_user');
-        location.reload();
-      }
+  const closeQrBtn = document.getElementById('closeQrBtn');
+  if (closeQrBtn) {
+    closeQrBtn.onclick = () => {
+      const qrModal = document.getElementById('qrModal');
+      if (qrModal) qrModal.classList.remove('open');
     };
   }
+
+  // Bắt sự kiện xem Mã VietQR Popup
+  const sideQrBtn = document.getElementById('sideQrBtn');
+  const settingsQrBtn = document.getElementById('settingsQrBtn');
+  const accModalQrBtn = document.getElementById('accModalQrBtn');
+  const loginQrBtn = document.getElementById('loginQrBtn');
+  if (sideQrBtn) sideQrBtn.onclick = showQrForCurrentUser;
+  if (settingsQrBtn) settingsQrBtn.onclick = showQrForCurrentUser;
+  if (accModalQrBtn) accModalQrBtn.onclick = showQrForCurrentUser;
+  if (loginQrBtn) loginQrBtn.onclick = showQrForCurrentUser;
+
+  // Bắt sự kiện xem thông tin tài khoản (Topbar Badge)
+  const userBadge = document.getElementById('userBadge');
+  const accountModal = document.getElementById('accountModal');
+  if (userBadge && accountModal) {
+    userBadge.onclick = () => {
+      accountModal.classList.add('open');
+    };
+  }
+
+  const logoutAction = () => {
+    if (confirm('Bạn có chắc chắn muốn đăng xuất tài khoản?')) {
+      localStorage.removeItem('aptv_user');
+      location.reload();
+    }
+  };
+  const btnLogout = document.getElementById('btnLogout');
+  const accModalLogoutBtn = document.getElementById('accModalLogoutBtn');
+  if (btnLogout) btnLogout.onclick = logoutAction;
+  if (accModalLogoutBtn) accModalLogoutBtn.onclick = logoutAction;
 
   const searchForm = document.getElementById('searchForm');
   if (searchForm) {
@@ -895,7 +1059,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => document.getElementById('urlModal').classList.remove('open'));
+  document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => {
+    document.querySelectorAll('.modal-back').forEach(m => {
+      if (m.id !== 'authModal') m.classList.remove('open');
+    });
+  });
 
   const exportBtn = document.getElementById('exportBtn');
   if (exportBtn) {

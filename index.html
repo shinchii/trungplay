@@ -196,6 +196,29 @@ button { cursor: pointer; border: 0; color: inherit; }
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
+  cursor: pointer;
+  transition: all .2s;
+}
+.user-badge:hover {
+  background: rgba(67, 209, 158, 0.25);
+  border-color: var(--good);
+}
+.side-user-card {
+  margin: 0 10px 16px;
+  padding: 12px;
+  background: #151a22;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.side-user-phone {
+  font-weight: 700;
+  color: #fff;
+  font-size: 13px;
+}
+.side-user-sub {
+  font-size: 11px;
+  color: var(--good);
+  margin-top: 2px;
 }
 
 .page { padding: 24px; max-width: 1450px; margin: auto; }
@@ -345,8 +368,8 @@ button { cursor: pointer; border: 0; color: inherit; }
 .modal-back {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.82);
-  backdrop-filter: blur(12px);
+  background: rgba(0,0,0,.85);
+  backdrop-filter: blur(14px);
   display: none;
   place-items: center;
   padding: 14px;
@@ -366,12 +389,11 @@ button { cursor: pointer; border: 0; color: inherit; }
 .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .modal h2 { margin: 0; font-size: 20px; }
 
-/* AUTHENTICATION MODAL (HIỂN THỊ VIETQR CHÍNH GIỮA) */
+/* AUTHENTICATION MODAL */
 #authModal {
   z-index: 9999;
   background: rgba(5, 7, 10, 0.96);
   backdrop-filter: blur(24px);
-  overflow-y: auto;
 }
 .auth-box {
   width: min(480px, 96%);
@@ -460,33 +482,44 @@ button { cursor: pointer; border: 0; color: inherit; }
   display: none;
 }
 
-/* VIETQR PAYMENT DISPLAY (HIỂN THỊ CHÍNH GIỮA) */
-.qr-container {
-  display: none;
-  text-align: center;
-  margin-top: 12px;
-  padding: 16px;
-  background: #0a0d13;
-  border: 1px solid #212936;
-  border-radius: 18px;
-  animation: qrFade .3s ease;
+/* POPUP VIETQR THANH TOÁN RIÊNG TÁCH BỆT CHÍNH GIỮA MÀN HÌNH (#qrModal) */
+#qrModal {
+  z-index: 10000;
+  background: rgba(4, 6, 9, 0.95);
+  backdrop-filter: blur(20px);
 }
-@keyframes qrFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.qr-modal-box {
+  width: min(440px, 94%);
+  background: #121620;
+  border: 1px solid #303746;
+  border-radius: 24px;
+  padding: 24px;
+  text-align: center;
+  box-shadow: 0 30px 90px rgba(0,0,0,0.9);
+  margin: auto;
+  animation: modalScale .25s ease;
+}
+@keyframes modalScale { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+
 .qr-img {
-  width: 190px;
-  height: 190px;
-  margin: 8px auto;
-  border-radius: 12px;
+  width: 210px;
+  height: 210px;
+  margin: 12px auto;
+  border-radius: 14px;
   border: 3px solid #fff;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
   background: #fff;
   display: block;
 }
 .qr-info {
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.6;
   color: #d1d7e0;
-  margin-top: 8px;
+  margin-top: 10px;
+  background: #0b0e14;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid #232a36;
 }
 .qr-info strong { color: var(--accent); font-size: 14px; }
 .qr-status {
@@ -494,18 +527,18 @@ button { cursor: pointer; border: 0; color: inherit; }
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-top: 12px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: rgba(255, 184, 0, 0.1);
-  border: 1px solid rgba(255, 184, 0, 0.25);
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 184, 0, 0.12);
+  border: 1px solid rgba(255, 184, 0, 0.3);
   color: #ffb800;
   font-size: 12px;
   font-weight: 600;
 }
 .qr-status-spin {
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   border: 2px solid rgba(255, 184, 0, 0.3);
   border-top-color: #ffb800;
   border-radius: 50%;
@@ -543,7 +576,7 @@ button { cursor: pointer; border: 0; color: inherit; }
 }
 @media(max-width:600px) {
   .topbar { padding: 10px 12px; }
-  .user-badge { display: none !important; }
+  .user-badge { font-size: 11px; padding: 4px 8px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
   .item { grid-template-columns: 70px minmax(0,1fr) auto; gap: 10px; padding: 8px; }
   .thumb { width: 70px; height: 40px; }
   .item-title { font-size: 13px; }
@@ -562,6 +595,11 @@ button { cursor: pointer; border: 0; color: inherit; }
     <div class="brand">
       <div class="logo"></div>
       <b>Trung Play</b>
+    </div>
+    <div class="side-user-card" id="sideUserCard" style="display:none">
+      <div class="side-user-phone" id="sideUserPhone">0965512394</div>
+      <div class="side-user-sub" id="sideUserSub">🟢 Hoạt động | Hạn: --</div>
+      <button class="pill" id="sideQrBtn" style="padding:6px 10px;font-size:11px;margin-top:8px;width:100%;justify-content:center" tabindex="0">⚡ Xem Mã VietQR</button>
     </div>
     <nav class="nav">
       <button class="active" data-view="home" tabindex="0"><span class="ico">⌂</span>Trang chủ</button>
@@ -585,7 +623,7 @@ button { cursor: pointer; border: 0; color: inherit; }
         <button type="button" id="btnMic" class="btn-mic" title="Tìm bằng giọng nói" tabindex="0">🎙️</button>
         <button type="submit" title="Tìm kiếm" tabindex="0">⌕</button>
       </form>
-      <div class="user-badge" id="userBadge" style="display:none">
+      <div class="user-badge" id="userBadge" style="display:none" tabindex="0" title="Xem thông tin tài khoản">
         <span class="user-phone" id="badgePhone">0965512394</span>
       </div>
       <button class="iconbtn" id="openUrlBtn" title="Mở Link YouTube" tabindex="0">🔗</button>
@@ -703,10 +741,17 @@ button { cursor: pointer; border: 0; color: inherit; }
               <input class="field" id="accPhone" readonly>
             </div>
             <div class="setting">
+              <label>Trạng thái tài khoản</label>
+              <input class="field" id="accStatus" readonly>
+            </div>
+            <div class="setting">
               <label>Hạn sử dụng gói cước</label>
               <input class="field" id="accExpire" readonly>
             </div>
-            <button class="pill" id="btnLogout" style="color:#ff5368" tabindex="0">Đăng xuất tài khoản</button>
+            <div class="controls">
+              <button class="pill primary" id="settingsQrBtn" tabindex="0">⚡ Xem Mã VietQR Thanh Toán</button>
+              <button class="pill" id="btnLogout" style="color:#ff5368" tabindex="0">Đăng xuất tài khoản</button>
+            </div>
           </div>
 
           <div class="panel">
@@ -748,9 +793,58 @@ button { cursor: pointer; border: 0; color: inherit; }
     </div>
     <button class="pill primary" id="openManual" tabindex="0">Phát Video ngay</button>
   </div>
+<!-- MODAL THÔNG TIN TÀI KHOẢN (#accountModal) -->
+<div class="modal-back" id="accountModal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-head">
+      <h2>Thông tin Tài khoản</h2>
+      <button class="iconbtn" data-close tabindex="0">×</button>
+    </div>
+    <div class="setting">
+      <label>Số điện thoại tài khoản</label>
+      <input class="field" id="accModalPhone" readonly>
+    </div>
+    <div class="setting">
+      <label>Trạng thái kích hoạt</label>
+      <input class="field" id="accModalStatus" readonly>
+    </div>
+    <div class="setting">
+      <label>Hạn sử dụng gói cước</label>
+      <input class="field" id="accModalExpire" readonly>
+    </div>
+    <div class="setting">
+      <label>Mã thiết bị (Device ID)</label>
+      <input class="field" id="accModalDevId" readonly style="font-size:11px;color:#8792a1">
+    </div>
+    <div class="controls" style="margin-top:16px;flex-direction:column;gap:8px">
+      <button class="pill primary" id="accModalQrBtn" style="width:100%;justify-content:center" tabindex="0">⚡ HIỆN MÃ QR CHUYỂN KHOẢN GIA HẠN</button>
+      <button class="pill" id="accModalLogoutBtn" style="width:100%;justify-content:center;color:#ff5368" tabindex="0">Đăng xuất tài khoản</button>
+    </div>
+  </div>
 </div>
 
-<!-- MODAL BẢO MẬT & ĐĂNG NHẬP / ĐĂNG KÝ THANH TOÁN VIETQR -->
+<!-- POPUP THANH TOÁN VIETQR CHÍNH GIỮA (#qrModal) -->
+<div class="modal-back" id="qrModal">
+  <div class="qr-modal-box">
+    <div class="modal-head" style="margin-bottom:8px">
+      <h2 style="font-size:17px;color:#fff">Quét mã VietQR TPBank để kích hoạt</h2>
+      <button class="iconbtn" id="closeQrBtn" tabindex="0">×</button>
+    </div>
+    <img class="qr-img" id="qrImage" src="" alt="Mã VietQR TPBank">
+    <div class="qr-info">
+      Ngân hàng: <strong>TPBank (TPB)</strong> | Chủ TK: <strong>DOAN QUANG TRUNG</strong><br>
+      Số TK: <strong style="color:#fff;font-size:15px">15940510182</strong><br>
+      Số tiền: <strong id="qrAmountText" style="color:var(--good);font-size:16px">100.000 VNĐ</strong><br>
+      Nội dung CK: <strong id="qrContentText" style="color:#ff3650;font-size:15px;background:rgba(255,54,80,0.15);padding:2px 8px;border-radius:6px">TP 0965512394</strong>
+    </div>
+    <div class="qr-status">
+      <div class="qr-status-spin"></div>
+      <span>Đang chờ chuyển khoản... Kích hoạt tự động khi nhận tiền!</span>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BẢO MẬT & ĐĂNG NHẬP / ĐĂNG KÝ -->
 <div class="modal-back open" id="authModal">
   <div class="auth-box">
     <div class="auth-head">
@@ -779,46 +873,28 @@ button { cursor: pointer; border: 0; color: inherit; }
         <input class="field" id="loginPass" type="password" placeholder="Nhập mật khẩu" autocomplete="current-password" tabindex="0">
       </div>
       <button class="btn-submit" id="btnDoLogin" tabindex="0">ĐĂNG NHẬP NGAY</button>
+      <button type="button" class="pill" id="loginQrBtn" style="width:100%;margin-top:6px;justify-content:center" tabindex="0">⚡ XEM MÃ QR THANH TOÁN GIA HẠN</button>
     </div>
 
     <!-- TAB 2: FORM ĐĂNG KÝ (MẶC ĐỊNH CHỌN GÓI 100K) -->
     <div id="formReg" class="auth-form" style="display:none">
-      <div id="regInputsArea">
-        <div class="setting" style="margin-bottom:8px">
-          <label>Số điện thoại của bạn</label>
-          <input class="field" id="regPhone" type="tel" placeholder="Ví dụ: 0965512394" tabindex="0">
-        </div>
-        <div class="setting" style="margin-bottom:8px">
-          <label>Tạo mật khẩu</label>
-          <input class="field" id="regPass" type="password" placeholder="Tạo mật khẩu đăng nhập" tabindex="0">
-        </div>
-        <div class="setting" style="margin-bottom:8px">
-          <label>Chọn Gói cước Dịch vụ</label>
-          <select class="field" id="regPlan" tabindex="0">
-            <option value="7" data-price="20000">Gói Dùng thử: 20.000 VNĐ (7 ngày)</option>
-            <option value="365" data-price="100000" selected>Gói 1 Năm (Khuyên dùng): 100.000 VNĐ (365 ngày)</option>
-            <option value="3650" data-price="300000">Gói Vĩnh viễn: 300.000 VNĐ (10 năm)</option>
-          </select>
-        </div>
-        <button class="btn-submit" id="btnCreateQr" tabindex="0">⚡ TẠO MÃ THANH TOÁN QR</button>
+      <div class="setting" style="margin-bottom:8px">
+        <label>Số điện thoại của bạn</label>
+        <input class="field" id="regPhone" type="tel" placeholder="Ví dụ: 0965512394" tabindex="0">
       </div>
-
-      <!-- VIETQR DISPLAY CONTAINER (CHÍNH GIỮA) -->
-      <div class="qr-container" id="qrContainer">
-        <div style="font-weight:700;font-size:15px;color:#fff">Quét mã VietQR TPBank để kích hoạt</div>
-        <img class="qr-img" id="qrImage" src="" alt="Mã VietQR TPBank">
-        <div class="qr-info">
-          Ngân hàng: <strong>TPBank (TPB)</strong><br>
-          Chủ TK: <strong>DOAN QUANG TRUNG</strong><br>
-          Số TK: <strong style="color:#fff;font-size:15px">15940510182</strong><br>
-          Số tiền: <strong id="qrAmountText" style="color:var(--good);font-size:16px">100.000 VNĐ</strong><br>
-          Nội dung CK: <strong id="qrContentText" style="color:#ff3650;font-size:16px;background:rgba(255,54,80,0.15);padding:2px 8px;border-radius:6px">TP 0965512394</strong>
-        </div>
-        <div class="qr-status">
-          <div class="qr-status-spin"></div>
-          <span>Đang chờ thanh toán... Kích hoạt tự động khi nhận tiền!</span>
-        </div>
+      <div class="setting" style="margin-bottom:8px">
+        <label>Tạo mật khẩu</label>
+        <input class="field" id="regPass" type="password" placeholder="Tạo mật khẩu đăng nhập" tabindex="0">
       </div>
+      <div class="setting" style="margin-bottom:8px">
+        <label>Chọn Gói cước Dịch vụ</label>
+        <select class="field" id="regPlan" tabindex="0">
+          <option value="7" data-price="20000">Gói Dùng thử: 20.000 VNĐ (7 ngày)</option>
+          <option value="365" data-price="100000" selected>Gói 1 Năm (Khuyên dùng): 100.000 VNĐ (365 ngày)</option>
+          <option value="3650" data-price="300000">Gói Vĩnh viễn: 300.000 VNĐ (10 năm)</option>
+        </select>
+      </div>
+      <button class="btn-submit" id="btnCreateQr" tabindex="0">⚡ TẠO MÃ THANH TOÁN QR</button>
     </div>
   </div>
 </div>
