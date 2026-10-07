@@ -599,7 +599,6 @@ button { cursor: pointer; border: 0; color: inherit; }
     <div class="side-user-card" id="sideUserCard" style="display:none">
       <div class="side-user-phone" id="sideUserPhone">0965512394</div>
       <div class="side-user-sub" id="sideUserSub">🟢 Hoạt động | Hạn: --</div>
-      <button class="pill" id="sideQrBtn" style="padding:6px 10px;font-size:11px;margin-top:8px;width:100%;justify-content:center" tabindex="0">⚡ Xem Mã VietQR</button>
     </div>
     <nav class="nav">
       <button class="active" data-view="home" tabindex="0"><span class="ico">⌂</span>Trang chủ</button>
@@ -610,7 +609,7 @@ button { cursor: pointer; border: 0; color: inherit; }
       <button data-view="settings" tabindex="0"><span class="ico">⚙</span>Cài đặt</button>
     </nav>
     <div class="side-foot">
-      APTV CarPlay v3.0
+      Liên hệ: <b>09655.123.94</b><br>Tiktok: <b>Trung Xe Cộ</b>
     </div>
   </aside>
 
@@ -749,7 +748,6 @@ button { cursor: pointer; border: 0; color: inherit; }
               <input class="field" id="accExpire" readonly>
             </div>
             <div class="controls">
-              <button class="pill primary" id="settingsQrBtn" tabindex="0">⚡ Xem Mã VietQR Thanh Toán</button>
               <button class="pill" id="btnLogout" style="color:#ff5368" tabindex="0">Đăng xuất tài khoản</button>
             </div>
           </div>
@@ -818,8 +816,7 @@ button { cursor: pointer; border: 0; color: inherit; }
       <label>Mã thiết bị (Device ID)</label>
       <input class="field" id="accModalDevId" readonly style="font-size:11px;color:#8792a1">
     </div>
-    <div class="controls" style="margin-top:16px;flex-direction:column;gap:8px">
-      <button class="pill primary" id="accModalQrBtn" style="width:100%;justify-content:center" tabindex="0">⚡ HIỆN MÃ QR CHUYỂN KHOẢN GIA HẠN</button>
+    <div class="controls" style="margin-top:16px">
       <button class="pill" id="accModalLogoutBtn" style="width:100%;justify-content:center;color:#ff5368" tabindex="0">Đăng xuất tài khoản</button>
     </div>
   </div>
@@ -875,7 +872,6 @@ button { cursor: pointer; border: 0; color: inherit; }
         <input class="field" id="loginPass" type="password" placeholder="Nhập mật khẩu" autocomplete="current-password" tabindex="0">
       </div>
       <button class="btn-submit" id="btnDoLogin" tabindex="0">ĐĂNG NHẬP NGAY</button>
-      <button type="button" class="pill" id="loginQrBtn" style="width:100%;margin-top:6px;justify-content:center" tabindex="0">⚡ XEM MÃ QR THANH TOÁN GIA HẠN</button>
     </div>
 
     <!-- TAB 2: FORM ĐĂNG KÝ (MẶC ĐỊNH CHỌN GÓI 100K) -->
@@ -893,7 +889,7 @@ button { cursor: pointer; border: 0; color: inherit; }
         <select class="field" id="regPlan" tabindex="0">
           <option value="7" data-price="20000">Gói Dùng thử: 20.000 VNĐ (7 ngày)</option>
           <option value="365" data-price="100000" selected>Gói 1 Năm (Khuyên dùng): 100.000 VNĐ (365 ngày)</option>
-          <option value="3650" data-price="300000">Gói Vĩnh viễn: 300.000 VNĐ (10 năm)</option>
+          <option value="3650" data-price="300000">Gói Vĩnh viễn: 300.000 VNĐ</option>
         </select>
       </div>
       <button class="btn-submit" id="btnCreateQr" tabindex="0">⚡ TẠO MÃ THANH TOÁN QR</button>

@@ -958,16 +958,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // Bắt sự kiện xem Mã VietQR Popup
-  const sideQrBtn = document.getElementById('sideQrBtn');
-  const settingsQrBtn = document.getElementById('settingsQrBtn');
-  const accModalQrBtn = document.getElementById('accModalQrBtn');
-  const loginQrBtn = document.getElementById('loginQrBtn');
-  if (sideQrBtn) sideQrBtn.onclick = showQrForCurrentUser;
-  if (settingsQrBtn) settingsQrBtn.onclick = showQrForCurrentUser;
-  if (accModalQrBtn) accModalQrBtn.onclick = showQrForCurrentUser;
-  if (loginQrBtn) loginQrBtn.onclick = showQrForCurrentUser;
-
   // Bắt sự kiện xem thông tin tài khoản (Topbar Badge)
   const userBadge = document.getElementById('userBadge');
   const accountModal = document.getElementById('accountModal');
