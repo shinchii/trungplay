@@ -6,12 +6,13 @@
 
 // 1. CẤU HÌNH FIREBASE FIRESTORE PROJECT (DÙNG CHUNG VỚI APP ANDROID)
 const firebaseConfig = {
-  apiKey: "AIzaSyC_PLACEHOLDER_KEY_TRUNGPLAY", // API Key dự án trungplay-12c60
+  apiKey: "AIzaSyD_T8u2_fHLSVyrMnOvIRYJULuLrF5fxJA",
   authDomain: "trungplay-12c60.firebaseapp.com",
   projectId: "trungplay-12c60",
-  storageBucket: "trungplay-12c60.appspot.com",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:trungplay12c60app"
+  storageBucket: "trungplay-12c60.firebasestorage.app",
+  messagingSenderId: "642083340590",
+  appId: "1:642083340590:web:151c35a53783ab31b93abf",
+  measurementId: "G-4LG6EV6HM4"
 };
 
 // Khởi tạo Firebase SDK compat
