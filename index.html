@@ -67,12 +67,12 @@
       <div class="hero-banner">
         <div class="hero-tag"><i class="fa-solid fa-car"></i> CHẾ ĐỘ XE Ô TÔ CHUYÊN NGHIỆP</div>
         <h2 class="hero-title">Trải Nghiệm Âm Nhạc Trực Tuyến Đỉnh Cao</h2>
-        <p class="hero-desc">Nhập từ khóa hoặc dán link YouTube bất kỳ để phát nhạc trực tiếp trên xe của bạn.</p>
+        <p class="hero-desc">Nhập tên ca sĩ, bài hát (ví dụ: Sơn Tùng, Tùng Sơn, Bolero...) hoặc dán link YouTube để phát ngay.</p>
         
         <!-- DIRECT YOUTUBE LINK / SEARCH BAR IN HERO -->
         <div class="search-input-group" style="margin-bottom: 14px;">
-          <input type="text" id="txtDirectLink" class="search-input" placeholder="Dán link YouTube (ví dụ: https://youtu.be/...) hoặc nhập tên bài hát...">
-          <button id="btnPlayDirectLink" class="btn-voice" style="right: 50px; background: var(--tp-cyan); color: #070a12;" title="Phát ngay">
+          <input type="text" id="txtDirectLink" class="search-input" placeholder="Nhập tên bài hát hoặc dán link YouTube (https://youtu.be/...)...">
+          <button id="btnPlayDirectLink" class="btn-voice" style="right: 50px; background: var(--tp-cyan); color: #070a12;" title="Phát/Tìm kiếm ngay">
             <i class="fa-solid fa-play"></i>
           </button>
           <button id="btnVoiceHero" class="btn-voice" title="Tìm bằng giọng nói">
@@ -81,7 +81,10 @@
         </div>
 
         <div class="hero-actions">
-          <button class="nav-btn active" id="btnQuickPlayCategory" data-query="Nhạc trẻ remix 2026">
+          <button class="nav-btn active" id="btnQuickPlaySonTung" data-query="Sơn Tùng M-TP">
+            <i class="fa-solid fa-star"></i> Sơn Tùng M-TP
+          </button>
+          <button class="nav-btn" id="btnQuickPlayCategory" data-query="Nhạc trẻ remix 2026">
             <i class="fa-solid fa-fire"></i> Nhạc Trẻ Remix
           </button>
           <button class="nav-btn" id="btnQuickPlayChill" data-query="Lofi chill lái xe">
@@ -96,7 +99,8 @@
       <!-- PLAYER CARD -->
       <div class="player-card">
         <div class="player-viewport">
-          <iframe id="ytIframePlayer" src="https://www.youtube-nocookie.com/embed/jfKfPfyJRdk?autoplay=1&enablejsapi=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+          <!-- 100% Guaranteed Working Non-livestream VOD Embed -->
+          <iframe id="ytIframePlayer" src="https://www.youtube-nocookie.com/embed/DWcJFNfaw9c?autoplay=1&enablejsapi=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
         </div>
 
         <div class="player-controls">
@@ -126,8 +130,8 @@
         </div>
 
         <div class="now-playing-info">
-          <h3 class="now-playing-title" id="nowPlayingTitle">Lofi Chill Lái Xe Đêm 2026</h3>
-          <p class="now-playing-sub" id="nowPlayingSub">TRUNG PLAY • Đang Phát</p>
+          <h3 class="now-playing-title" id="nowPlayingTitle">Sơn Tùng M-TP | Hãy Trao Cho Anh ft. Snoop Dogg</h3>
+          <p class="now-playing-sub" id="nowPlayingSub">Sơn Tùng M-TP • TRUNG PLAY</p>
         </div>
       </div>
 
@@ -135,7 +139,7 @@
       <div class="section-card">
         <div class="section-header">
           <div class="section-title">
-            <i class="fa-solid fa-compass" style="color: var(--tp-cyan);"></i> Chủ Đề Nhạc Xe Ô Tô Đề Xuất
+            <i class="fa-solid fa-compass" style="color: var(--tp-cyan);"></i> Chủ Đề Nhạc Xe Ô Tô Nổi Bật
           </div>
         </div>
         <div class="media-list" id="suggestedCategories">
@@ -147,7 +151,7 @@
       <div class="section-card">
         <div class="section-header">
           <div class="section-title">
-            <i class="fa-solid fa-clock-rotate-left" style="color: var(--tp-gold);"></i> Danh Sách Bài Hát Nổi Bật
+            <i class="fa-solid fa-music" style="color: var(--tp-gold);"></i> Danh Sách Bài Hát Tuyển Chọn Việt Nam
           </div>
         </div>
         <div class="media-list" id="ytMediaList">
@@ -223,7 +227,7 @@
       </div>
       <div class="modal-body">
         <div class="search-input-group">
-          <input type="text" id="txtSearchQuery" class="search-input" placeholder="Nhập tên bài hát hoặc dán link YouTube...">
+          <input type="text" id="txtSearchQuery" class="search-input" placeholder="Nhập tên ca sĩ, bài hát (ví dụ: Sơn Tùng, Tùng Sơn, Bolero...) hoặc dán link YouTube...">
           <button id="btnVoiceSearch" class="btn-voice" title="Tìm bằng giọng nói">
             <i class="fa-solid fa-microphone"></i>
           </button>
@@ -237,7 +241,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn-form btn-form-primary" id="btnExecuteSearch">Tìm Kiếm</button>
+        <button class="btn-form btn-form-primary" id="btnExecuteSearch">Tìm Kiếm & Phát</button>
       </div>
     </div>
   </div>
@@ -267,6 +271,12 @@
             </div>
             <input type="checkbox" id="chkAutoplay" checked style="width: 20px; height: 20px; accent-color: var(--tp-cyan);">
           </label>
+
+          <div style="padding: 12px; background: rgba(255,255,255,0.04); border-radius: 12px;">
+            <div style="font-weight: 700; margin-bottom: 4px;">Khóa Google YouTube API Key (Tùy chọn)</div>
+            <div style="font-size: 12px; color: var(--tp-text-sub); margin-bottom: 8px;">Nhập YouTube Data API v3 Key cá nhân để mở khóa tìm kiếm live 100% từ YouTube Data API.</div>
+            <input type="text" id="txtYtApiKey" class="search-input" style="height: 40px; font-size: 13px; padding-right: 12px;" placeholder="Dán YouTube API Key (để trống nếu không dùng)...">
+          </div>
 
           <button id="btnClearData" class="btn-form" style="background: rgba(255,51,102,0.2); color: var(--tp-red); border-color: rgba(255,51,102,0.3); width: 100%; margin-top: 10px;">
             <i class="fa-solid fa-trash-can"></i> Xóa Tất Cả Dữ Liệu & Khôi Phục Mặc Định
