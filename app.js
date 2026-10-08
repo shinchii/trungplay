@@ -108,13 +108,33 @@ function hashMD5(str) {
   return CryptoJS.MD5(str).toString();
 }
 
-// TẠO VÀ KHÓA DUY NHẤT 1 DEVICE ID CHO MỖI TRÌNH DUYỆT / ĐIỆN THOẠI
+// TẠO VÀ KHÓA DUY NHẤT 1 DEVICE ID CHO MỖI TRÌNH DUYỆT / ĐIỆN THOẠI (DỰA TRÊN FINGERPRINT PHẦN CỨNG)
 function getDeviceId() {
   let id = localStorage.getItem('aptv_device_id');
-  if (!id) {
-    id = 'DEV_' + Math.random().toString(36).substr(2, 8) + '_' + Date.now().toString(36);
-    localStorage.setItem('aptv_device_id', id);
+  if (id) return id;
+
+  const nav = window.navigator || {};
+  const scr = window.screen || {};
+  const str = [
+    nav.userAgent || '',
+    nav.platform || '',
+    nav.language || '',
+    nav.hardwareConcurrency || '',
+    scr.width || '',
+    scr.height || '',
+    scr.colorDepth || '',
+    new Date().getTimezoneOffset()
+  ].join('|');
+
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
   }
+  id = 'DEV_' + Math.abs(hash).toString(36).toUpperCase();
+  try {
+    localStorage.setItem('aptv_device_id', id);
+  } catch(e){}
   return id;
 }
 
@@ -369,9 +389,9 @@ async function handleLogin() {
       return showAuthError('Mật khẩu không chính xác. Vui lòng thử lại.');
     }
 
-    // Khóa 1 thiết bị
+    // KHÓA CỨNG 1 THIẾT BỊ: Nếu tài khoản đã được gắn với 1 thiết bị khác thì CHẶN đăng nhập ngay
     if (userData.device_id && userData.device_id !== "" && userData.device_id !== currentDevId) {
-      return showAuthError('⚠️ Tài khoản này đã liên kết với 1 thiết bị khác!');
+      return showAuthError('⚠️ Tài khoản này đã được liên kết với 1 thiết bị khác! Không thể đăng nhập trên thiết bị này.');
     }
 
     if (!userData.device_id || userData.device_id === "") {
