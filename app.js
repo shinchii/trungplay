@@ -467,11 +467,7 @@ async function handleRegister() {
     const docSnap = await docRef.get();
 
     if (docSnap.exists) {
-      showAuthError('⚠️ Số điện thoại này đã được đăng ký! Vui lòng chuyển sang Tab ĐĂNG NHẬP.');
-      switchTab('login');
-      const loginPhoneInput = document.getElementById('loginPhone');
-      if (loginPhoneInput) loginPhoneInput.value = phone;
-      return;
+      return showAuthError('⚠️ Số điện thoại này đã được đăng ký! Vui lòng chuyển sang Tab ĐĂNG NHẬP.');
     }
 
     toast('Đang tạo tài khoản mới...');
