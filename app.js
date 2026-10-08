@@ -737,6 +737,30 @@ function renderAll() {
    5. BỘ TÌM KIẾM ĐA KÊNH YOUTUBE & TỰ ĐỘNG CUỘN CON LĂN (ROTARY FOCUS)
    ========================================================================= */
 
+function parseYoutubeHtmlResults(html) {
+  try {
+    const match = html.match(/ytInitialData\s*=\s*({.+?});<\/script>/);
+    if (!match) return [];
+    const json = JSON.parse(match[1]);
+    const contents = json?.contents?.twoColumnSearchResultsRenderer?.tabs?.[0]?.tabRenderer?.content?.sectionListRenderer?.contents?.[0]?.itemSectionRenderer?.contents || [];
+    const items = [];
+    for (const item of contents) {
+      const v = item.videoRenderer;
+      if (v && v.videoId) {
+        items.push({
+          id: v.videoId,
+          title: v.title?.runs?.[0]?.text || 'YouTube Video',
+          channel: v.ownerText?.runs?.[0]?.text || 'YouTube',
+          thumb: v.thumbnail?.thumbnails?.[0]?.url || ytThumb(v.videoId)
+        });
+      }
+    }
+    return items;
+  } catch(e) {
+    return [];
+  }
+}
+
 async function search(q) {
   q = (q || '').trim();
   if (!q) return [];
@@ -774,38 +798,55 @@ async function search(q) {
   }
 
   const searchEndpoints = [
+    // 1. Direct High-Speed Piped / Invidious Mirrors
+    `https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(q)}&filter=videos`,
+    `https://api.piped.privacydev.net/search?q=${encodeURIComponent(q)}&filter=videos`,
+    `https://pipedapi.drgns.space/search?q=${encodeURIComponent(q)}&filter=videos`,
+    `https://inv.tux.stream/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
+    `https://vid.puffyan.us/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
+    `https://invidious.nerdvpn.de/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
     `https://yewtu.be/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
     `https://invidious.privacydev.net/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
-    `https://invidious.nerdvpn.de/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
-    `https://api.piped.private.coffee/search?q=${encodeURIComponent(q)}&filter=videos`
+    `https://invidious.drgns.space/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
+
+    // 2. Direct CORS Proxy Fallbacks to YouTube Official Search HTML
+    `https://corsproxy.io/?https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent('https://www.youtube.com/results?search_query=' + q)}`
   ];
 
   for (const apiUrl of searchEndpoints) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
 
       const res = await fetch(apiUrl, { signal: controller.signal });
       clearTimeout(timeoutId);
 
       if (!res.ok) continue;
-      const data = await res.json();
+
+      const contentType = res.headers.get('content-type') || '';
       let items = [];
 
-      if (Array.isArray(data)) {
-        items = data.filter(x => x.type === 'video' || x.videoId).map(x => ({
-          id: x.videoId || x.id,
-          title: x.title,
-          channel: x.author || x.uploaderName || 'YouTube',
-          thumb: (x.videoThumbnails && x.videoThumbnails[0] ? x.videoThumbnails[0].url : '') || ytThumb(x.videoId || x.id)
-        })).filter(x => x.id);
-      } else if (data && Array.isArray(data.items)) {
-        items = data.items.map(x => ({
-          id: (x.url || '').split('v=')[1] || x.id,
-          title: x.title,
-          channel: x.uploaderName || 'YouTube',
-          thumb: x.thumbnail || ytThumb((x.url || '').split('v=')[1])
-        })).filter(x => x.id);
+      if (contentType.includes('text/html') || apiUrl.includes('youtube.com')) {
+        const html = await res.text();
+        items = parseYoutubeHtmlResults(html);
+      } else {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          items = data.filter(x => x.type === 'video' || x.videoId).map(x => ({
+            id: x.videoId || x.id,
+            title: x.title,
+            channel: x.author || x.uploaderName || 'YouTube',
+            thumb: (x.videoThumbnails && x.videoThumbnails[0] ? x.videoThumbnails[0].url : '') || ytThumb(x.videoId || x.id)
+          })).filter(x => x.id);
+        } else if (data && Array.isArray(data.items)) {
+          items = data.items.map(x => ({
+            id: (x.url || '').split('v=')[1] || x.id,
+            title: x.title,
+            channel: x.uploaderName || 'YouTube',
+            thumb: x.thumbnail || ytThumb((x.url || '').split('v=')[1])
+          })).filter(x => x.id);
+        }
       }
 
       if (items.length > 0) {
