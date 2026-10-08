@@ -739,13 +739,13 @@ function renderAll() {
 
 async function search(q) {
   q = (q || '').trim();
-  if (!q) return;
+  if (!q) return [];
 
   const directVid = vidFromUrl(q);
   if (directVid) {
     const item = { id: directVid, title: 'YouTube Video (' + directVid + ')', thumb: ytThumb(directVid), channel: 'YouTube' };
     play(item);
-    return;
+    return [item];
   }
 
   const out = document.getElementById('results');
@@ -765,7 +765,7 @@ async function search(q) {
         }));
         if (arr.length > 0) {
           renderSearchResults(arr);
-          return;
+          return arr;
         }
       }
     } catch (e) {
@@ -810,7 +810,7 @@ async function search(q) {
 
       if (items.length > 0) {
         renderSearchResults(items);
-        return;
+        return items;
       }
     } catch (err) {
       console.warn('Search endpoint error:', apiUrl, err);
@@ -824,6 +824,7 @@ async function search(q) {
         Hãy dán đường Link bài hát YouTube vào ô tìm kiếm ở trên để phát ngay.
       </div>`;
   }
+  return [];
 }
 
 function renderSearchResults(arr) {
@@ -912,40 +913,137 @@ async function loadM3u(isAuto = false) {
   }
 }
 
+let voiceRecognition = null;
+let voiceSilenceTimer = null;
+let currentVoiceText = '';
+
+function triggerPlayerFullscreen() {
+  const wrap = document.getElementById('playerWrap') || document.querySelector('.player-card');
+  if (!wrap) return;
+
+  try {
+    if (wrap.requestFullscreen) {
+      wrap.requestFullscreen().catch(e => console.log('Fullscreen request ignored:', e));
+    } else if (wrap.webkitRequestFullscreen) {
+      wrap.webkitRequestFullscreen();
+    } else if (wrap.msRequestFullscreen) {
+      wrap.msRequestFullscreen();
+    }
+  } catch(e) {
+    console.warn('Fullscreen error:', e);
+  }
+}
+
 function initVoiceSearch() {
-  const btn = document.getElementById('btnMic');
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  if (!btn) return;
+  const btnMic = document.getElementById('btnMic');
+  const floatingBtn = document.getElementById('floatingVoiceBtn');
+  const voiceModal = document.getElementById('voiceModal');
+  const voiceTranscript = document.getElementById('voiceTranscript');
+  const closeVoiceBtn = document.getElementById('closeVoiceBtn');
+  const cancelVoiceBtn = document.getElementById('cancelVoiceBtn');
+
   if (!SpeechRecognition) {
-    btn.style.display = 'none';
+    if (btnMic) btnMic.title = 'Trình duyệt không hỗ trợ Tìm bằng giọng nói';
     return;
   }
 
-  const recog = new SpeechRecognition();
-  recog.lang = 'vi-VN';
+  try {
+    voiceRecognition = new SpeechRecognition();
+    voiceRecognition.lang = 'vi-VN';
+    voiceRecognition.continuous = true;
+    voiceRecognition.interimResults = true;
+  } catch(e) {
+    console.warn('SpeechRecognition init error:', e);
+    return;
+  }
 
-  btn.onclick = () => {
-    btn.classList.add('listening');
-    toast('🎙️ Đang nghe... Hãy nói tên bài hát');
-    recog.start();
+  function startVoiceSearch() {
+    currentVoiceText = '';
+    if (voiceTranscript) {
+      voiceTranscript.textContent = 'Đang nghe... Hãy nói tên bài hát!';
+      voiceTranscript.style.color = '#ff3650';
+    }
+    if (voiceModal) voiceModal.classList.add('open');
+
+    try {
+      voiceRecognition.stop();
+    } catch(e){}
+
+    setTimeout(() => {
+      try {
+        voiceRecognition.start();
+        toast('🎙️ Đang nghe... Hãy nói tên bài hát!');
+      } catch(err) {
+        console.warn('Voice start error:', err);
+      }
+    }, 200);
+  }
+
+  function stopVoiceSearch() {
+    clearTimeout(voiceSilenceTimer);
+    try {
+      voiceRecognition.stop();
+    } catch(e){}
+    if (voiceModal) voiceModal.classList.remove('open');
+  }
+
+  async function executeVoiceSearch(text) {
+    stopVoiceSearch();
+    if (!text || !text.trim()) return;
+
+    toast('🔍 Đang tìm & tự phát: ' + text);
+    const results = await search(text);
+
+    if (results && results.length > 0) {
+      const topItem = results[0];
+      play(topItem);
+
+      // Kích hoạt Fullscreen tự động sau khi bắt đầu phát
+      setTimeout(() => {
+        triggerPlayerFullscreen();
+      }, 800);
+    }
+  }
+
+  voiceRecognition.onresult = (e) => {
+    let finalTranscript = '';
+    for (let i = e.resultIndex; i < e.results.length; ++i) {
+      finalTranscript += e.results[i][0].transcript;
+    }
+
+    if (finalTranscript.trim()) {
+      currentVoiceText = finalTranscript.trim();
+      if (voiceTranscript) voiceTranscript.textContent = `"${currentVoiceText}"`;
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) searchInput.value = currentVoiceText;
+
+      // Reset timer 3s không nghe thấy tiếng -> tự động tìm kiếm, tự phát & Fullscreen
+      clearTimeout(voiceSilenceTimer);
+      voiceSilenceTimer = setTimeout(() => {
+        executeVoiceSearch(currentVoiceText);
+      }, 3000);
+    }
   };
 
-  recog.onresult = (e) => {
-    btn.classList.remove('listening');
-    const text = e.results[0][0].transcript;
-    document.getElementById('searchInput').value = text;
-    search(text);
+  voiceRecognition.onerror = (err) => {
+    console.warn('Voice recognition error:', err);
+    if (voiceTranscript && !currentVoiceText) {
+      voiceTranscript.textContent = 'Chưa nghe rõ giọng nói. Thử nói lại nhé!';
+    }
   };
 
-  recog.onerror = () => {
-    btn.classList.remove('listening');
-    toast('Chưa nghe rõ giọng nói. Thử lại nhé!');
+  voiceRecognition.onend = () => {
+    if (currentVoiceText && voiceModal && voiceModal.classList.contains('open')) {
+      executeVoiceSearch(currentVoiceText);
+    }
   };
 
-  recog.onend = () => {
-    btn.classList.remove('listening');
-  };
+  if (btnMic) btnMic.onclick = startVoiceSearch;
+  if (floatingBtn) floatingBtn.onclick = startVoiceSearch;
+  if (closeVoiceBtn) closeVoiceBtn.onclick = stopVoiceSearch;
+  if (cancelVoiceBtn) cancelVoiceBtn.onclick = stopVoiceSearch;
 }
 
 function initRotaryKnobScroll() {
