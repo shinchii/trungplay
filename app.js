@@ -737,11 +737,8 @@ function renderAll() {
    5. BỘ TÌM KIẾM ĐA KÊNH YOUTUBE & TỰ ĐỘNG CUỘN CON LĂN (ROTARY FOCUS)
    ========================================================================= */
 
-function parseYoutubeHtmlResults(html) {
+function parseInnerTubeResults(json) {
   try {
-    const match = html.match(/ytInitialData\s*=\s*({.+?});<\/script>/);
-    if (!match) return [];
-    const json = JSON.parse(match[1]);
     const contents = json?.contents?.twoColumnSearchResultsRenderer?.tabs?.[0]?.tabRenderer?.content?.sectionListRenderer?.contents?.[0]?.itemSectionRenderer?.contents || [];
     const items = [];
     for (const item of contents) {
@@ -761,6 +758,43 @@ function parseYoutubeHtmlResults(html) {
   }
 }
 
+async function searchYoutubeInnerTube(q) {
+  try {
+    const res = await fetch('https://www.youtube.com/youtubei/v1/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        context: {
+          client: {
+            clientName: "WEB",
+            clientVersion: "2.20230522.00.00"
+          }
+        },
+        query: q
+      })
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return parseInnerTubeResults(json);
+  } catch(e) {
+    console.warn('InnerTube search warning:', e);
+    return [];
+  }
+}
+
+function parseYoutubeHtmlResults(html) {
+  try {
+    const match = html.match(/ytInitialData\s*=\s*({.+?});<\/script>/);
+    if (!match) return [];
+    const json = JSON.parse(match[1]);
+    return parseInnerTubeResults(json);
+  } catch(e) {
+    return [];
+  }
+}
+
 async function search(q) {
   q = (q || '').trim();
   if (!q) return [];
@@ -775,6 +809,18 @@ async function search(q) {
   const out = document.getElementById('results');
   if (out) out.innerHTML = '<div class="empty">🔍 Đang tìm kiếm video...</div>';
 
+  // 1. ƯU TIÊN SỐ 1: API InnerTube Chính Thức Của YouTube (Không bị chặn CORS, Tốc độ cao)
+  try {
+    const innerTubeResults = await searchYoutubeInnerTube(q);
+    if (innerTubeResults && innerTubeResults.length > 0) {
+      renderSearchResults(innerTubeResults);
+      return innerTubeResults;
+    }
+  } catch (e) {
+    console.warn('InnerTube search fallback:', e);
+  }
+
+  // 2. Google YouTube API Key (Nếu người dùng có cấu hình)
   if (state.apiKey) {
     try {
       const u = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=15&q=${encodeURIComponent(q)}&key=${encodeURIComponent(state.apiKey)}`;
