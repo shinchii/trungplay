@@ -737,6 +737,29 @@ function renderAll() {
    5. BỘ TÌM KIẾM ĐA KÊNH YOUTUBE & TỰ ĐỘNG CUỘN CON LĂN (ROTARY FOCUS)
    ========================================================================= */
 
+const DEFAULT_YOUTUBE_API_KEYS = [
+  "AIzaSyD_T8u2_fHLSVyrMnOvIRYJULuLrF5fxJA"
+];
+
+async function fetchYoutubeApiSearch(q, key) {
+  try {
+    const u = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=20&q=${encodeURIComponent(q)}&key=${encodeURIComponent(key)}`;
+    const r = await fetch(u);
+    const j = await r.json();
+    if (r.ok && j.items) {
+      return j.items.map(x => ({
+        id: x.id?.videoId || x.id,
+        title: x.snippet?.title || 'YouTube Video',
+        channel: x.snippet?.channelTitle || 'YouTube',
+        thumb: x.snippet?.thumbnails?.medium?.url || x.snippet?.thumbnails?.default?.url || ytThumb(x.id?.videoId)
+      })).filter(x => x.id && typeof x.id === 'string');
+    }
+  } catch(e) {
+    console.warn('Google API search error with key:', e);
+  }
+  return [];
+}
+
 function parseYoutubeHtmlResults(html) {
   if (!html) return [];
   try {
@@ -788,38 +811,25 @@ async function search(q) {
   const out = document.getElementById('results');
   if (out) out.innerHTML = '<div class="empty">🔍 Đang tìm kiếm video...</div>';
 
-  // 1. GOOGLE YOUTUBE API KEY (NẾU CÓ CẤU HÌNH)
-  if (state.apiKey) {
-    try {
-      const u = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=15&q=${encodeURIComponent(q)}&key=${encodeURIComponent(state.apiKey)}`;
-      const r = await fetch(u);
-      const j = await r.json();
-      if (r.ok && j.items) {
-        const arr = j.items.map(x => ({
-          id: x.id.videoId,
-          title: x.snippet.title,
-          channel: x.snippet.channelTitle,
-          thumb: x.snippet.thumbnails?.medium?.url || ytThumb(x.id.videoId)
-        }));
-        if (arr.length > 0) {
-          renderSearchResults(arr);
-          return arr;
-        }
-      }
-    } catch (e) {
-      console.warn('Google API Key error:', e);
+  // 1. TÌM KIẾM TRỰC TIẾP QUA GOOGLE YOUTUBE API (CÓ KEY MẶC ĐỊNH SẴN HỖ TRỢ TỐC ĐỘ CAO - KHÔNG BAO GIỜ LỖI MẠNG)
+  const keysToTry = state.apiKey ? [state.apiKey, ...DEFAULT_YOUTUBE_API_KEYS] : DEFAULT_YOUTUBE_API_KEYS;
+  for (const key of keysToTry) {
+    if (!key) continue;
+    const apiResults = await fetchYoutubeApiSearch(q, key);
+    if (apiResults && apiResults.length > 0) {
+      renderSearchResults(apiResults);
+      return apiResults;
     }
   }
 
-  // 2. TÌM KIẾM TRỰC TIẾP TRÊN YOUTUBE QUA PROXY GET (KHÔNG BỊ CHẶN PREFLIGHT CORS)
+  // 2. DỰ PHÒNG CHUỖI PROXY ĐA KÊNH PIPED / INVIDIOUS / CORS PROXY
   const proxyServices = [
-    `https://api.allorigins.win/get?url=${encodeURIComponent('https://www.youtube.com/results?search_query=' + encodeURIComponent(q))}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent('https://www.youtube.com/results?search_query=' + encodeURIComponent(q))}`,
     `https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(q)}&filter=videos`,
     `https://api.piped.privacydev.net/search?q=${encodeURIComponent(q)}&filter=videos`,
     `https://pipedapi.drgns.space/search?q=${encodeURIComponent(q)}&filter=videos`,
-    `https://inv.tux.stream/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
-    `https://vid.puffyan.us/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent('https://www.youtube.com/results?search_query=' + encodeURIComponent(q))}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent('https://www.youtube.com/results?search_query=' + encodeURIComponent(q))}`,
+    `https://yewtu.be/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
     `https://invidious.nerdvpn.de/api/v1/search?q=${encodeURIComponent(q)}&type=video`
   ];
 
