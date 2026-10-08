@@ -173,37 +173,76 @@ button { cursor: pointer; border: 0; color: inherit; }
 .search button:hover { color: #fff; }
 .btn-mic {
   color: #ff3650 !important;
-  font-size: 17px !important;
+  font-size: 24px !important;
   background: transparent;
   border: 0;
   display: grid;
   place-items: center;
-  padding: 0 10px;
+  padding: 0 14px !important;
+  min-width: 54px;
 }
 
-/* FLOATING VOICE BUBBLE BUTTON (HIỂN THỊ CẢ KHI FULLSCREEN) */
+/* BONG BÓNG MICRO NỔI - LUÔN HIỂN THỊ TRÊN CÙNG (KỂ CẢ KHI FULLSCREEN) */
 .floating-voice-btn {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: 56px;
-  height: 56px;
+  bottom: 28px;
+  right: 28px;
+  width: 76px;
+  height: 76px;
   border-radius: 50%;
-  background: linear-gradient(145deg, #ff3650, #cc001f);
+  background: #ff1f3d;
   color: #fff;
-  font-size: 24px;
+  font-size: 36px;
+  line-height: 1;
   display: grid;
   place-items: center;
-  box-shadow: 0 8px 30px rgba(255, 54, 80, 0.6);
-  z-index: 2147483647;
+  box-shadow: 0 8px 30px rgba(255, 31, 61, 0.7), 0 0 0 6px rgba(255, 31, 61, 0.18);
+  z-index: 2147483600;
   cursor: pointer;
-  border: 2px solid rgba(255, 255, 255, 0.25);
+  border: 3px solid rgba(255, 255, 255, 0.85);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 .floating-voice-btn:hover, .floating-voice-btn:focus-visible {
   transform: scale(1.12);
-  box-shadow: 0 10px 40px rgba(255, 54, 80, 0.95);
+  box-shadow: 0 10px 40px rgba(255, 31, 61, 0.95), 0 0 0 10px rgba(255, 31, 61, 0.3);
 }
+body.auth-locked .floating-voice-btn { display: none; }
+
+/* CHẾ ĐỘ XEM TOÀN MÀN HÌNH (CINEMA MODE) - KHÔNG CẦN BẤM, MICRO VẪN NỔI */
+body.cinema { overflow: hidden !important; }
+body.cinema #playerWrap {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  aspect-ratio: auto !important;
+  border-radius: 0 !important;
+  z-index: 2147483000 !important;
+  background: #000;
+}
+body.cinema .floating-voice-btn { bottom: 90px; right: 22px; }
+.cinema-bar {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 2147483100;
+  gap: 8px;
+}
+body.cinema .cinema-bar { display: flex; }
+.cinema-bar button {
+  min-width: 56px;
+  height: 50px;
+  padding: 0 16px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+}
+.cinema-bar button:hover { background: rgba(255, 31, 61, 0.8); }
 
 /* POPUP TÌM KIẾM GIỌNG NÓI (#voiceModal) */
 #voiceModal {
@@ -645,7 +684,7 @@ button { cursor: pointer; border: 0; color: inherit; }
   position: fixed;
   right: 18px;
   bottom: 18px;
-  z-index: 100000;
+  z-index: 2147483646;
   background: #202631;
   border: 1px solid #343d4a;
   border-radius: 12px;
@@ -668,6 +707,8 @@ button { cursor: pointer; border: 0; color: inherit; }
   .content-grid { grid-template-columns: 1fr; }
   .page { padding: 12px; }
   .toast { bottom: 72px; right: 12px; left: 12px; text-align: center; }
+  .floating-voice-btn { bottom: 78px; right: 16px; width: 68px; height: 68px; font-size: 32px; }
+  body.cinema .floating-voice-btn { bottom: 90px; }
 }
 @media(max-width:600px) {
   .topbar { padding: 10px 12px; }
@@ -992,10 +1033,15 @@ button { cursor: pointer; border: 0; color: inherit; }
   </div>
 </div>
 
+<!-- THANH ĐIỀU KHIỂN KHI XEM TOÀN MÀN HÌNH -->
+<div class="cinema-bar" id="cinemaBar">
+  <button id="cinemaExitBtn" tabindex="0">✕ Thoát</button>
+  <button id="cinemaPrevBtn" tabindex="0">⏮</button>
+  <button id="cinemaNextBtn" tabindex="0">⏭</button>
+</div>
+
 <!-- BONG BÓNG MICRO NỔI (FLOATING VOICE BUBBLE) -->
-<button class="floating-voice-btn" id="floatingVoiceBtn" title="Tìm bằng giọng nói" tabindex="0">
-  🎤
-</button>
+<button class="floating-voice-btn" id="floatingVoiceBtn" title="Tìm bằng giọng nói" tabindex="0">🎤</button>
 
 <!-- POPUP TÌM KIẾM GIỌNG NÓI (#voiceModal) -->
 <div class="modal-back" id="voiceModal">
@@ -1006,8 +1052,9 @@ button { cursor: pointer; border: 0; color: inherit; }
     </div>
     <div class="voice-title">Đang nghe giọng nói...</div>
     <div class="voice-transcript" id="voiceTranscript">Hãy nói tên bài hát bạn muốn phát (Ví dụ: "Nhạc sàn xe hơi")</div>
-    <div class="voice-hint">Tự động phát bài #1 & Fullscreen sau 3 giây dừng nói</div>
+    <div class="voice-hint">Tự động phát bài #1 &amp; Toàn màn hình sau 3 giây dừng nói</div>
     <div class="controls" style="margin-top:16px;justify-content:center">
+      <button class="pill primary" id="retryVoiceBtn" tabindex="0">🎤 Nói lại</button>
       <button class="pill" id="cancelVoiceBtn" tabindex="0">Hủy bỏ</button>
     </div>
   </div>

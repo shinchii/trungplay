@@ -187,6 +187,7 @@ function showAuthModal() {
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
   }
+  document.body.classList.add('auth-locked');
 }
 
 function hideAuthModal() {
@@ -197,6 +198,7 @@ function hideAuthModal() {
   if (qrModal) qrModal.classList.remove('open');
   if (accountModal) accountModal.classList.remove('open');
   document.body.style.overflow = '';
+  document.body.classList.remove('auth-locked');
 }
 
 function showAuthError(msg) {
@@ -564,13 +566,13 @@ function play(item, add = true) {
   showView('home');
 
   const wrap = document.getElementById('playerWrap');
-  const embedUrl = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1`;
+  // fs=0: tắt nút fullscreen riêng của YouTube (nó sẽ che mất micro nổi). Dùng chế độ toàn màn hình của app.
+  const embedUrl = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&playsinline=1&rel=0&modestbranding=1&fs=0&enablejsapi=1`;
 
   wrap.innerHTML = `
     <iframe id="ytIframe" 
       src="${embedUrl}" 
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" 
-      allowfullscreen 
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
       style="width:100%;height:100%;border:0;background:#000">
     </iframe>`;
 
@@ -579,6 +581,7 @@ function play(item, add = true) {
 
   toast('Đang phát: ' + (item.title || videoId));
   renderAll();
+  enterCinemaMode();
 }
 
 function playNext() {
@@ -600,7 +603,7 @@ function playTv(ch) {
 
   const src = state.proxyUrl ? state.proxyUrl + encodeURIComponent(ch.url) : ch.url;
   const wrap = document.getElementById('playerWrap');
-  wrap.innerHTML = `<video id="tvVideo" controls autoplay playsinline style="width:100%;height:100%;background:#000;object-fit:contain"></video>`;
+  wrap.innerHTML = `<video id="tvVideo" controls controlslist="nofullscreen" disablepictureinpicture autoplay playsinline style="width:100%;height:100%;background:#000;object-fit:contain"></video>`;
   const video = document.getElementById('tvVideo');
 
   if (window.Hls && Hls.isSupported() && (src.includes('.m3u8') || !video.canPlayType('application/vnd.apple.mpegurl'))) {
@@ -618,6 +621,7 @@ function playTv(ch) {
   document.getElementById('nowTitle').textContent = ch.name;
   document.getElementById('nowSub').textContent = '📺 TV / Live Stream';
   toast('Đang phát TV: ' + ch.name);
+  enterCinemaMode();
 }
 
 function addHistory(item) {
@@ -999,135 +1003,239 @@ async function loadM3u(isAuto = false) {
 
 let voiceRecognition = null;
 let voiceSilenceTimer = null;
+let voiceMaxTimer = null;
 let currentVoiceText = '';
+let voiceSessionId = 0;
+let voiceHandled = false;
 
-function triggerPlayerFullscreen() {
-  const wrap = document.getElementById('playerWrap') || document.querySelector('.player-card');
-  if (!wrap) return;
+function isDocFullscreen() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+}
 
+// Xin toàn màn hình thật cho CẢ TRANG (trình duyệt chỉ cho phép ngay lúc người dùng bấm).
+// Fullscreen cả trang chứ không phải riêng khung video => micro nổi vẫn luôn hiển thị phía trên.
+function requestPageFullscreen() {
+  if (isDocFullscreen()) return;
+  const el = document.documentElement;
   try {
-    if (wrap.requestFullscreen) {
-      wrap.requestFullscreen().catch(e => console.log('Fullscreen request ignored:', e));
-    } else if (wrap.webkitRequestFullscreen) {
-      wrap.webkitRequestFullscreen();
-    } else if (wrap.msRequestFullscreen) {
-      wrap.msRequestFullscreen();
-    }
-  } catch(e) {
-    console.warn('Fullscreen error:', e);
+    const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+    if (!fn) return;
+    const p = fn.call(el, { navigationUI: 'hide' });
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  } catch (e) {}
+}
+
+function exitPageFullscreen() {
+  if (!isDocFullscreen()) return;
+  try {
+    const fn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+    const p = fn && fn.call(document);
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  } catch (e) {}
+}
+
+// CHẾ ĐỘ XEM TOÀN MÀN HÌNH: khung video phủ kín màn hình bằng CSS (không cần thao tác bấm),
+// đồng thời thử xin fullscreen thật của trình duyệt nếu đang có thao tác bấm.
+function enterCinemaMode() {
+  document.body.classList.add('cinema');
+  requestPageFullscreen();
+  const voiceModal = document.getElementById('voiceModal');
+  const mic = document.getElementById('floatingVoiceBtn');
+  if (mic && !(voiceModal && voiceModal.classList.contains('open'))) {
+    try { mic.focus({ preventScroll: true }); } catch (e) {}
   }
 }
 
-function initVoiceSearch() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+function exitCinemaMode() {
+  document.body.classList.remove('cinema');
+  exitPageFullscreen();
+}
 
+function getSpeechRecognition() {
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+function setVoiceText(text) {
+  const el = document.getElementById('voiceTranscript');
+  if (el) el.textContent = text;
+}
+
+// Hủy hoàn toàn phiên nhận giọng nói cũ (gỡ hết sự kiện rồi abort) để lần sau luôn khởi động sạch
+function killRecognition() {
+  clearTimeout(voiceSilenceTimer);
+  clearTimeout(voiceMaxTimer);
+  const r = voiceRecognition;
+  voiceRecognition = null;
+  if (r) {
+    r.onresult = null;
+    r.onerror = null;
+    r.onend = null;
+    try { r.abort(); } catch (e) { try { r.stop(); } catch (e2) {} }
+  }
+}
+
+function closeVoiceModal() {
+  const modal = document.getElementById('voiceModal');
+  if (modal) modal.classList.remove('open');
+}
+
+function stopVoiceSearch() {
+  voiceSessionId++;
+  killRecognition();
+  closeVoiceModal();
+}
+
+async function finishVoice(session) {
+  if (session !== voiceSessionId || voiceHandled) return;
+  voiceHandled = true;
+  const text = currentVoiceText.trim();
+  killRecognition();
+  closeVoiceModal();
+  if (!text) return;
+
+  toast('🔍 Đang tìm & tự phát: ' + text);
+  const results = await search(text);
+  if (results && results.length > 0) {
+    if (!current || current.id !== results[0].id) {
+      play(results[0]); // play() tự vào chế độ toàn màn hình
+    } else {
+      enterCinemaMode();
+    }
+  }
+}
+
+function startVoiceSearch() {
+  // Đang có thao tác bấm => xin toàn màn hình NGAY BÂY GIỜ (sau 3 giây trình duyệt sẽ không cho nữa)
+  requestPageFullscreen();
+
+  const SR = getSpeechRecognition();
+  if (!SR) {
+    toast('Trình duyệt này không hỗ trợ tìm bằng giọng nói. Hãy gõ tên bài hát.');
+    return;
+  }
+
+  // Luôn hủy phiên cũ và tạo bộ nhận giọng nói MỚI cho mỗi lần bấm (sửa lỗi dùng vài lần thì không nhận nữa)
+  killRecognition();
+  const mySession = ++voiceSessionId;
+  currentVoiceText = '';
+  voiceHandled = false;
+
+  const modal = document.getElementById('voiceModal');
+  if (modal) modal.classList.add('open');
+  setVoiceText('Đang nghe... Hãy nói tên bài hát!');
+
+  let r;
+  try {
+    r = new SR();
+  } catch (e) {
+    setVoiceText('⚠️ Không khởi động được micro. Bấm "🎤 Nói lại".');
+    return;
+  }
+  r.lang = 'vi-VN';
+  r.continuous = false;
+  r.interimResults = true;
+  r.maxAlternatives = 1;
+
+  r.onresult = (e) => {
+    if (mySession !== voiceSessionId) return;
+    let text = '';
+    for (let i = 0; i < e.results.length; i++) {
+      text += e.results[i][0].transcript;
+    }
+    text = text.trim();
+    if (!text) return;
+
+    currentVoiceText = text;
+    setVoiceText(`"${text}"`);
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = text;
+
+    // 3 giây không nói thêm => tự tìm, tự phát, toàn màn hình
+    clearTimeout(voiceSilenceTimer);
+    voiceSilenceTimer = setTimeout(() => finishVoice(mySession), 3000);
+  };
+
+  r.onerror = (e) => {
+    if (mySession !== voiceSessionId) return;
+    const err = e && e.error;
+    if (err === 'not-allowed' || err === 'service-not-allowed') {
+      setVoiceText('⚠️ Micro đang bị chặn. Hãy cho phép quyền Micro cho trang web rồi bấm "🎤 Nói lại".');
+    } else if (err === 'network') {
+      setVoiceText('⚠️ Mạng yếu, không nhận dạng được giọng nói. Bấm "🎤 Nói lại".');
+    } else if (!currentVoiceText) {
+      setVoiceText('Chưa nghe rõ. Bấm "🎤 Nói lại" để thử lại.');
+    }
+  };
+
+  r.onend = () => {
+    if (mySession !== voiceSessionId) return;
+    voiceRecognition = null;
+    if (currentVoiceText) {
+      finishVoice(mySession);
+    } else {
+      clearTimeout(voiceMaxTimer);
+      const el = document.getElementById('voiceTranscript');
+      if (el && el.textContent.indexOf('Đang nghe') === 0) {
+        setVoiceText('Chưa nghe rõ. Bấm "🎤 Nói lại" để thử lại.');
+      }
+    }
+  };
+
+  voiceRecognition = r;
+  try {
+    r.start();
+  } catch (e) {
+    setVoiceText('⚠️ Micro đang bận. Bấm "🎤 Nói lại".');
+  }
+
+  // Giới hạn tối đa 15 giây cho 1 lần nghe để không bao giờ bị treo
+  voiceMaxTimer = setTimeout(() => {
+    if (mySession !== voiceSessionId) return;
+    if (currentVoiceText) {
+      finishVoice(mySession);
+    } else {
+      killRecognition();
+      setVoiceText('Chưa nghe rõ. Bấm "🎤 Nói lại" để thử lại.');
+    }
+  }, 15000);
+}
+
+function initVoiceSearch() {
   const btnMic = document.getElementById('btnMic');
   const floatingBtn = document.getElementById('floatingVoiceBtn');
-  const voiceModal = document.getElementById('voiceModal');
-  const voiceTranscript = document.getElementById('voiceTranscript');
+  const retryVoiceBtn = document.getElementById('retryVoiceBtn');
   const closeVoiceBtn = document.getElementById('closeVoiceBtn');
   const cancelVoiceBtn = document.getElementById('cancelVoiceBtn');
 
-  if (!SpeechRecognition) {
-    if (btnMic) btnMic.title = 'Trình duyệt không hỗ trợ Tìm bằng giọng nói';
-    return;
+  if (!getSpeechRecognition() && btnMic) {
+    btnMic.title = 'Trình duyệt không hỗ trợ Tìm bằng giọng nói';
   }
-
-  try {
-    voiceRecognition = new SpeechRecognition();
-    voiceRecognition.lang = 'vi-VN';
-    voiceRecognition.continuous = true;
-    voiceRecognition.interimResults = true;
-  } catch(e) {
-    console.warn('SpeechRecognition init error:', e);
-    return;
-  }
-
-  function startVoiceSearch() {
-    currentVoiceText = '';
-    if (voiceTranscript) {
-      voiceTranscript.textContent = 'Đang nghe... Hãy nói tên bài hát!';
-      voiceTranscript.style.color = '#ff3650';
-    }
-    if (voiceModal) voiceModal.classList.add('open');
-
-    try {
-      voiceRecognition.stop();
-    } catch(e){}
-
-    setTimeout(() => {
-      try {
-        voiceRecognition.start();
-        toast('🎙️ Đang nghe... Hãy nói tên bài hát!');
-      } catch(err) {
-        console.warn('Voice start error:', err);
-      }
-    }, 200);
-  }
-
-  function stopVoiceSearch() {
-    clearTimeout(voiceSilenceTimer);
-    try {
-      voiceRecognition.stop();
-    } catch(e){}
-    if (voiceModal) voiceModal.classList.remove('open');
-  }
-
-  async function executeVoiceSearch(text) {
-    stopVoiceSearch();
-    if (!text || !text.trim()) return;
-
-    toast('🔍 Đang tìm & tự phát: ' + text);
-    const results = await search(text);
-
-    if (results && results.length > 0) {
-      const topItem = results[0];
-      play(topItem);
-
-      // Kích hoạt Fullscreen tự động sau khi bắt đầu phát
-      setTimeout(() => {
-        triggerPlayerFullscreen();
-      }, 800);
-    }
-  }
-
-  voiceRecognition.onresult = (e) => {
-    let finalTranscript = '';
-    for (let i = e.resultIndex; i < e.results.length; ++i) {
-      finalTranscript += e.results[i][0].transcript;
-    }
-
-    if (finalTranscript.trim()) {
-      currentVoiceText = finalTranscript.trim();
-      if (voiceTranscript) voiceTranscript.textContent = `"${currentVoiceText}"`;
-      const searchInput = document.getElementById('searchInput');
-      if (searchInput) searchInput.value = currentVoiceText;
-
-      // Reset timer 3s không nghe thấy tiếng -> tự động tìm kiếm, tự phát & Fullscreen
-      clearTimeout(voiceSilenceTimer);
-      voiceSilenceTimer = setTimeout(() => {
-        executeVoiceSearch(currentVoiceText);
-      }, 3000);
-    }
-  };
-
-  voiceRecognition.onerror = (err) => {
-    console.warn('Voice recognition error:', err);
-    if (voiceTranscript && !currentVoiceText) {
-      voiceTranscript.textContent = 'Chưa nghe rõ giọng nói. Thử nói lại nhé!';
-    }
-  };
-
-  voiceRecognition.onend = () => {
-    if (currentVoiceText && voiceModal && voiceModal.classList.contains('open')) {
-      executeVoiceSearch(currentVoiceText);
-    }
-  };
 
   if (btnMic) btnMic.onclick = startVoiceSearch;
   if (floatingBtn) floatingBtn.onclick = startVoiceSearch;
+  if (retryVoiceBtn) retryVoiceBtn.onclick = startVoiceSearch;
   if (closeVoiceBtn) closeVoiceBtn.onclick = stopVoiceSearch;
   if (cancelVoiceBtn) cancelVoiceBtn.onclick = stopVoiceSearch;
+}
+
+function initCinemaControls() {
+  const exitBtn = document.getElementById('cinemaExitBtn');
+  const prevBtn = document.getElementById('cinemaPrevBtn');
+  const nextBtn = document.getElementById('cinemaNextBtn');
+  if (exitBtn) exitBtn.onclick = exitCinemaMode;
+  if (prevBtn) prevBtn.onclick = playPrev;
+  if (nextBtn) nextBtn.onclick = playNext;
+
+  // Nút Back / Esc trên xe: đóng popup giọng nói trước, sau đó thoát toàn màn hình
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' && e.key !== 'BrowserBack' && e.key !== 'GoBack') return;
+    const voiceModal = document.getElementById('voiceModal');
+    if (voiceModal && voiceModal.classList.contains('open')) {
+      stopVoiceSearch();
+    } else if (document.body.classList.contains('cinema')) {
+      exitCinemaMode();
+    }
+  });
 }
 
 function initRotaryKnobScroll() {
@@ -1313,6 +1421,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderAll();
   initVoiceSearch();
+  initCinemaControls();
 
   if (!state.tv.length) {
     loadM3u(true);
