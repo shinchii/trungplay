@@ -462,8 +462,20 @@ async function handleRegister() {
   };
 
   try {
-    toast('Đang tạo tài khoản trên Firestore...');
-    await db.collection('users').doc(phone).set(userData, { merge: true });
+    toast('Đang kiểm tra tài khoản...');
+    const docRef = db.collection('users').doc(phone);
+    const docSnap = await docRef.get();
+
+    if (docSnap.exists) {
+      showAuthError('⚠️ Số điện thoại này đã được đăng ký! Vui lòng chuyển sang Tab ĐĂNG NHẬP.');
+      switchTab('login');
+      const loginPhoneInput = document.getElementById('loginPhone');
+      if (loginPhoneInput) loginPhoneInput.value = phone;
+      return;
+    }
+
+    toast('Đang tạo tài khoản mới...');
+    await docRef.set(userData);
 
     const transferContent = `TP ${phone}`;
     const qrUrl = `https://img.vietqr.io/image/TPB-15940510182-compact2.png?amount=${price}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent("DOAN QUANG TRUNG")}`;
