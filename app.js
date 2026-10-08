@@ -737,60 +737,39 @@ function renderAll() {
    5. BỘ TÌM KIẾM ĐA KÊNH YOUTUBE & TỰ ĐỘNG CUỘN CON LĂN (ROTARY FOCUS)
    ========================================================================= */
 
-function parseInnerTubeResults(json) {
+function parseYoutubeHtmlResults(html) {
+  if (!html) return [];
   try {
-    const contents = json?.contents?.twoColumnSearchResultsRenderer?.tabs?.[0]?.tabRenderer?.content?.sectionListRenderer?.contents?.[0]?.itemSectionRenderer?.contents || [];
+    let rawJson = '';
+    const match1 = html.match(/ytInitialData\s*=\s*({[\s\S]+?});\s*<\/script>/);
+    if (match1) {
+      rawJson = match1[1];
+    } else {
+      const match2 = html.match(/var\s+ytInitialData\s*=\s*({[\s\S]+?});/);
+      if (match2) rawJson = match2[1];
+    }
+
+    if (!rawJson) return [];
+
+    const json = JSON.parse(rawJson);
+    const contents = json?.contents?.twoColumnSearchResultsRenderer?.tabs?.[0]?.tabRenderer?.content?.sectionListRenderer?.contents || [];
+
     const items = [];
-    for (const item of contents) {
-      const v = item.videoRenderer;
-      if (v && v.videoId) {
-        items.push({
-          id: v.videoId,
-          title: v.title?.runs?.[0]?.text || 'YouTube Video',
-          channel: v.ownerText?.runs?.[0]?.text || 'YouTube',
-          thumb: v.thumbnail?.thumbnails?.[0]?.url || ytThumb(v.videoId)
-        });
+    for (const section of contents) {
+      const itemSection = section?.itemSectionRenderer?.contents || [];
+      for (const item of itemSection) {
+        const v = item?.videoRenderer;
+        if (v && v.videoId) {
+          const title = v.title?.runs?.[0]?.text || v.title?.simpleText || 'YouTube Video';
+          const channel = v.ownerText?.runs?.[0]?.text || v.longBylineText?.runs?.[0]?.text || 'YouTube';
+          const thumb = v.thumbnail?.thumbnails?.[0]?.url || ytThumb(v.videoId);
+          items.push({ id: v.videoId, title, channel, thumb });
+        }
       }
     }
     return items;
   } catch(e) {
-    return [];
-  }
-}
-
-async function searchYoutubeInnerTube(q) {
-  try {
-    const res = await fetch('https://www.youtube.com/youtubei/v1/search', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        context: {
-          client: {
-            clientName: "WEB",
-            clientVersion: "2.20230522.00.00"
-          }
-        },
-        query: q
-      })
-    });
-    if (!res.ok) return [];
-    const json = await res.json();
-    return parseInnerTubeResults(json);
-  } catch(e) {
-    console.warn('InnerTube search warning:', e);
-    return [];
-  }
-}
-
-function parseYoutubeHtmlResults(html) {
-  try {
-    const match = html.match(/ytInitialData\s*=\s*({.+?});<\/script>/);
-    if (!match) return [];
-    const json = JSON.parse(match[1]);
-    return parseInnerTubeResults(json);
-  } catch(e) {
+    console.warn('parseYoutubeHtmlResults error:', e);
     return [];
   }
 }
@@ -809,18 +788,7 @@ async function search(q) {
   const out = document.getElementById('results');
   if (out) out.innerHTML = '<div class="empty">🔍 Đang tìm kiếm video...</div>';
 
-  // 1. ƯU TIÊN SỐ 1: API InnerTube Chính Thức Của YouTube (Không bị chặn CORS, Tốc độ cao)
-  try {
-    const innerTubeResults = await searchYoutubeInnerTube(q);
-    if (innerTubeResults && innerTubeResults.length > 0) {
-      renderSearchResults(innerTubeResults);
-      return innerTubeResults;
-    }
-  } catch (e) {
-    console.warn('InnerTube search fallback:', e);
-  }
-
-  // 2. Google YouTube API Key (Nếu người dùng có cấu hình)
+  // 1. GOOGLE YOUTUBE API KEY (NẾU CÓ CẤU HÌNH)
   if (state.apiKey) {
     try {
       const u = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=15&q=${encodeURIComponent(q)}&key=${encodeURIComponent(state.apiKey)}`;
@@ -843,37 +811,36 @@ async function search(q) {
     }
   }
 
-  const searchEndpoints = [
-    // 1. Direct High-Speed Piped / Invidious Mirrors
+  // 2. TÌM KIẾM TRỰC TIẾP TRÊN YOUTUBE QUA PROXY GET (KHÔNG BỊ CHẶN PREFLIGHT CORS)
+  const proxyServices = [
+    `https://api.allorigins.win/get?url=${encodeURIComponent('https://www.youtube.com/results?search_query=' + encodeURIComponent(q))}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent('https://www.youtube.com/results?search_query=' + encodeURIComponent(q))}`,
     `https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(q)}&filter=videos`,
     `https://api.piped.privacydev.net/search?q=${encodeURIComponent(q)}&filter=videos`,
     `https://pipedapi.drgns.space/search?q=${encodeURIComponent(q)}&filter=videos`,
     `https://inv.tux.stream/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
     `https://vid.puffyan.us/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
-    `https://invidious.nerdvpn.de/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
-    `https://yewtu.be/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
-    `https://invidious.privacydev.net/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
-    `https://invidious.drgns.space/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
-
-    // 2. Direct CORS Proxy Fallbacks to YouTube Official Search HTML
-    `https://corsproxy.io/?https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent('https://www.youtube.com/results?search_query=' + q)}`
+    `https://invidious.nerdvpn.de/api/v1/search?q=${encodeURIComponent(q)}&type=video`
   ];
 
-  for (const apiUrl of searchEndpoints) {
+  for (const apiUrl of proxyServices) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
 
       const res = await fetch(apiUrl, { signal: controller.signal });
       clearTimeout(timeoutId);
 
       if (!res.ok) continue;
 
-      const contentType = res.headers.get('content-type') || '';
       let items = [];
 
-      if (contentType.includes('text/html') || apiUrl.includes('youtube.com')) {
+      if (apiUrl.includes('allorigins.win')) {
+        const data = await res.json();
+        if (data && data.contents) {
+          items = parseYoutubeHtmlResults(data.contents);
+        }
+      } else if (apiUrl.includes('codetabs.com')) {
         const html = await res.text();
         items = parseYoutubeHtmlResults(html);
       } else {
@@ -895,12 +862,12 @@ async function search(q) {
         }
       }
 
-      if (items.length > 0) {
+      if (items && items.length > 0) {
         renderSearchResults(items);
         return items;
       }
     } catch (err) {
-      console.warn('Search endpoint error:', apiUrl, err);
+      console.warn('Search proxy error:', apiUrl, err);
     }
   }
 
