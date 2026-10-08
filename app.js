@@ -581,7 +581,7 @@ function play(item, add = true) {
 
   toast('Đang phát: ' + (item.title || videoId));
   renderAll();
-  enterCinemaMode();
+  showFullscreenPrompt(item.title || videoId);
 }
 
 function playNext() {
@@ -621,7 +621,7 @@ function playTv(ch) {
   document.getElementById('nowTitle').textContent = ch.name;
   document.getElementById('nowSub').textContent = '📺 TV / Live Stream';
   toast('Đang phát TV: ' + ch.name);
-  enterCinemaMode();
+  showFullscreenPrompt(ch.name);
 }
 
 function addHistory(item) {
@@ -1051,6 +1051,33 @@ function exitCinemaMode() {
   exitPageFullscreen();
 }
 
+// POPUP "XEM TOÀN MÀN HÌNH": hiện sau khi bắt đầu phát, người dùng bấm (hoặc nhấn con lăn) để vào toàn màn hình
+let fsPromptTimer = null;
+
+function showFullscreenPrompt(title) {
+  // Nếu đang xem toàn màn hình rồi (ví dụ bấm ⏮ ⏭) thì giữ nguyên, không hỏi lại
+  if (document.body.classList.contains('cinema')) return;
+  const prompt = document.getElementById('fsPrompt');
+  if (!prompt) return;
+  const t = document.getElementById('fsPromptTitle');
+  if (t) t.textContent = title || '';
+  prompt.classList.add('open');
+
+  // Đặt sẵn vòng sáng con lăn vào nút "XEM TOÀN MÀN HÌNH" => xe không cảm ứng chỉ cần nhấn con lăn
+  const go = document.getElementById('fsPromptGo');
+  setTimeout(() => { try { go && go.focus({ preventScroll: true }); } catch (e) {} }, 50);
+
+  // Tự ẩn sau 15 giây nếu không chọn
+  clearTimeout(fsPromptTimer);
+  fsPromptTimer = setTimeout(hideFullscreenPrompt, 15000);
+}
+
+function hideFullscreenPrompt() {
+  clearTimeout(fsPromptTimer);
+  const prompt = document.getElementById('fsPrompt');
+  if (prompt) prompt.classList.remove('open');
+}
+
 function getSpeechRecognition() {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
@@ -1097,16 +1124,16 @@ async function finishVoice(session) {
   const results = await search(text);
   if (results && results.length > 0) {
     if (!current || current.id !== results[0].id) {
-      play(results[0]); // play() tự vào chế độ toàn màn hình
+      play(results[0]); // play() tự hiện popup "XEM TOÀN MÀN HÌNH"
     } else {
-      enterCinemaMode();
+      showFullscreenPrompt(current.title);
     }
   }
 }
 
 function startVoiceSearch() {
-  // Đang có thao tác bấm => xin toàn màn hình NGAY BÂY GIỜ (sau 3 giây trình duyệt sẽ không cho nữa)
-  requestPageFullscreen();
+  // KHÔNG xin toàn màn hình ở đây: để hộp thoại "Cho phép sử dụng micro" của trình duyệt luôn hiện rõ
+  hideFullscreenPrompt();
 
   const SR = getSpeechRecognition();
   if (!SR) {
@@ -1226,12 +1253,21 @@ function initCinemaControls() {
   if (prevBtn) prevBtn.onclick = playPrev;
   if (nextBtn) nextBtn.onclick = playNext;
 
-  // Nút Back / Esc trên xe: đóng popup giọng nói trước, sau đó thoát toàn màn hình
+  // Nút trong popup: bấm = thao tác thật của người dùng => trình duyệt cho phép toàn màn hình
+  const fsGo = document.getElementById('fsPromptGo');
+  const fsLater = document.getElementById('fsPromptLater');
+  if (fsGo) fsGo.onclick = () => { hideFullscreenPrompt(); enterCinemaMode(); };
+  if (fsLater) fsLater.onclick = hideFullscreenPrompt;
+
+  // Nút Back / Esc trên xe: đóng popup giọng nói / popup toàn màn hình trước, sau đó thoát toàn màn hình
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' && e.key !== 'BrowserBack' && e.key !== 'GoBack') return;
     const voiceModal = document.getElementById('voiceModal');
+    const fsPrompt = document.getElementById('fsPrompt');
     if (voiceModal && voiceModal.classList.contains('open')) {
       stopVoiceSearch();
+    } else if (fsPrompt && fsPrompt.classList.contains('open')) {
+      hideFullscreenPrompt();
     } else if (document.body.classList.contains('cinema')) {
       exitCinemaMode();
     }

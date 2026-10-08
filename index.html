@@ -244,6 +244,50 @@ body.cinema .cinema-bar { display: flex; }
 }
 .cinema-bar button:hover { background: rgba(255, 31, 61, 0.8); }
 
+/* POPUP HỎI XEM TOÀN MÀN HÌNH SAU KHI PHÁT */
+.fs-prompt {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483200;
+  background: rgba(0, 0, 0, 0.55);
+  place-items: center;
+  padding: 16px;
+}
+.fs-prompt.open { display: grid; }
+.fs-prompt-box {
+  width: min(420px, 94vw);
+  background: #121620;
+  border: 1px solid #303746;
+  border-radius: 22px;
+  padding: 22px 18px;
+  text-align: center;
+  box-shadow: 0 30px 90px rgba(0,0,0,0.9);
+  animation: modalScale .2s ease;
+}
+.fs-prompt-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.fs-prompt-sub { font-size: 13px; color: var(--muted); margin-bottom: 16px; word-break: break-word; }
+.fs-prompt-go {
+  width: 100%;
+  min-height: 64px;
+  border-radius: 16px;
+  background: #ff1f3d;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  box-shadow: 0 10px 30px rgba(255, 31, 61, 0.5);
+}
+.fs-prompt-later {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 10px;
+  border-radius: 14px;
+  background: #202631;
+  border: 1px solid #2c3441;
+  color: #c7ced9;
+  font-size: 15px;
+}
+
 /* POPUP TÌM KIẾM GIỌNG NÓI (#voiceModal) */
 #voiceModal {
   z-index: 2147483647 !important;
@@ -1040,6 +1084,16 @@ body.cinema .cinema-bar { display: flex; }
   <button id="cinemaNextBtn" tabindex="0">⏭</button>
 </div>
 
+<!-- POPUP HỎI XEM TOÀN MÀN HÌNH (HIỆN SAU KHI BẮT ĐẦU PHÁT) -->
+<div class="fs-prompt" id="fsPrompt">
+  <div class="fs-prompt-box">
+    <div class="fs-prompt-title">▶ Đang phát</div>
+    <div class="fs-prompt-sub" id="fsPromptTitle"></div>
+    <button class="fs-prompt-go" id="fsPromptGo" tabindex="0">⛶ XEM TOÀN MÀN HÌNH</button>
+    <button class="fs-prompt-later" id="fsPromptLater" tabindex="0">Để sau</button>
+  </div>
+</div>
+
 <!-- BONG BÓNG MICRO NỔI (FLOATING VOICE BUBBLE) -->
 <button class="floating-voice-btn" id="floatingVoiceBtn" title="Tìm bằng giọng nói" tabindex="0">🎤</button>
 
@@ -1052,7 +1106,7 @@ body.cinema .cinema-bar { display: flex; }
     </div>
     <div class="voice-title">Đang nghe giọng nói...</div>
     <div class="voice-transcript" id="voiceTranscript">Hãy nói tên bài hát bạn muốn phát (Ví dụ: "Nhạc sàn xe hơi")</div>
-    <div class="voice-hint">Tự động phát bài #1 &amp; Toàn màn hình sau 3 giây dừng nói</div>
+    <div class="voice-hint">Dừng nói 3 giây sẽ tự động tìm &amp; phát bài #1</div>
     <div class="controls" style="margin-top:16px;justify-content:center">
       <button class="pill primary" id="retryVoiceBtn" tabindex="0">🎤 Nói lại</button>
       <button class="pill" id="cancelVoiceBtn" tabindex="0">Hủy bỏ</button>
