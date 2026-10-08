@@ -733,33 +733,6 @@ function renderAll() {
   renderTv();
 }
 
-/* =========================================================================
-   5. BỘ TÌM KIẾM ĐA KÊNH YOUTUBE & TỰ ĐỘNG CUỘN CON LĂN (ROTARY FOCUS)
-   ========================================================================= */
-
-const DEFAULT_YOUTUBE_API_KEYS = [
-  "AIzaSyD_T8u2_fHLSVyrMnOvIRYJULuLrF5fxJA"
-];
-
-async function fetchYoutubeApiSearch(q, key) {
-  try {
-    const u = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=20&q=${encodeURIComponent(q)}&key=${encodeURIComponent(key)}`;
-    const r = await fetch(u);
-    const j = await r.json();
-    if (r.ok && j.items) {
-      return j.items.map(x => ({
-        id: x.id?.videoId || x.id,
-        title: x.snippet?.title || 'YouTube Video',
-        channel: x.snippet?.channelTitle || 'YouTube',
-        thumb: x.snippet?.thumbnails?.medium?.url || x.snippet?.thumbnails?.default?.url || ytThumb(x.id?.videoId)
-      })).filter(x => x.id && typeof x.id === 'string');
-    }
-  } catch(e) {
-    console.warn('Google API search error with key:', e);
-  }
-  return [];
-}
-
 function parseYoutubeHtmlResults(html) {
   if (!html) return [];
   try {
@@ -797,6 +770,44 @@ function parseYoutubeHtmlResults(html) {
   }
 }
 
+async function searchSingleEndpoint(apiUrl) {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(apiUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) return [];
+    const contentType = res.headers.get('content-type') || '';
+
+    if (contentType.includes('text/html') || apiUrl.includes('youtube.com')) {
+      const html = await res.text();
+      return parseYoutubeHtmlResults(html);
+    }
+
+    const data = await res.json();
+    let items = [];
+    if (Array.isArray(data)) {
+      items = data.filter(x => x.type === 'video' || x.videoId).map(x => ({
+        id: x.videoId || x.id,
+        title: x.title,
+        channel: x.author || x.uploaderName || 'YouTube',
+        thumb: (x.videoThumbnails && x.videoThumbnails[0] ? x.videoThumbnails[0].url : '') || ytThumb(x.videoId || x.id)
+      })).filter(x => x.id);
+    } else if (data && Array.isArray(data.items)) {
+      items = data.items.map(x => ({
+        id: (x.url || '').split('v=')[1] || x.id,
+        title: x.title,
+        channel: x.uploaderName || 'YouTube',
+        thumb: x.thumbnail || ytThumb((x.url || '').split('v=')[1])
+      })).filter(x => x.id);
+    }
+    return items;
+  } catch(e) {
+    return [];
+  }
+}
+
 async function search(q) {
   q = (q || '').trim();
   if (!q) return [];
@@ -811,73 +822,47 @@ async function search(q) {
   const out = document.getElementById('results');
   if (out) out.innerHTML = '<div class="empty">🔍 Đang tìm kiếm video...</div>';
 
-  // 1. TÌM KIẾM TRỰC TIẾP QUA GOOGLE YOUTUBE API (CÓ KEY MẶC ĐỊNH SẴN HỖ TRỢ TỐC ĐỘ CAO - KHÔNG BAO GIỜ LỖI MẠNG)
-  const keysToTry = state.apiKey ? [state.apiKey, ...DEFAULT_YOUTUBE_API_KEYS] : DEFAULT_YOUTUBE_API_KEYS;
-  for (const key of keysToTry) {
-    if (!key) continue;
-    const apiResults = await fetchYoutubeApiSearch(q, key);
-    if (apiResults && apiResults.length > 0) {
-      renderSearchResults(apiResults);
-      return apiResults;
-    }
+  // 1. NẾU CÓ CẤU HÌNH API KEY TRONG CÀI ĐẶT
+  if (state.apiKey) {
+    try {
+      const u = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=20&q=${encodeURIComponent(q)}&key=${encodeURIComponent(state.apiKey)}`;
+      const r = await fetch(u);
+      const j = await r.json();
+      if (r.ok && j.items) {
+        const arr = j.items.map(x => ({
+          id: x.id?.videoId || x.id,
+          title: x.snippet?.title || 'YouTube Video',
+          channel: x.snippet?.channelTitle || 'YouTube',
+          thumb: x.snippet?.thumbnails?.medium?.url || ytThumb(x.id?.videoId)
+        })).filter(x => x.id);
+        if (arr.length > 0) {
+          renderSearchResults(arr);
+          return arr;
+        }
+      }
+    } catch(e){}
   }
 
-  // 2. DỰ PHÒNG CHUỖI PROXY ĐA KÊNH PIPED / INVIDIOUS / CORS PROXY
-  const proxyServices = [
+  // 2. CHẠY DỰ PHÒNG SONG SONG TẤT CẢ CÁC MÁY CHỦ MIRROR (PARALLEL RACE)
+  const endpoints = [
     `https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(q)}&filter=videos`,
     `https://api.piped.privacydev.net/search?q=${encodeURIComponent(q)}&filter=videos`,
     `https://pipedapi.drgns.space/search?q=${encodeURIComponent(q)}&filter=videos`,
-    `https://api.allorigins.win/get?url=${encodeURIComponent('https://www.youtube.com/results?search_query=' + encodeURIComponent(q))}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent('https://www.youtube.com/results?search_query=' + encodeURIComponent(q))}`,
+    `https://inv.tux.stream/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
+    `https://vid.puffyan.us/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
+    `https://invidious.nerdvpn.de/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
     `https://yewtu.be/api/v1/search?q=${encodeURIComponent(q)}&type=video`,
-    `https://invidious.nerdvpn.de/api/v1/search?q=${encodeURIComponent(q)}&type=video`
+    `https://api.allorigins.win/get?url=${encodeURIComponent('https://www.youtube.com/results?search_query=' + encodeURIComponent(q))}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent('https://www.youtube.com/results?search_query=' + encodeURIComponent(q))}`
   ];
 
-  for (const apiUrl of proxyServices) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+  const promises = endpoints.map(url => searchSingleEndpoint(url));
+  const results = await Promise.allSettled(promises);
 
-      const res = await fetch(apiUrl, { signal: controller.signal });
-      clearTimeout(timeoutId);
-
-      if (!res.ok) continue;
-
-      let items = [];
-
-      if (apiUrl.includes('allorigins.win')) {
-        const data = await res.json();
-        if (data && data.contents) {
-          items = parseYoutubeHtmlResults(data.contents);
-        }
-      } else if (apiUrl.includes('codetabs.com')) {
-        const html = await res.text();
-        items = parseYoutubeHtmlResults(html);
-      } else {
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          items = data.filter(x => x.type === 'video' || x.videoId).map(x => ({
-            id: x.videoId || x.id,
-            title: x.title,
-            channel: x.author || x.uploaderName || 'YouTube',
-            thumb: (x.videoThumbnails && x.videoThumbnails[0] ? x.videoThumbnails[0].url : '') || ytThumb(x.videoId || x.id)
-          })).filter(x => x.id);
-        } else if (data && Array.isArray(data.items)) {
-          items = data.items.map(x => ({
-            id: (x.url || '').split('v=')[1] || x.id,
-            title: x.title,
-            channel: x.uploaderName || 'YouTube',
-            thumb: x.thumbnail || ytThumb((x.url || '').split('v=')[1])
-          })).filter(x => x.id);
-        }
-      }
-
-      if (items && items.length > 0) {
-        renderSearchResults(items);
-        return items;
-      }
-    } catch (err) {
-      console.warn('Search proxy error:', apiUrl, err);
+  for (const res of results) {
+    if (res.status === 'fulfilled' && Array.isArray(res.value) && res.value.length > 0) {
+      renderSearchResults(res.value);
+      return res.value;
     }
   }
 
