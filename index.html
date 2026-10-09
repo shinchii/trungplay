@@ -923,8 +923,9 @@ body.cinema .cinema-bar {
       <div class="setting" style="margin-bottom:10px">
         <label>Chọn Gói cước Dịch vụ</label>
         <select class="field" id="regPlan" style="background:#171d28;cursor:pointer" tabindex="0">
-          <option value="100k_1y" selected>Gói Tiết Kiệm: 100.000 VNĐ / 1 Năm</option>
-          <option value="200k_vinhvien">Gói Trọn Đời: 200.000 VNĐ / Vĩnh Viễn</option>
+          <option value="trial_7d" data-price="20000" data-days="7">Gói Dùng thử: 20.000 VNĐ (7 ngày)</option>
+          <option value="1y" data-price="100000" data-days="365" selected>Gói 1 Năm (Khuyên dùng): 100.000 VNĐ (1 năm)</option>
+          <option value="lifetime" data-price="300000" data-days="36500">Gói Vĩnh viễn: 300.000 VNĐ (Trọn đời)</option>
         </select>
       </div>
       <button class="btn-submit" id="btnCreateQr" tabindex="0">TẠO MÃ VIETQR KÍCH HOẠT</button>

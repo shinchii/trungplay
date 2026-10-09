@@ -336,7 +336,8 @@ function updateUserUI(user) {
   if (!user) return;
   const username = user.username || user.phone || 'Tài khoản';
   const expireDate = getAccountExpireDate(user);
-  const expireStr = expireDate.getTime() > 0 ? (expireDate.toLocaleDateString('vi-VN') + ' ' + expireDate.toLocaleTimeString('vi-VN')) : 'Không xác định';
+  const isLifetime = (user.plan_days >= 3650) || (user.plan_name && user.plan_name.toLowerCase().includes('vĩnh viễn')) || (expireDate.getFullYear() > 2090);
+  const expireStr = isLifetime ? '🟢 Vĩnh viễn (Trọn đời)' : (expireDate.getTime() > 0 ? (expireDate.toLocaleDateString('vi-VN') + ' ' + expireDate.toLocaleTimeString('vi-VN')) : 'Không xác định');
   const statusStr = user.status === 'ACTIVE' ? '🟢 Đã kích hoạt' : '🟡 Chờ kích hoạt';
   const devId = user.device_id || getDeviceId();
 
@@ -400,12 +401,22 @@ async function handleLogin() {
       switchTab('reg');
       document.getElementById('regPhone').value = phone;
       await docRef.update({ device_id: currentDevId });
-      triggerQrGenerationForPhone(phone, 100000);
+      const pendingPrice = userData.price || 100000;
+      if (document.getElementById('regPlan')) {
+        if (pendingPrice === 20000) document.getElementById('regPlan').value = 'trial_7d';
+        else if (pendingPrice === 300000) document.getElementById('regPlan').value = 'lifetime';
+        else document.getElementById('regPlan').value = '1y';
+      }
+      triggerQrGenerationForPhone(phone, pendingPrice);
       return;
     }
 
     if (expireDate <= now) {
-      return showAuthError(`Tài khoản đã hết hạn vào ngày ${expireDate.toLocaleDateString('vi-VN')}. Vui lòng đăng ký gói mới.`);
+      showAuthError(`Tài khoản đã hết hạn vào ngày ${expireDate.toLocaleDateString('vi-VN')}. Vui lòng chọn gói cước để gia hạn.`);
+      switchTab('reg');
+      document.getElementById('regPhone').value = phone;
+      document.getElementById('regPass').value = pass;
+      return;
     }
 
     // CHIẾM PHIÊN ĐĂNG NHẬP: Cập nhật device_id và nâng cấp bảo mật SHA-256 lên Firestore
@@ -431,12 +442,42 @@ async function handleLogin() {
 
 async function handleRegister() {
   clearAuthError();
-  const phone = document.getElementById('regPhone').value.trim();
-  const pass = document.getElementById('regPass').value.trim();
+  let phone = (document.getElementById('regPhone') ? document.getElementById('regPhone').value : '').trim();
+  const pass = (document.getElementById('regPass') ? document.getElementById('regPass').value : '').trim();
   const planSelect = document.getElementById('regPlan');
-  const planVal = planSelect ? planSelect.value : '100k_1y';
-  const price = planVal === '200k_vinhvien' ? 200000 : 100000;
-  const planDays = planVal === '200k_vinhvien' ? 3650 : 365;
+
+  // Chuẩn hóa số điện thoại: loại bỏ khoảng trắng, dấu chấm, dấu gạch ngang
+  phone = phone.replace(/[\s\.\-\(\)]/g, '');
+  if (phone.startsWith('+84')) phone = '0' + phone.slice(3);
+  if (phone.startsWith('84') && phone.length === 11) phone = '0' + phone.slice(2);
+
+  // Định nghĩa các gói cước chuẩn: Dùng thử 7 ngày 20k, 1 Năm 100k, Vĩnh viễn 300k
+  let planVal = planSelect ? planSelect.value : '1y';
+  let price = 100000;
+  let planDays = 365;
+  let planName = 'Gói 1 Năm';
+
+  if (planVal === 'trial_7d' || planVal === '7') {
+    price = 20000;
+    planDays = 7;
+    planName = 'Gói Dùng Thử 7 Ngày';
+  } else if (planVal === 'lifetime' || planVal === '36500' || planVal === '3650' || planVal === '200k_vinhvien' || planVal === '300k_vinhvien') {
+    price = 300000;
+    planDays = 36500;
+    planName = 'Gói Vĩnh Viễn';
+  } else {
+    price = 100000;
+    planDays = 365;
+    planName = 'Gói 1 Năm';
+  }
+
+  // Đọc từ data attributes trên option nếu có
+  if (planSelect && planSelect.selectedIndex >= 0) {
+    const opt = planSelect.options[planSelect.selectedIndex];
+    if (opt.dataset && opt.dataset.price) price = parseInt(opt.dataset.price, 10);
+    if (opt.dataset && opt.dataset.days) planDays = parseInt(opt.dataset.days, 10);
+  }
+
   const currentDevId = getDeviceId();
 
   if (!phone || !pass) {
@@ -458,32 +499,103 @@ async function handleRegister() {
   const now = new Date();
   const expireDate = new Date(now.getTime() + planDays * 86400000).toISOString();
 
-  const userData = {
-    username: phone,
-    password_hash: hashed,
-    device_id: currentDevId,
-    expire_date: expireDate,
-    status: 'PENDING',
-    created_at: now.toISOString()
-  };
-
   try {
     toast('Đang kiểm tra tài khoản...');
     const docRef = db.collection('users').doc(phone);
     const docSnap = await docRef.get();
 
-    if (docSnap.exists) {
-      return showAuthError('⚠️ Số điện thoại này đã được đăng ký! Vui lòng chuyển sang Tab ĐĂNG NHẬP.');
+    const exists = docSnap && docSnap.exists;
+    const existingData = (exists && typeof docSnap.data === 'function') ? docSnap.data() : null;
+
+    if (exists && existingData && Object.keys(existingData).length > 0) {
+      // 1. TÀI KHOẢN CHƯA KÍCH HOẠT (status !== 'ACTIVE' như PENDING):
+      // Cho phép cập nhật gói cước, mật khẩu và hiển thị lại mã VietQR ngay
+      if (existingData.status !== 'ACTIVE') {
+        toast(`Cập nhật đơn ${planName} (${price.toLocaleString('vi-VN')} VNĐ)...`);
+        await docRef.set({
+          password_hash: hashed,
+          device_id: currentDevId,
+          expire_date: expireDate,
+          price: price,
+          plan_days: planDays,
+          plan_name: planName,
+          status: 'PENDING',
+          updated_at: now.toISOString()
+        }, { merge: true });
+
+        const transferContent = `TP ${phone}`;
+        const qrUrl = `https://img.vietqr.io/image/TPB-15940510182-compact2.png?amount=${price}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent("DOAN QUANG TRUNG")}`;
+        displayQrCode(qrUrl, price, transferContent);
+        listenRealtimeStatus(phone);
+        toast(`Mã QR ${price.toLocaleString('vi-VN')} VNĐ đã sẵn sàng - Quét để kích hoạt!`);
+        return;
+      }
+
+      // 2. TÀI KHOẢN ĐÃ KÍCH HOẠT (ACTIVE)
+      const liveExpire = getAccountExpireDate(existingData);
+      const isExpired = (liveExpire <= now);
+
+      const storedPass = (existingData.password_hash || existingData.passwordHash || existingData.password || '').toString().trim().toLowerCase();
+      const inputSha = hashPassword(pass).toLowerCase().trim();
+      const inputMd5 = hashMD5(pass).toLowerCase().trim();
+      const inputPlain = pass.trim().toLowerCase();
+      const isPassMatch = (storedPass === inputSha) || (storedPass === inputMd5) || (storedPass === inputPlain);
+
+      // Nếu đã hết hạn -> Cho phép gia hạn gói mới khi mật khẩu đúng
+      if (isExpired) {
+        if (!isPassMatch) {
+          return showAuthError('⚠️ Số điện thoại này đã có tài khoản (đã hết hạn). Vui lòng nhập đúng mật khẩu cũ để gia hạn gói mới!');
+        }
+
+        toast(`Gia hạn gói ${planName} (${price.toLocaleString('vi-VN')} VNĐ)...`);
+        await docRef.set({
+          device_id: currentDevId,
+          expire_date: expireDate,
+          price: price,
+          plan_days: planDays,
+          plan_name: planName,
+          status: 'PENDING',
+          updated_at: now.toISOString()
+        }, { merge: true });
+
+        const transferContent = `TP ${phone}`;
+        const qrUrl = `https://img.vietqr.io/image/TPB-15940510182-compact2.png?amount=${price}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent("DOAN QUANG TRUNG")}`;
+        displayQrCode(qrUrl, price, transferContent);
+        listenRealtimeStatus(phone);
+        toast(`Mã QR gia hạn (${price.toLocaleString('vi-VN')} VNĐ) - Quét để kích hoạt!`);
+        return;
+      }
+
+      // Tài khoản đang còn hạn sử dụng
+      if (isPassMatch) {
+        return showAuthError(`⚠️ Tài khoản ${phone} đang hoạt động (còn hạn đến ${liveExpire.toLocaleDateString('vi-VN')}). Vui lòng sang Tab ĐĂNG NHẬP để sử dụng.`);
+      } else {
+        return showAuthError('⚠️ Số điện thoại này đã được đăng ký và đang hoạt động. Vui lòng chuyển sang Tab ĐĂNG NHẬP.');
+      }
     }
 
+    // 3. TÀI KHOẢN MỚI HOÀN TOÀN
     toast('Đang tạo tài khoản mới...');
-    await docRef.set(userData);
+    const newUserData = {
+      username: phone,
+      phone: phone,
+      password_hash: hashed,
+      device_id: currentDevId,
+      expire_date: expireDate,
+      price: price,
+      plan_days: planDays,
+      plan_name: planName,
+      status: 'PENDING',
+      created_at: now.toISOString()
+    };
+    await docRef.set(newUserData);
 
     const transferContent = `TP ${phone}`;
     const qrUrl = `https://img.vietqr.io/image/TPB-15940510182-compact2.png?amount=${price}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent("DOAN QUANG TRUNG")}`;
 
     displayQrCode(qrUrl, price, transferContent);
     listenRealtimeStatus(phone);
+    toast(`Đã tạo mã QR gói ${planName} (${price.toLocaleString('vi-VN')} VNĐ)`);
 
   } catch (err) {
     showAuthError('Lỗi tạo tài khoản: ' + err.message);
@@ -1515,7 +1627,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (loginPassInput) loginPassInput.onkeydown = (e) => { if (e.key === 'Enter') handleLogin(); };
 
   const btnCreateQr = document.getElementById('btnCreateQr');
+  const regPassInput = document.getElementById('regPass');
+  const regPhoneInput = document.getElementById('regPhone');
   if (btnCreateQr) btnCreateQr.onclick = handleRegister;
+  if (regPassInput) regPassInput.onkeydown = (e) => { if (e.key === 'Enter') handleRegister(); };
+  if (regPhoneInput) regPhoneInput.onkeydown = (e) => { if (e.key === 'Enter') handleRegister(); };
 
   const closeQrBtn = document.getElementById('closeQrBtn');
   if (closeQrBtn) {
