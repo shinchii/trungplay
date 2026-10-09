@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Trung Play">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Trung Play - CarPlay &amp; Android Auto Car Stream</title>
+<title>Trung Play - CarPlay &amp; Car Stream</title>
 
 <!-- YouTube Iframe API cho Auto-Next & Error Handling -->
 <script src="https://www.youtube.com/iframe_api"></script>
@@ -155,7 +155,7 @@ button { cursor: pointer; border: 0; color: inherit; }
 .search-hero {
   max-width: 960px;
   width: 100%;
-  margin: 40px auto 24px;
+  margin: 36px auto 20px;
   padding: 0 20px;
 }
 .search-box-center {
@@ -250,7 +250,7 @@ button { cursor: pointer; border: 0; color: inherit; }
   padding: 0 4px;
 }
 .results-header h2 {
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 700;
   margin: 0;
   color: #fff;
@@ -327,40 +327,12 @@ button { cursor: pointer; border: 0; color: inherit; }
 
 .empty-state {
   text-align: center;
-  padding: 40px 20px;
+  padding: 36px 20px;
   background: #11151f;
   border: 1px solid var(--line);
   border-radius: 20px;
   color: var(--muted);
-}
-.empty-state-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #fff;
-  margin-bottom: 8px;
-}
-.suggest-chips {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-top: 18px;
-}
-.chip {
-  padding: 10px 18px;
-  border-radius: 999px;
-  background: #1a202d;
-  border: 1px solid #2d3648;
-  color: #cbd5e1;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all .2s;
-}
-.chip:hover, .chip:focus-visible {
-  background: #252e40;
-  border-color: var(--accent);
-  color: #fff;
+  font-size: 15px;
 }
 
 /* KHUNG PHÁT VIDEO CHÍNH - ẨN KHI Ở TRANG CHỦ, TOÀN MÀN HÌNH KHI PHÁT */
@@ -819,22 +791,11 @@ body.cinema .cinema-bar {
     </div>
 
     <div class="results-container">
-      <div class="results-header" id="resultsHeader" style="display:none">
-        <h2>Kết quả tìm kiếm</h2>
+      <div class="results-header" id="resultsHeader">
+        <h2>Danh sách tìm kiếm</h2>
         <span class="muted" id="resultCount" style="color:var(--muted);font-size:14px"></span>
       </div>
-      <div id="results" class="results-list">
-        <div class="empty-state">
-          <div class="empty-state-title">🚗 Hệ Thống Giải Trí Ô Tô</div>
-          <div>Bấm nút <b>🎤 Giọng nói</b> to phía trên hoặc gõ tên bài hát để bắt đầu nghe nhạc trên xe.</div>
-          <div class="suggest-chips">
-            <button class="chip" onclick="quickSearch('nhac remix hot 2026')" tabindex="0">🔥 Nhạc Trẻ Remix Hot 2026</button>
-            <button class="chip" onclick="quickSearch('nhac san xe hoi bass cuc manh')" tabindex="0">🚗 Nhạc Sàn Xe Hơi Bass Cực Căng</button>
-            <button class="chip" onclick="quickSearch('nhac bolero hay nhat')" tabindex="0">🎸 Tuyển Tập Bolero Bất Hủ</button>
-            <button class="chip" onclick="quickSearch('nhac acoustic thu gian')" tabindex="0">☕ Nhạc Acoustic Thư Giãn</button>
-          </div>
-        </div>
-      </div>
+      <div id="results" class="results-list"></div>
     </div>
   </main>
 </div>
@@ -851,26 +812,6 @@ body.cinema .cinema-bar {
   <button id="cinemaExitBtn" class="danger" title="Thoát toàn màn hình và tắt nhạc" tabindex="0">✕ Thoát</button>
 </div>
 
-<!-- POPUP CẤP QUYỀN TRUY CẬP MICRO CHO XE HƠI (#micPermModal) -->
-<div class="modal-back" id="micPermModal">
-  <div class="modal" style="max-width:480px;text-align:center;padding:28px 24px">
-    <div style="font-size:52px;margin-bottom:12px">🎙️</div>
-    <h2 style="font-size:21px;color:#fff;margin-bottom:10px">Cần cấp quyền truy cập Micro</h2>
-    <p style="color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:20px">
-      Để tìm kiếm bài hát bằng giọng nói qua micro của xe hơi (CarPlay / APTV), vui lòng cho phép quyền truy cập Micro.
-    </p>
-    <button class="pill primary" id="btnGrantMic" style="width:100%;height:58px;font-size:17px;font-weight:800;border-radius:16px;margin-bottom:12px" tabindex="0">
-      👉 BẤM ĐỂ CẤP QUYỀN MICRO
-    </button>
-    <button class="pill" id="btnCloseMicPerm" style="width:100%;height:44px;color:var(--muted)" tabindex="0">
-      Để sau
-    </button>
-    <div style="margin-top:16px;font-size:12px;color:#7e8b9d;line-height:1.5;text-align:left;background:rgba(255,255,255,0.04);padding:10px 14px;border-radius:12px">
-      💡 <b>Nếu đã lỡ bấm Chặn:</b> Vào <b>Cài đặt iPhone</b> &gt; <b>Quyền riêng tư &amp; Bảo mật</b> &gt; <b>Micro</b> &gt; Bật cho ứng dụng APTV hoặc Safari rồi tải lại trang.
-    </div>
-  </div>
-</div>
-
 <!-- POPUP TÌM KIẾM GIỌNG NÓI (#voiceModal) -->
 <div class="modal-back" id="voiceModal">
   <div class="voice-modal-box">
@@ -878,7 +819,7 @@ body.cinema .cinema-bar {
     <div class="voice-mic-ring">
       <div class="voice-mic-icon">🎤</div>
     </div>
-    <div class="voice-title">Đang nghe qua Micro xe...</div>
+    <div class="voice-title">Đang nghe giọng nói...</div>
     <div class="voice-transcript" id="voiceTranscript">Hãy nói tên bài hát bạn muốn nghe!</div>
     <div class="voice-hint" id="voiceHint">Dừng nói 3 giây sẽ tự tìm kiếm &amp; tự phát bài #1</div>
     <div class="controls" style="margin-top:16px;display:flex;gap:10px;justify-content:center">
