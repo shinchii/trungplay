@@ -127,9 +127,10 @@ button { cursor: pointer; border: 0; color: inherit; }
   transition: all .2s;
   box-shadow: 0 4px 16px rgba(0,0,0,0.3);
 }
-.user-badge:hover {
+.user-badge:hover, .user-badge:focus {
   background: #1d2432;
   border-color: var(--accent);
+  outline: 2px solid var(--accent);
 }
 .status-dot {
   width: 9px;
@@ -419,7 +420,13 @@ body.cinema .cinema-bar {
   padding: 16px;
 }
 .modal-back.open {
-  display: grid;
+  display: grid !important;
+}
+#accountModal {
+  z-index: 2147483647 !important;
+}
+#accountModal.open {
+  display: grid !important;
 }
 .modal {
   width: min(520px, 94vw);
@@ -775,7 +782,7 @@ body.cinema .cinema-bar {
         <div class="brand-sub">CarPlay &amp; Car Stream</div>
       </div>
     </div>
-    <div class="user-badge" id="userBadge" style="display:none" tabindex="0" title="Xem thông tin tài khoản">
+    <div class="user-badge" id="userBadge" onclick="openAccountModal()" style="display:none" tabindex="0" title="Xem thông tin tài khoản">
       <span class="status-dot"></span>
       <span class="user-phone" id="badgePhone">0965512394</span>
     </div>
@@ -843,7 +850,7 @@ body.cinema .cinema-bar {
   <div class="modal" style="max-width:440px">
     <div class="modal-head">
       <h2>Thông tin Tài khoản</h2>
-      <button class="iconbtn" data-close tabindex="0">×</button>
+      <button class="iconbtn" id="closeAccountModalBtn" onclick="closeAccountModal()" data-close tabindex="0">×</button>
     </div>
     <div class="setting">
       <label>Số điện thoại tài khoản</label>

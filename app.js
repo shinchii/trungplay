@@ -397,6 +397,30 @@ function updateUserUI(user) {
   if (accModalDevId) accModalDevId.value = devId;
 }
 
+function openAccountModal() {
+  const accountModal = document.getElementById('accountModal');
+  if (!accountModal) return;
+  const sessionStr = localStorage.getItem('aptv_user');
+  if (sessionStr) {
+    try {
+      const u = JSON.parse(sessionStr);
+      updateUserUI(u);
+    } catch(e){}
+  }
+  accountModal.style.display = 'grid';
+  accountModal.classList.add('open');
+}
+window.openAccountModal = openAccountModal;
+
+function closeAccountModal() {
+  const accountModal = document.getElementById('accountModal');
+  if (accountModal) {
+    accountModal.classList.remove('open');
+    accountModal.style.display = 'none';
+  }
+}
+window.closeAccountModal = closeAccountModal;
+
 async function handleLogin() {
   clearAuthError();
   let phone = normalizePhone(document.getElementById('loginPhone') ? document.getElementById('loginPhone').value : '');
@@ -531,7 +555,14 @@ async function handleRegister() {
     if (opt.dataset && opt.dataset.days) planDays = parseInt(opt.dataset.days, 10);
   }
 
-  // 3. BẮT ĐẦU LẮNG NGHE REALTIME STATUS TRƯỚC TIÊN ĐỂ KHÔNG BỎ LỠ WEBHOOK
+  // 3. GHI NHỚ THÔNG TIN ĐƠN ĐĂNG KÝ VÀ BẮT ĐẦU LẮNG NGHE REALTIME
+  window.__pendingPhone = phone;
+  window.__pendingPass = pass;
+  window.__pendingPlanDays = planDays;
+  window.__pendingPlanName = planName;
+  window.__pendingPrice = price;
+  try { localStorage.setItem('aptv_pending_phone', phone); } catch(e){}
+
   listenRealtimeStatus(phone);
 
   // 4. HIỂN THỊ POPUP VIETQR NGAY LẬP TỨC
@@ -1743,9 +1774,32 @@ document.addEventListener('DOMContentLoaded', () => {
   // Bắt sự kiện xem thông tin tài khoản (Topbar Badge)
   const userBadge = document.getElementById('userBadge');
   const accountModal = document.getElementById('accountModal');
-  if (userBadge && accountModal) {
-    userBadge.onclick = () => {
-      accountModal.classList.add('open');
+  if (userBadge) {
+    userBadge.onclick = (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      openAccountModal();
+    };
+    userBadge.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openAccountModal();
+      }
+    };
+  }
+
+  // Bắt sự kiện click toàn cục cho userBadge (hỗ trợ màn hình xe & con lăn)
+  document.addEventListener('click', (e) => {
+    if (e.target && (e.target.id === 'userBadge' || e.target.closest('#userBadge'))) {
+      if (e.preventDefault) e.preventDefault();
+      openAccountModal();
+    }
+  });
+
+  if (accountModal) {
+    accountModal.onclick = (e) => {
+      if (e.target === accountModal) {
+        closeAccountModal();
+      }
     };
   }
 
@@ -1772,7 +1826,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => {
     document.querySelectorAll('.modal-back').forEach(m => {
-      if (m.id !== 'authModal') m.classList.remove('open');
+      if (m.id !== 'authModal') {
+        m.classList.remove('open');
+        m.style.display = 'none';
+      }
     });
   });
 
