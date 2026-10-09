@@ -875,13 +875,15 @@ function play(item, add = true) {
     fallbackIframePlay(videoId, wrap);
   }
 
-  document.getElementById('nowTitle').textContent = item.title || 'YouTube Video';
-  document.getElementById('nowSub').textContent = item.channel ? (item.channel + ' · YouTube') : ('YouTube · ' + videoId);
+  const nowT = document.getElementById('nowTitle');
+  if (nowT) nowT.textContent = item.title || 'YouTube Video';
+  const nowS = document.getElementById('nowSub');
+  if (nowS) nowS.textContent = item.channel ? (item.channel + ' · YouTube') : ('YouTube · ' + videoId);
 
   toast('Đang phát: ' + (item.title || videoId));
   renderAll();
   updateMediaSession(item);
-  showFullscreenPrompt(item.title || videoId);
+  enterCinemaMode();
 }
 
 // BẮT SỰ KIỆN POSTMESSAGE TỪ YOUTUBE IFRAME (DỰ PHÒNG CHO TRƯỜNG HỢP IFRAME TĨNH)
@@ -994,21 +996,16 @@ function toggleFav(item) {
   renderAll();
 }
 
-function itemHtml(item, kind = 'result') {
-  const fav = state.favorites.some(x => x.id === item.id);
+function itemHtml(item) {
   const isPlaying = current && current.id === item.id;
   return `
-    <div class="item ${isPlaying ? 'active-play' : ''}" data-play-id="${esc(item.id)}" tabindex="0">
+    <div class="item ${isPlaying ? 'active-play' : ''}" data-play-id="${esc(item.id)}" tabindex="0" title="Bấm để phát toàn màn hình">
       <img class="thumb" src="${esc(item.thumb || ytThumb(item.id))}" loading="lazy">
-      <div style="min-width:0;cursor:pointer">
+      <div class="item-info">
         <div class="item-title" title="${esc(item.title || 'YouTube video')}">${esc(item.title || 'YouTube video')}</div>
-        <div class="item-sub">${esc(item.channel || 'YouTube')} · ${kind === 'history' ? 'Đã xem' : 'Video'}</div>
+        <div class="item-sub">${esc(item.channel || 'YouTube')}</div>
       </div>
-      <div class="actions">
-        <button class="iconbtn" data-play="${esc(item.id)}" title="Phát ngay" tabindex="0">▶</button>
-        <button class="iconbtn" data-add="${esc(item.id)}" title="Thêm playlist" tabindex="0">＋</button>
-        <button class="iconbtn" data-fav="${esc(item.id)}" title="${fav ? 'Bỏ yêu thích' : 'Yêu thích'}" tabindex="0">${fav ? '♥' : '♡'}</button>
-      </div>
+      <button class="btn-play-item" data-play="${esc(item.id)}" tabindex="0">▶ Phát</button>
     </div>`;
 }
 
@@ -1252,43 +1249,42 @@ async function search(q) {
   return [];
 }
 
+function quickSearch(q) {
+  const input = document.getElementById('searchInput');
+  if (input) input.value = q;
+  search(q);
+}
+window.quickSearch = quickSearch;
+
 function renderSearchResults(arr) {
   const out = document.getElementById('results');
   if (!out) return;
-  out.innerHTML = arr.length ? arr.map(x => itemHtml(x, 'result')).join('') : '<div class="empty">Không tìm thấy video nào.</div>';
+  const header = document.getElementById('resultsHeader');
   const countEl = document.getElementById('resultCount');
+  if (header) header.style.display = arr.length ? 'flex' : 'none';
   if (countEl) countEl.textContent = arr.length + ' video';
 
-  out.querySelectorAll('[data-play]').forEach(b => b.onclick = (e) => {
-    e.stopPropagation();
-    const item = arr.find(x => x.id === b.dataset.play);
-    if (item) play(item);
-  });
-  out.querySelectorAll('[data-play-id]').forEach(itemEl => itemEl.onclick = () => {
-    const item = arr.find(x => x.id === itemEl.dataset.playId);
-    if (item) play(item);
-  });
-  out.querySelectorAll('[data-add]').forEach(b => b.onclick = (e) => {
-    e.stopPropagation();
-    const item = arr.find(x => x.id === b.dataset.add);
-    if (item) addPlaylist(item);
-  });
-  out.querySelectorAll('[data-fav]').forEach(b => b.onclick = (e) => {
-    e.stopPropagation();
-    const item = arr.find(x => x.id === b.dataset.fav);
-    if (item) toggleFav(item);
+  state.playlist = [...arr];
+
+  out.innerHTML = arr.length ? arr.map(x => itemHtml(x)).join('') : `
+    <div class="empty-state">
+      <div class="empty-state-title">Không tìm thấy bài hát</div>
+      <div>Hãy thử tìm với từ khóa khác hoặc bấm 🎤 Giọng nói để tìm lại.</div>
+    </div>`;
+
+  out.querySelectorAll('[data-play-id]').forEach(itemEl => {
+    itemEl.onclick = () => {
+      const item = arr.find(x => x.id === itemEl.dataset.playId);
+      if (item) {
+        play(item);
+        enterCinemaMode();
+      }
+    };
   });
 }
 
 function showView(v) {
-  document.querySelectorAll('.view').forEach(x => x.hidden = true);
-  const targetView = document.getElementById('view-' + v);
-  if (targetView) targetView.hidden = false;
-
-  document.querySelectorAll('.nav button, .mobile-nav button').forEach(x => x.classList.toggle('active', x.dataset.view === v));
-  const sidebar = document.getElementById('sidebar');
-  if (sidebar) sidebar.classList.remove('open');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Giao diện đã được tối giản chỉ còn tìm kiếm và phát toàn màn hình
 }
 
 function renderTv() {
@@ -1402,8 +1398,7 @@ function focusCinemaButton(indexOrElement) {
 function enterCinemaMode() {
   document.body.classList.add('cinema');
   requestPageFullscreen();
-  hideFullscreenPrompt();
-  // Đặt ngay vòng sáng đỏ con lăn vào nút Micro đầu tiên trong Cinema Bar
+  forceCarAudioOutput();
   setTimeout(() => {
     const mic = document.getElementById('cinemaMicBtn');
     if (mic) {
@@ -1417,31 +1412,17 @@ function enterCinemaMode() {
 function exitCinemaMode() {
   document.body.classList.remove('cinema');
   exitPageFullscreen();
+  destroyPlayers(); // Tắt nhạc khi thoát toàn màn hình theo đúng yêu cầu
+  const input = document.getElementById('searchInput');
+  if (input) {
+    setTimeout(() => {
+      try { input.focus(); } catch(e){}
+    }, 120);
+  }
 }
 
-// POPUP "XEM TOÀN MÀN HÌNH": hiện sau khi bắt đầu phát
-let fsPromptTimer = null;
-
-function showFullscreenPrompt(title) {
-  if (document.body.classList.contains('cinema')) return;
-  const prompt = document.getElementById('fsPrompt');
-  if (!prompt) return;
-  const t = document.getElementById('fsPromptTitle');
-  if (t) t.textContent = title || '';
-  prompt.classList.add('open');
-
-  const go = document.getElementById('fsPromptGo');
-  setTimeout(() => { try { go && go.focus({ preventScroll: true }); } catch (e) {} }, 50);
-
-  clearTimeout(fsPromptTimer);
-  fsPromptTimer = setTimeout(hideFullscreenPrompt, 15000);
-}
-
-function hideFullscreenPrompt() {
-  clearTimeout(fsPromptTimer);
-  const prompt = document.getElementById('fsPrompt');
-  if (prompt) prompt.classList.remove('open');
-}
+function showFullscreenPrompt() {}
+function hideFullscreenPrompt() {}
 
 function getSpeechRecognition() {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
@@ -1452,8 +1433,26 @@ function setVoiceText(text) {
   if (el) el.textContent = text;
 }
 
+let voiceCountdownInterval = null;
+
+function setVoiceHint(text) {
+  const el = document.getElementById('voiceHint');
+  if (el) el.textContent = text;
+}
+
+function showMicPermissionModal() {
+  const m = document.getElementById('micPermModal');
+  if (m) m.classList.add('open');
+}
+
+function closeMicPermissionModal() {
+  const m = document.getElementById('micPermModal');
+  if (m) m.classList.remove('open');
+}
+
 // Hủy hoàn toàn phiên nhận giọng nói cũ để giải phóng tài nguyên micro
 function killRecognition() {
+  clearInterval(voiceCountdownInterval);
   clearTimeout(voiceSilenceTimer);
   clearTimeout(voiceMaxTimer);
   const r = voiceRecognition;
@@ -1468,6 +1467,7 @@ function killRecognition() {
   if ('audioSession' in navigator) {
     try { navigator.audioSession.type = 'playback'; } catch(e){}
   }
+  forceCarAudioOutput();
 }
 
 function closeVoiceModal() {
@@ -1498,7 +1498,6 @@ async function finishVoice(session) {
   const results = await search(text);
   if (results && results.length > 0) {
     play(results[0], true);
-    hideFullscreenPrompt();
     // TỰ ĐỘNG VÀO FULL SCREEN TOÀN MÀN HÌNH THEO ĐÚNG YÊU CẦU
     enterCinemaMode();
   } else {
@@ -1509,16 +1508,29 @@ async function finishVoice(session) {
   }
 }
 
-function startVoiceSearch() {
-  hideFullscreenPrompt();
+async function handleVoiceButtonClick() {
+  // 1. Kiểm tra quyền Micro trên WebView của app APTV hoặc Safari trước khi bắt đầu
+  if (!sessionStorage.getItem('mic_ready') && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop());
+      sessionStorage.setItem('mic_ready', '1');
+    } catch(err) {
+      console.warn('Microphone permission check error:', err);
+      showMicPermissionModal();
+      return;
+    }
+  }
+  startVoiceSearch();
+}
 
+function startVoiceSearch() {
   const SR = getSpeechRecognition();
   if (!SR) {
-    toast('Trình duyệt này không hỗ trợ tìm bằng giọng nói. Hãy gõ tên bài hát.');
+    toast('Trình duyệt của xe chưa hỗ trợ Web Speech. Vui lòng gõ tên bài hát để tìm kiếm.');
     return;
   }
 
-  // Dọn sạch phiên cũ để tránh lỗi "recognition has already started" gây lúc được lúc không
   killRecognition();
   const mySession = ++voiceSessionId;
   currentVoiceText = '';
@@ -1526,9 +1538,9 @@ function startVoiceSearch() {
 
   const modal = document.getElementById('voiceModal');
   if (modal) modal.classList.add('open');
-  setVoiceText('Đang nghe... Hãy nói tên bài hát!');
+  setVoiceText('Đang nghe qua Micro xe... Hãy nói tên bài hát!');
+  setVoiceHint('Dừng nói 3 giây sẽ tự tìm kiếm & tự phát bài #1');
 
-  // Trì hoãn 80ms để trình duyệt giải phóng phần cứng micro hoàn toàn trước khi mở phiên mới
   setTimeout(() => {
     if (mySession !== voiceSessionId) return;
 
@@ -1541,7 +1553,7 @@ function startVoiceSearch() {
     }
 
     r.lang = 'vi-VN';
-    r.continuous = true; // Bật continuous để không bị ngắt vội khi người lái ngập ngừng
+    r.continuous = true;
     r.interimResults = true;
     r.maxAlternatives = 1;
 
@@ -1559,9 +1571,26 @@ function startVoiceSearch() {
       const searchInput = document.getElementById('searchInput');
       if (searchInput) searchInput.value = text;
 
-      // 2.5 giây không nói thêm -> Tự động tìm kiếm & phát ngay
+      // ĐÚNG 3 GIÂY KHÔNG NÓI THÊM -> TỰ ĐỘNG TÌM KIẾM & PHÁT BÀI ĐẦU TIÊN & FULL SCREEN
       clearTimeout(voiceSilenceTimer);
-      voiceSilenceTimer = setTimeout(() => finishVoice(mySession), 2500);
+      clearInterval(voiceCountdownInterval);
+
+      let secondsLeft = 3;
+      setVoiceHint(`⏱️ Đang chờ... Tự phát sau ${secondsLeft}s`);
+
+      voiceCountdownInterval = setInterval(() => {
+        secondsLeft--;
+        if (secondsLeft > 0) {
+          setVoiceHint(`⏱️ Đang chờ... Tự phát sau ${secondsLeft}s`);
+        } else {
+          clearInterval(voiceCountdownInterval);
+        }
+      }, 1000);
+
+      voiceSilenceTimer = setTimeout(() => {
+        clearInterval(voiceCountdownInterval);
+        finishVoice(mySession);
+      }, 3000);
     };
 
     r.onerror = (e) => {
@@ -1569,7 +1598,9 @@ function startVoiceSearch() {
       const err = e && e.error;
       console.warn('Speech recognition status/error:', err);
       if (err === 'not-allowed' || err === 'service-not-allowed') {
-        setVoiceText('⚠️ Quyền Micro bị chặn. Hãy cho phép quyền truy cập Micro trên trình duyệt rồi thử lại.');
+        killRecognition();
+        closeVoiceModal();
+        showMicPermissionModal();
       } else if (err === 'network') {
         setVoiceText('⚠️ Mạng chập chờn, không nhận dạng được giọng nói. Bấm "🎤 Nói lại".');
       } else if (err === 'no-speech') {
@@ -1585,7 +1616,9 @@ function startVoiceSearch() {
       if (mySession !== voiceSessionId) return;
       voiceRecognition = null;
       if (currentVoiceText) {
-        finishVoice(mySession);
+        if (!voiceSilenceTimer) {
+          voiceSilenceTimer = setTimeout(() => finishVoice(mySession), 3000);
+        }
       } else {
         clearTimeout(voiceMaxTimer);
         const el = document.getElementById('voiceTranscript');
@@ -1603,7 +1636,7 @@ function startVoiceSearch() {
       setVoiceText('⚠️ Micro đang bận. Bấm "🎤 Nói lại".');
     }
 
-    // Giới hạn tối đa 15 giây cho 1 lần nghe để không bao giờ bị treo
+    // Giới hạn tối đa 20 giây cho 1 lần nghe
     voiceMaxTimer = setTimeout(() => {
       if (mySession !== voiceSessionId) return;
       if (currentVoiceText) {
@@ -1612,23 +1645,17 @@ function startVoiceSearch() {
         killRecognition();
         setVoiceText('Hết thời gian nghe. Bấm "🎤 Nói lại" để thử lại.');
       }
-    }, 15000);
+    }, 20000);
   }, 80);
 }
 
 function initVoiceSearch() {
-  const btnMic = document.getElementById('btnMic');
-  const floatingBtn = document.getElementById('floatingVoiceBtn');
+  const btnVoice = document.getElementById('btnVoiceSearch');
   const retryVoiceBtn = document.getElementById('retryVoiceBtn');
   const closeVoiceBtn = document.getElementById('closeVoiceBtn');
   const cancelVoiceBtn = document.getElementById('cancelVoiceBtn');
 
-  if (!getSpeechRecognition() && btnMic) {
-    btnMic.title = 'Trình duyệt không hỗ trợ Tìm bằng giọng nói';
-  }
-
-  if (btnMic) btnMic.onclick = startVoiceSearch;
-  if (floatingBtn) floatingBtn.onclick = startVoiceSearch;
+  if (btnVoice) btnVoice.onclick = handleVoiceButtonClick;
   if (retryVoiceBtn) retryVoiceBtn.onclick = startVoiceSearch;
   if (closeVoiceBtn) closeVoiceBtn.onclick = stopVoiceSearch;
   if (cancelVoiceBtn) cancelVoiceBtn.onclick = stopVoiceSearch;
@@ -1640,31 +1667,39 @@ function initCinemaControls() {
   const prevBtn = document.getElementById('cinemaPrevBtn');
   const nextBtn = document.getElementById('cinemaNextBtn');
   const exitBtn = document.getElementById('cinemaExitBtn');
-  const cinemaAirPlayBtn = document.getElementById('cinemaAirPlayBtn');
 
-  if (micBtn) micBtn.onclick = startVoiceSearch;
+  if (micBtn) micBtn.onclick = handleVoiceButtonClick;
   if (playPauseBtn) playPauseBtn.onclick = togglePlayPause;
   if (prevBtn) prevBtn.onclick = playPrev;
   if (nextBtn) nextBtn.onclick = playNext;
   if (exitBtn) exitBtn.onclick = exitCinemaMode;
-  if (cinemaAirPlayBtn) cinemaAirPlayBtn.onclick = showCarPlayAirPlayPicker;
 
-  // Nút trong popup "Xem toàn màn hình"
-  const fsGo = document.getElementById('fsPromptGo');
-  const fsLater = document.getElementById('fsPromptLater');
-  if (fsGo) fsGo.onclick = () => { hideFullscreenPrompt(); enterCinemaMode(); };
-  if (fsLater) fsLater.onclick = hideFullscreenPrompt;
+  // Lắng nghe sự kiện thoát Fullscreen của trình duyệt để tự tắt nhạc
+  const handleFullscreenChange = () => {
+    const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+    if (!isFs && document.body.classList.contains('cinema')) {
+      exitCinemaMode();
+    }
+  };
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
 
   // ĐIỀU KHIỂN BẰNG CON LĂN MAZDA / MERCEDES / BMW VÀ PHÍM BÀN PHÍM
   document.addEventListener('keydown', (e) => {
     // 1. Phím Back / Escape trên vô lăng hoặc xe: đóng modal / thoát toàn màn hình
     if (e.key === 'Escape' || e.key === 'BrowserBack' || e.key === 'GoBack') {
       const voiceModal = document.getElementById('voiceModal');
-      const fsPrompt = document.getElementById('fsPrompt');
+      const micPermModal = document.getElementById('micPermModal');
+      const qrModal = document.getElementById('qrModal');
+      const accountModal = document.getElementById('accountModal');
       if (voiceModal && voiceModal.classList.contains('open')) {
         stopVoiceSearch();
-      } else if (fsPrompt && fsPrompt.classList.contains('open')) {
-        hideFullscreenPrompt();
+      } else if (micPermModal && micPermModal.classList.contains('open')) {
+        closeMicPermissionModal();
+      } else if (accountModal && accountModal.classList.contains('open')) {
+        accountModal.classList.remove('open');
+      } else if (qrModal && qrModal.classList.remove('open')) {
+        qrModal.classList.remove('open');
       } else if (document.body.classList.contains('cinema')) {
         exitCinemaMode();
       }
@@ -1745,11 +1780,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initRotaryKnobScroll();
   initCarPlayAudioAnchor();
 
-  const topAirPlayBtn = document.getElementById('topAirPlayBtn');
-  const airPlayBtn = document.getElementById('airPlayBtn');
-  if (topAirPlayBtn) topAirPlayBtn.onclick = showCarPlayAirPlayPicker;
-  if (airPlayBtn) airPlayBtn.onclick = showCarPlayAirPlayPicker;
-
+  // Tự động mở khóa âm thanh ra loa xe khi chạm / bấm lần đầu
   const unlockAudioOnTouch = () => { forceCarAudioOutput(); };
   document.addEventListener('touchstart', unlockAudioOnTouch, { once: true, passive: true });
   document.addEventListener('click', unlockAudioOnTouch, { once: true, passive: true });
@@ -1799,72 +1830,32 @@ document.addEventListener('DOMContentLoaded', () => {
   if (searchForm) {
     searchForm.onsubmit = e => {
       e.preventDefault();
-      search(document.getElementById('searchInput').value);
+      const val = document.getElementById('searchInput').value.trim();
+      if (val) search(val);
+      else toast('Vui lòng nhập tên bài hát cần tìm');
     };
   }
 
-  document.querySelectorAll('.nav button, .mobile-nav button').forEach(b => b.onclick = () => showView(b.dataset.view));
-  const menuBtn = document.getElementById('menuBtn');
-  const settingsTop = document.getElementById('settingsTop');
-  const openUrlBtn = document.getElementById('openUrlBtn');
-
-  if (menuBtn) menuBtn.onclick = () => document.getElementById('sidebar').classList.toggle('open');
-  if (settingsTop) settingsTop.onclick = () => showView('settings');
-  if (openUrlBtn) openUrlBtn.onclick = () => document.getElementById('urlModal').classList.add('open');
-
-  const saveSettingsBtn = document.getElementById('saveSettings');
-  if (saveSettingsBtn) {
-    saveSettingsBtn.onclick = () => {
-      state.apiKey = document.getElementById('apiKey').value.trim();
-      state.proxyUrl = document.getElementById('proxyUrl').value.trim();
-      saveState();
-      toast('Đã lưu cài đặt');
+  // Nút cấp quyền Micro trong popup
+  const btnGrantMic = document.getElementById('btnGrantMic');
+  if (btnGrantMic) {
+    btnGrantMic.onclick = async () => {
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach(t => t.stop());
+        }
+        sessionStorage.setItem('mic_ready', '1');
+        closeMicPermissionModal();
+        toast('✅ Đã cấp quyền Micro thành công! Bắt đầu nghe...');
+        setTimeout(startVoiceSearch, 300);
+      } catch(err) {
+        alert('⚠️ Bạn chưa cấp quyền Micro trên thiết bị.\n\nVui lòng vào Cài đặt iPhone > Quyền riêng tư & Bảo mật > Micro > Bật quyền cho ứng dụng APTV (hoặc Safari) rồi thử lại!');
+      }
     };
   }
-
-  const autoNextBtn = document.getElementById('autoNextBtn');
-  if (autoNextBtn) {
-    autoNextBtn.onclick = () => {
-      state.autoNext = !state.autoNext;
-      saveState();
-      renderAll();
-      toast(state.autoNext ? 'Đã BẬT tự động phát' : 'Đã TẮT tự động phát');
-    };
-  }
-
-  const clearPlaylistBtn1 = document.getElementById('clearPlaylist');
-  const clearPlaylistBtn2 = document.getElementById('clearPlaylist2');
-  const clearHistoryBtn = document.getElementById('clearHistory');
-
-  if (clearPlaylistBtn1) clearPlaylistBtn1.onclick = () => { state.playlist = []; currentIndex = -1; saveState(); renderAll(); toast('Đã xóa danh sách phát'); };
-  if (clearPlaylistBtn2) clearPlaylistBtn2.onclick = () => { state.playlist = []; currentIndex = -1; saveState(); renderAll(); toast('Đã xóa danh sách phát'); };
-  if (clearHistoryBtn) clearHistoryBtn.onclick = () => { state.history = []; saveState(); renderAll(); toast('Đã xóa lịch sử'); };
-
-  const prevBtn = document.getElementById('prevBtn');
-  const nextBtn = document.getElementById('nextBtn');
-  const playCurrentBtn = document.getElementById('playCurrent');
-  const favCurrentBtn = document.getElementById('favCurrent');
-
-  if (prevBtn) prevBtn.onclick = playPrev;
-  if (nextBtn) nextBtn.onclick = playNext;
-  if (playCurrentBtn) playCurrentBtn.onclick = () => current ? togglePlayPause() : toast('Chưa có video đang phát');
-  if (favCurrentBtn) favCurrentBtn.onclick = () => current && toggleFav(current);
-
-  const loadM3uBtn = document.getElementById('loadM3u');
-  const clearTvBtn = document.getElementById('clearTv');
-  if (loadM3uBtn) loadM3uBtn.onclick = () => loadM3u(false);
-  if (clearTvBtn) clearTvBtn.onclick = () => { state.tv = []; saveState(); renderAll(); toast('Đã xóa cache TV'); };
-
-  const openManualBtn = document.getElementById('openManual');
-  if (openManualBtn) {
-    openManualBtn.onclick = () => {
-      const id = vidFromUrl(document.getElementById('manualUrl').value);
-      if (!id) return toast('URL / Video ID không hợp lệ');
-      const x = { id, title: 'YouTube Video', thumb: ytThumb(id), channel: 'YouTube' };
-      document.getElementById('urlModal').classList.remove('open');
-      play(x);
-    };
-  }
+  const btnCloseMicPerm = document.getElementById('btnCloseMicPerm');
+  if (btnCloseMicPerm) btnCloseMicPerm.onclick = closeMicPermissionModal;
 
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => {
     document.querySelectorAll('.modal-back').forEach(m => {
@@ -1872,57 +1863,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  const exportBtn = document.getElementById('exportBtn');
-  if (exportBtn) {
-    exportBtn.onclick = () => {
-      const backup = { format: 'trung-play-backup', version: 3.0, createdAt: new Date().toISOString(), storage: state };
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
-      a.download = 'trung-play-backup-' + new Date().toISOString().slice(0, 10) + '.json';
-      a.click();
-      URL.revokeObjectURL(a.href);
-      toast('Đã xuất file Backup');
-    };
-  }
-
-  const importBtn = document.getElementById('importBtn');
-  const importFile = document.getElementById('importFile');
-  if (importBtn) importBtn.onclick = () => importFile.click();
-  if (importFile) {
-    importFile.onchange = async e => {
-      const f = e.target.files[0];
-      if (!f) return;
-      try {
-        const j = JSON.parse(await f.text());
-        if (j.format !== 'trung-play-backup' || !j.storage) throw Error('File không hợp lệ');
-        state = { ...defaults, ...j.storage };
-        saveState();
-        renderAll();
-        toast('Đã khôi phục dữ liệu từ Backup');
-      } catch (err) {
-        toast('Lỗi đọc file: ' + err.message);
-      }
-      e.target.value = '';
-    };
-  }
-
-  const resetBtn = document.getElementById('resetBtn');
-  if (resetBtn) {
-    resetBtn.onclick = () => {
-      if (confirm('Xóa toàn bộ dữ liệu ứng dụng trên thiết bị này?')) {
-        localStorage.removeItem(KEY);
-        state = loadState();
-        renderAll();
-        toast('Đã đặt lại ứng dụng');
-      }
-    };
-  }
-
   renderAll();
   initVoiceSearch();
   initCinemaControls();
-
-  if (!state.tv.length) {
-    loadM3u(true);
-  }
 });
