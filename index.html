@@ -835,6 +835,7 @@ body.cinema .cinema-bar { display: flex; }
       <div class="user-badge" id="userBadge" style="display:none" tabindex="0" title="Xem thông tin tài khoản">
         <span class="user-phone" id="badgePhone">0965512394</span>
       </div>
+      <button class="iconbtn" id="topAirPlayBtn" title="Chuyển âm thanh ra Loa xe / CarPlay" tabindex="0">🔊</button>
       <button class="iconbtn" id="openUrlBtn" title="Mở Link YouTube" tabindex="0">🔗</button>
       <button class="iconbtn" id="settingsTop" title="Cài đặt" tabindex="0">⚙</button>
     </header>
@@ -862,6 +863,7 @@ body.cinema .cinema-bar { display: flex; }
                 <button class="pill" id="nextBtn" tabindex="0">Sau ⏭</button>
                 <button class="pill" id="autoNextBtn" tabindex="0">🔄 Tự phát: Bật</button>
                 <button class="pill" id="favCurrent" tabindex="0">♡ Yêu thích</button>
+                <button class="pill" id="airPlayBtn" title="Chuyển âm thanh ra Loa xe / CarPlay" tabindex="0">🔊 Loa xe</button>
               </div>
             </div>
           </div>
@@ -1113,6 +1115,7 @@ body.cinema .cinema-bar { display: flex; }
   <button id="cinemaPlayPauseBtn" title="Tạm dừng / Tiếp tục" tabindex="0">⏸</button>
   <button id="cinemaPrevBtn" title="Bài trước" tabindex="0">⏮ Trước</button>
   <button id="cinemaNextBtn" title="Bài sau" tabindex="0">Sau ⏭</button>
+  <button id="cinemaAirPlayBtn" title="Chuyển âm thanh ra Loa xe / CarPlay" tabindex="0">🔊 Loa xe</button>
   <button id="cinemaExitBtn" title="Thoát toàn màn hình" tabindex="0">✕ Thoát</button>
 </div>
 
@@ -1147,6 +1150,9 @@ body.cinema .cinema-bar { display: flex; }
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- AUDIO ANCHOR: ÉP SAFARI/IOS KÍCH HOẠT KÊNH ÂM THANH CARPLAY / LOA XE HƠI -->
+<audio id="carPlayAudioAnchor" loop playsinline webkit-playsinline x-webkit-airplay="allow" style="display:none"></audio>
 
 <!-- APPLICATION LOGIC JS -->
 <script src="app.js" defer></script>
