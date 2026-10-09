@@ -3,10 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0b0d12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trung Play">
+<meta name="mobile-web-app-capable" content="yes">
 <title>Trung Play - APTV CarPlay & Web Stream</title>
 
-<!-- CryptoJS MD5 Hashing -->
+<!-- YouTube Iframe API cho Auto-Next & Error Handling -->
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<!-- CryptoJS MD5 & SHA256 Hashing -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 
 <!-- Firebase v10 Compat SDKs -->
@@ -221,28 +227,52 @@ body.cinema #playerWrap {
   z-index: 2147483000 !important;
   background: #000;
 }
-body.cinema .floating-voice-btn { bottom: 90px; right: 22px; }
+body.cinema .floating-voice-btn { display: none !important; }
 .cinema-bar {
   display: none;
   position: fixed;
-  top: 12px;
-  left: 12px;
+  top: 16px;
+  left: 16px;
   z-index: 2147483100;
-  gap: 8px;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 body.cinema .cinema-bar { display: flex; }
 .cinema-bar button {
-  min-width: 56px;
-  height: 50px;
-  padding: 0 16px;
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.6);
-  border: 2px solid rgba(255, 255, 255, 0.35);
+  min-width: 64px;
+  height: 56px;
+  padding: 0 20px;
+  border-radius: 16px;
+  background: rgba(14, 18, 26, 0.88);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   color: #fff;
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
-.cinema-bar button:hover { background: rgba(255, 31, 61, 0.8); }
+.cinema-bar button.primary {
+  background: linear-gradient(135deg, #ff3650, #d90029);
+  border-color: #ff5368;
+}
+.cinema-bar button:hover,
+.cinema-bar button:focus,
+.cinema-bar button:focus-visible {
+  outline: 4px solid #ff3650 !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 35px rgba(255, 54, 80, 1) !important;
+  transform: scale(1.08);
+  background: rgba(255, 54, 80, 0.95);
+  color: #fff;
+  z-index: 100;
+}
 
 /* POPUP HỎI XEM TOÀN MÀN HÌNH SAU KHI PHÁT */
 .fs-prompt {
@@ -1079,9 +1109,11 @@ body.cinema .cinema-bar { display: flex; }
 
 <!-- THANH ĐIỀU KHIỂN KHI XEM TOÀN MÀN HÌNH -->
 <div class="cinema-bar" id="cinemaBar">
-  <button id="cinemaExitBtn" tabindex="0">✕ Thoát</button>
-  <button id="cinemaPrevBtn" tabindex="0">⏮</button>
-  <button id="cinemaNextBtn" tabindex="0">⏭</button>
+  <button id="cinemaMicBtn" class="primary" title="Tìm bằng giọng nói" tabindex="0">🎤 Giọng nói</button>
+  <button id="cinemaPlayPauseBtn" title="Tạm dừng / Tiếp tục" tabindex="0">⏸</button>
+  <button id="cinemaPrevBtn" title="Bài trước" tabindex="0">⏮ Trước</button>
+  <button id="cinemaNextBtn" title="Bài sau" tabindex="0">Sau ⏭</button>
+  <button id="cinemaExitBtn" title="Thoát toàn màn hình" tabindex="0">✕ Thoát</button>
 </div>
 
 <!-- POPUP HỎI XEM TOÀN MÀN HÌNH (HIỆN SAU KHI BẮT ĐẦU PHÁT) -->

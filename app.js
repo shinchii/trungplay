@@ -103,7 +103,14 @@ function getAccountExpireDate(user) {
   return parseExpireDate(raw);
 }
 
-// HÀM BĂM MD5 MẬT KHẨU
+// HÀM BĂM MẬT KHẨU BẢO MẬT (SHA-256 + SECRET SALT) VÀ MD5 TƯƠNG THÍCH NGƯỢC
+function hashPassword(str) {
+  if (window.CryptoJS && CryptoJS.SHA256) {
+    return CryptoJS.SHA256(str + '@trungplay_secure_salt_2026').toString();
+  }
+  return hashMD5(str);
+}
+
 function hashMD5(str) {
   return CryptoJS.MD5(str).toString();
 }
@@ -401,10 +408,11 @@ async function handleLogin() {
 
     const userData = docSnap.data();
     const storedPass = (userData.password_hash || userData.passwordHash || userData.password || '').toString().trim().toLowerCase();
-    const inputHash = hashed.toLowerCase().trim();
+    const inputSha = hashPassword(pass).toLowerCase().trim();
+    const inputMd5 = hashMD5(pass).toLowerCase().trim();
     const inputPlain = pass.trim().toLowerCase();
 
-    const isMatch = (storedPass === inputHash) || (storedPass === inputPlain);
+    const isMatch = (storedPass === inputSha) || (storedPass === inputMd5) || (storedPass === inputPlain);
     if (!isMatch) {
       return showAuthError('Mật khẩu không chính xác. Vui lòng thử lại.');
     }
@@ -425,9 +433,12 @@ async function handleLogin() {
       return showAuthError(`Tài khoản đã hết hạn vào ngày ${expireDate.toLocaleDateString('vi-VN')}. Vui lòng đăng ký gói mới.`);
     }
 
-    // CHIẾM PHIÊN ĐĂNG NHẬP: Cập nhật device_id của thiết bị này lên Firestore.
-    // Nếu có thiết bị khác đang mở cùng tài khoản, listener realtime trên thiết bị đó sẽ ngay lập tức tự động đăng xuất!
-    await docRef.update({ device_id: currentDevId });
+    // CHIẾM PHIÊN ĐĂNG NHẬP: Cập nhật device_id và nâng cấp bảo mật SHA-256 lên Firestore
+    const updatePayload = { device_id: currentDevId };
+    if (storedPass !== inputSha) {
+      updatePayload.password_hash = inputSha;
+    }
+    await docRef.update(updatePayload);
     userData.device_id = currentDevId;
 
     // ĐĂNG NHẬP THÀNH CÔNG -> LƯU SESSION CHUẨN ISO STRING
@@ -459,13 +470,16 @@ async function handleRegister() {
   if (!/^0\d{8,10}$/.test(phone)) {
     return showAuthError('Số điện thoại không hợp lệ (Ví dụ: 0965512394).');
   }
+  if (pass.length < 6) {
+    return showAuthError('Mật khẩu phải có từ 6 ký tự trở lên để đảm bảo an toàn.');
+  }
 
   if (!db) {
     initFirebase();
     if (!db) return showAuthError('Không thể kết nối Firebase SDK. Vui lòng kiểm tra mạng.');
   }
 
-  const hashed = hashMD5(pass);
+  const hashed = hashPassword(pass);
   const now = new Date();
   const expireDate = new Date(now.getTime() + planDays * 86400000).toISOString();
 
@@ -578,13 +592,114 @@ function switchTab(tab) {
    4. TRÌNH PHÁT MEDIA CHÍNH (YOUTUBE EMBED & TV M3U8 STREAM)
    ========================================================================= */
 
+let ytPlayer = null;
+
 function destroyPlayers() {
+  if (ytPlayer) {
+    try { ytPlayer.destroy(); } catch(e){}
+    ytPlayer = null;
+  }
   if (hlsPlayer) {
     try { hlsPlayer.destroy(); } catch(e){}
     hlsPlayer = null;
   }
   const wrap = document.getElementById('playerWrap');
   if (wrap) wrap.innerHTML = '';
+  if ('mediaSession' in navigator) {
+    try { navigator.mediaSession.playbackState = 'none'; } catch(e){}
+  }
+  updatePlayPauseButton(false);
+}
+
+// CẬP NHẬT GIAO DIỆN MEDIA SESSION (HIỂN THỊ TRÊN MÀN HÌNH KHÓA & BẢNG ĐỒNG HỒ XE HƠI)
+function updateMediaSession(item) {
+  if (!('mediaSession' in navigator)) return;
+  try {
+    const title = item?.title || 'YouTube Video';
+    const artist = item?.channel || 'Trung Play CarPlay';
+    const thumb = item?.thumb || (item?.id ? ytThumb(item.id) : '');
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: title,
+      artist: artist,
+      album: 'Trung Play CarPlay',
+      artwork: thumb ? [{ src: thumb, sizes: '512x512', type: 'image/jpeg' }] : []
+    });
+
+    // BẮT SỰ KIỆN PHÍM BẤM TRÊN VÔ LĂNG XE HƠI (STEERING WHEEL BUTTONS)
+    navigator.mediaSession.setActionHandler('play', () => {
+      togglePlayPause();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      togglePlayPause();
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      playPrev();
+    });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      playNext();
+    });
+  } catch (e) {
+    console.warn('MediaSession warning:', e);
+  }
+}
+
+// ĐỒNG BỘ TRẠNG THÁI NÚT PHÁT / TẠM DỪNG
+function updatePlayPauseButton(isPlaying) {
+  const cinemaBtn = document.getElementById('cinemaPlayPauseBtn');
+  const homeBtn = document.getElementById('playCurrent');
+  if (cinemaBtn) {
+    cinemaBtn.textContent = isPlaying ? '⏸ Tạm dừng' : '▶ Phát tiếp';
+    cinemaBtn.title = isPlaying ? 'Tạm dừng bài hát' : 'Phát tiếp';
+  }
+  if (homeBtn) {
+    homeBtn.textContent = isPlaying ? '⏸ Tạm dừng' : '▶ Tiếp tục';
+  }
+}
+
+function togglePlayPause() {
+  if (ytPlayer && typeof ytPlayer.getPlayerState === 'function') {
+    const s = ytPlayer.getPlayerState();
+    if (s === 1) { // 1 = PLAYING
+      try { ytPlayer.pauseVideo(); } catch(e){}
+      updatePlayPauseButton(false);
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    } else {
+      try { ytPlayer.playVideo(); } catch(e){}
+      updatePlayPauseButton(true);
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+    }
+    return;
+  }
+
+  const tvVid = document.getElementById('tvVideo');
+  if (tvVid) {
+    if (tvVid.paused) {
+      tvVid.play().catch(() => {});
+      updatePlayPauseButton(true);
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+    } else {
+      tvVid.pause();
+      updatePlayPauseButton(false);
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    }
+    return;
+  }
+
+  const iframe = document.getElementById('ytIframe');
+  if (iframe && iframe.contentWindow) {
+    iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+  }
+}
+
+function fallbackIframePlay(videoId, wrap) {
+  const embedUrl = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&playsinline=1&rel=0&modestbranding=1&fs=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`;
+  wrap.innerHTML = `
+    <iframe id="ytIframe" 
+      src="${embedUrl}" 
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+      style="width:100%;height:100%;border:0;background:#000">
+    </iframe>`;
 }
 
 function play(item, add = true) {
@@ -608,23 +723,98 @@ function play(item, add = true) {
   showView('home');
 
   const wrap = document.getElementById('playerWrap');
-  // fs=0: tắt nút fullscreen riêng của YouTube (nó sẽ che mất micro nổi). Dùng chế độ toàn màn hình của app.
-  const embedUrl = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&playsinline=1&rel=0&modestbranding=1&fs=0&enablejsapi=1`;
+  wrap.innerHTML = `<div id="ytPlayerContainer" style="width:100%;height:100%"></div>`;
 
-  wrap.innerHTML = `
-    <iframe id="ytIframe" 
-      src="${embedUrl}" 
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-      style="width:100%;height:100%;border:0;background:#000">
-    </iframe>`;
+  const onPlayerReady = (event) => {
+    try { event.target.playVideo(); } catch(e){}
+    updatePlayPauseButton(true);
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+  };
+
+  const onPlayerStateChange = (event) => {
+    // 0 = YT.PlayerState.ENDED -> MỤC 1: TỰ ĐỘNG CHUYỂN BÀI KẾ TIẾP KHI HẾT BÀI
+    if (event.data === 0) {
+      updatePlayPauseButton(false);
+      if (state.autoNext) {
+        toast('🔄 Hết bài, tự động phát bài kế tiếp...');
+        setTimeout(() => playNext(), 600);
+      }
+    } else if (event.data === 1) { // 1 = PLAYING
+      updatePlayPauseButton(true);
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+    } else if (event.data === 2) { // 2 = PAUSED
+      updatePlayPauseButton(false);
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    }
+  };
+
+  const onPlayerError = (event) => {
+    // MỤC 6: TỰ ĐỘNG BỎ QUA VIDEO BỊ CHẶN NHÚNG (ERROR 150/101/100/2)
+    const errCode = event.data;
+    console.warn('YouTube Player Error code:', errCode);
+    if (errCode === 101 || errCode === 150 || errCode === 100 || errCode === 2) {
+      toast('⚠️ Video này bị hạn chế phát ngoài YouTube, đang tự chuyển bài kế tiếp...');
+      setTimeout(() => playNext(), 1200);
+    }
+  };
+
+  if (window.YT && window.YT.Player) {
+    try {
+      ytPlayer = new YT.Player('ytPlayerContainer', {
+        videoId: videoId,
+        playerVars: {
+          autoplay: 1,
+          playsinline: 1,
+          rel: 0,
+          modestbranding: 1,
+          fs: 0,
+          enablejsapi: 1,
+          origin: window.location.origin
+        },
+        events: {
+          onReady: onPlayerReady,
+          onStateChange: onPlayerStateChange,
+          onError: onPlayerError
+        }
+      });
+    } catch(e) {
+      fallbackIframePlay(videoId, wrap);
+    }
+  } else {
+    fallbackIframePlay(videoId, wrap);
+  }
 
   document.getElementById('nowTitle').textContent = item.title || 'YouTube Video';
   document.getElementById('nowSub').textContent = item.channel ? (item.channel + ' · YouTube') : ('YouTube · ' + videoId);
 
   toast('Đang phát: ' + (item.title || videoId));
   renderAll();
+  updateMediaSession(item);
   showFullscreenPrompt(item.title || videoId);
 }
+
+// BẮT SỰ KIỆN POSTMESSAGE TỪ YOUTUBE IFRAME (DỰ PHÒNG CHO TRƯỜNG HỢP IFRAME TĨNH)
+window.addEventListener('message', (e) => {
+  try {
+    const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+    if (!data) return;
+    if (data.event === 'onStateChange') {
+      if (data.info === 0 && state.autoNext) {
+        toast('🔄 Hết bài, tự động phát bài kế tiếp...');
+        setTimeout(() => playNext(), 600);
+      } else if (data.info === 1) {
+        updatePlayPauseButton(true);
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+      } else if (data.info === 2) {
+        updatePlayPauseButton(false);
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+      }
+    } else if (data.event === 'onError') {
+      toast('⚠️ Video không phát được, tự chuyển bài kế tiếp...');
+      setTimeout(() => playNext(), 1200);
+    }
+  } catch(err){}
+});
 
 function playNext() {
   if (!state.playlist.length) return toast('Playlist đang trống');
@@ -648,6 +838,18 @@ function playTv(ch) {
   wrap.innerHTML = `<video id="tvVideo" controls controlslist="nofullscreen" disablepictureinpicture autoplay playsinline style="width:100%;height:100%;background:#000;object-fit:contain"></video>`;
   const video = document.getElementById('tvVideo');
 
+  video.onended = () => {
+    if (state.autoNext) playNext();
+  };
+  video.onplay = () => {
+    updatePlayPauseButton(true);
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+  };
+  video.onpause = () => {
+    updatePlayPauseButton(false);
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+  };
+
   if (window.Hls && Hls.isSupported() && (src.includes('.m3u8') || !video.canPlayType('application/vnd.apple.mpegurl'))) {
     hlsPlayer = new Hls();
     hlsPlayer.loadSource(src);
@@ -663,6 +865,11 @@ function playTv(ch) {
   document.getElementById('nowTitle').textContent = ch.name;
   document.getElementById('nowSub').textContent = '📺 TV / Live Stream';
   toast('Đang phát TV: ' + ch.name);
+  updateMediaSession({
+    title: ch.name,
+    channel: '📺 TV Live Stream',
+    thumb: ''
+  });
   showFullscreenPrompt(ch.name);
 }
 
@@ -1076,16 +1283,43 @@ function exitPageFullscreen() {
   } catch (e) {}
 }
 
-// CHẾ ĐỘ XEM TOÀN MÀN HÌNH: khung video phủ kín màn hình bằng CSS (không cần thao tác bấm),
-// đồng thời thử xin fullscreen thật của trình duyệt nếu đang có thao tác bấm.
+function getCinemaBarButtons() {
+  const bar = document.getElementById('cinemaBar');
+  if (!bar) return [];
+  return Array.from(bar.querySelectorAll('button:not([disabled])'));
+}
+
+function focusCinemaButton(indexOrElement) {
+  const btns = getCinemaBarButtons();
+  if (!btns.length) return;
+  let target = null;
+  if (typeof indexOrElement === 'number') {
+    const idx = (indexOrElement + btns.length) % btns.length;
+    target = btns[idx];
+  } else if (indexOrElement && btns.includes(indexOrElement)) {
+    target = indexOrElement;
+  } else {
+    target = btns[0];
+  }
+  if (target) {
+    try { target.focus({ preventScroll: true }); } catch (e) {}
+  }
+}
+
+// CHẾ ĐỘ XEM TOÀN MÀN HÌNH (CINEMA MODE)
 function enterCinemaMode() {
   document.body.classList.add('cinema');
   requestPageFullscreen();
-  const voiceModal = document.getElementById('voiceModal');
-  const mic = document.getElementById('floatingVoiceBtn');
-  if (mic && !(voiceModal && voiceModal.classList.contains('open'))) {
-    try { mic.focus({ preventScroll: true }); } catch (e) {}
-  }
+  hideFullscreenPrompt();
+  // Đặt ngay vòng sáng đỏ con lăn vào nút Micro đầu tiên trong Cinema Bar
+  setTimeout(() => {
+    const mic = document.getElementById('cinemaMicBtn');
+    if (mic) {
+      try { mic.focus({ preventScroll: true }); } catch (e) {}
+    } else {
+      focusCinemaButton(0);
+    }
+  }, 120);
 }
 
 function exitCinemaMode() {
@@ -1093,11 +1327,10 @@ function exitCinemaMode() {
   exitPageFullscreen();
 }
 
-// POPUP "XEM TOÀN MÀN HÌNH": hiện sau khi bắt đầu phát, người dùng bấm (hoặc nhấn con lăn) để vào toàn màn hình
+// POPUP "XEM TOÀN MÀN HÌNH": hiện sau khi bắt đầu phát
 let fsPromptTimer = null;
 
 function showFullscreenPrompt(title) {
-  // Nếu đang xem toàn màn hình rồi (ví dụ bấm ⏮ ⏭) thì giữ nguyên, không hỏi lại
   if (document.body.classList.contains('cinema')) return;
   const prompt = document.getElementById('fsPrompt');
   if (!prompt) return;
@@ -1105,11 +1338,9 @@ function showFullscreenPrompt(title) {
   if (t) t.textContent = title || '';
   prompt.classList.add('open');
 
-  // Đặt sẵn vòng sáng con lăn vào nút "XEM TOÀN MÀN HÌNH" => xe không cảm ứng chỉ cần nhấn con lăn
   const go = document.getElementById('fsPromptGo');
   setTimeout(() => { try { go && go.focus({ preventScroll: true }); } catch (e) {} }, 50);
 
-  // Tự ẩn sau 15 giây nếu không chọn
   clearTimeout(fsPromptTimer);
   fsPromptTimer = setTimeout(hideFullscreenPrompt, 15000);
 }
@@ -1129,7 +1360,7 @@ function setVoiceText(text) {
   if (el) el.textContent = text;
 }
 
-// Hủy hoàn toàn phiên nhận giọng nói cũ (gỡ hết sự kiện rồi abort) để lần sau luôn khởi động sạch
+// Hủy hoàn toàn phiên nhận giọng nói cũ để giải phóng tài nguyên micro
 function killRecognition() {
   clearTimeout(voiceSilenceTimer);
   clearTimeout(voiceMaxTimer);
@@ -1139,7 +1370,7 @@ function killRecognition() {
     r.onresult = null;
     r.onerror = null;
     r.onend = null;
-    try { r.abort(); } catch (e) { try { r.stop(); } catch (e2) {} }
+    try { r.stop(); } catch (e) { try { r.abort(); } catch (e2) {} }
   }
 }
 
@@ -1152,6 +1383,9 @@ function stopVoiceSearch() {
   voiceSessionId++;
   killRecognition();
   closeVoiceModal();
+  if (document.body.classList.contains('cinema')) {
+    setTimeout(() => focusCinemaButton(0), 100);
+  }
 }
 
 async function finishVoice(session) {
@@ -1165,16 +1399,19 @@ async function finishVoice(session) {
   toast('🔍 Đang tìm & tự phát: ' + text);
   const results = await search(text);
   if (results && results.length > 0) {
-    if (!current || current.id !== results[0].id) {
-      play(results[0]); // play() tự hiện popup "XEM TOÀN MÀN HÌNH"
-    } else {
-      showFullscreenPrompt(current.title);
+    play(results[0], true);
+    hideFullscreenPrompt();
+    // TỰ ĐỘNG VÀO FULL SCREEN TOÀN MÀN HÌNH THEO ĐÚNG YÊU CẦU
+    enterCinemaMode();
+  } else {
+    toast('Không tìm thấy bài hát: ' + text);
+    if (document.body.classList.contains('cinema')) {
+      setTimeout(() => focusCinemaButton(0), 100);
     }
   }
 }
 
 function startVoiceSearch() {
-  // KHÔNG xin toàn màn hình ở đây: để hộp thoại "Cho phép sử dụng micro" của trình duyệt luôn hiện rõ
   hideFullscreenPrompt();
 
   const SR = getSpeechRecognition();
@@ -1183,7 +1420,7 @@ function startVoiceSearch() {
     return;
   }
 
-  // Luôn hủy phiên cũ và tạo bộ nhận giọng nói MỚI cho mỗi lần bấm (sửa lỗi dùng vài lần thì không nhận nữa)
+  // Dọn sạch phiên cũ để tránh lỗi "recognition has already started" gây lúc được lúc không
   killRecognition();
   const mySession = ++voiceSessionId;
   currentVoiceText = '';
@@ -1193,80 +1430,92 @@ function startVoiceSearch() {
   if (modal) modal.classList.add('open');
   setVoiceText('Đang nghe... Hãy nói tên bài hát!');
 
-  let r;
-  try {
-    r = new SR();
-  } catch (e) {
-    setVoiceText('⚠️ Không khởi động được micro. Bấm "🎤 Nói lại".');
-    return;
-  }
-  r.lang = 'vi-VN';
-  r.continuous = false;
-  r.interimResults = true;
-  r.maxAlternatives = 1;
-
-  r.onresult = (e) => {
+  // Trì hoãn 80ms để trình duyệt giải phóng phần cứng micro hoàn toàn trước khi mở phiên mới
+  setTimeout(() => {
     if (mySession !== voiceSessionId) return;
-    let text = '';
-    for (let i = 0; i < e.results.length; i++) {
-      text += e.results[i][0].transcript;
+
+    let r;
+    try {
+      r = new SR();
+    } catch (e) {
+      setVoiceText('⚠️ Không khởi động được micro. Bấm "🎤 Nói lại".');
+      return;
     }
-    text = text.trim();
-    if (!text) return;
 
-    currentVoiceText = text;
-    setVoiceText(`"${text}"`);
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) searchInput.value = text;
+    r.lang = 'vi-VN';
+    r.continuous = true; // Bật continuous để không bị ngắt vội khi người lái ngập ngừng
+    r.interimResults = true;
+    r.maxAlternatives = 1;
 
-    // 3 giây không nói thêm => tự tìm, tự phát, toàn màn hình
-    clearTimeout(voiceSilenceTimer);
-    voiceSilenceTimer = setTimeout(() => finishVoice(mySession), 3000);
-  };
-
-  r.onerror = (e) => {
-    if (mySession !== voiceSessionId) return;
-    const err = e && e.error;
-    if (err === 'not-allowed' || err === 'service-not-allowed') {
-      setVoiceText('⚠️ Micro đang bị chặn. Hãy cho phép quyền Micro cho trang web rồi bấm "🎤 Nói lại".');
-    } else if (err === 'network') {
-      setVoiceText('⚠️ Mạng yếu, không nhận dạng được giọng nói. Bấm "🎤 Nói lại".');
-    } else if (!currentVoiceText) {
-      setVoiceText('Chưa nghe rõ. Bấm "🎤 Nói lại" để thử lại.');
-    }
-  };
-
-  r.onend = () => {
-    if (mySession !== voiceSessionId) return;
-    voiceRecognition = null;
-    if (currentVoiceText) {
-      finishVoice(mySession);
-    } else {
-      clearTimeout(voiceMaxTimer);
-      const el = document.getElementById('voiceTranscript');
-      if (el && el.textContent.indexOf('Đang nghe') === 0) {
-        setVoiceText('Chưa nghe rõ. Bấm "🎤 Nói lại" để thử lại.');
+    r.onresult = (e) => {
+      if (mySession !== voiceSessionId) return;
+      let text = '';
+      for (let i = 0; i < e.results.length; i++) {
+        text += e.results[i][0].transcript;
       }
-    }
-  };
+      text = text.trim();
+      if (!text) return;
 
-  voiceRecognition = r;
-  try {
-    r.start();
-  } catch (e) {
-    setVoiceText('⚠️ Micro đang bận. Bấm "🎤 Nói lại".');
-  }
+      currentVoiceText = text;
+      setVoiceText(`"${text}"`);
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) searchInput.value = text;
 
-  // Giới hạn tối đa 15 giây cho 1 lần nghe để không bao giờ bị treo
-  voiceMaxTimer = setTimeout(() => {
-    if (mySession !== voiceSessionId) return;
-    if (currentVoiceText) {
-      finishVoice(mySession);
-    } else {
-      killRecognition();
-      setVoiceText('Chưa nghe rõ. Bấm "🎤 Nói lại" để thử lại.');
+      // 2.5 giây không nói thêm -> Tự động tìm kiếm & phát ngay
+      clearTimeout(voiceSilenceTimer);
+      voiceSilenceTimer = setTimeout(() => finishVoice(mySession), 2500);
+    };
+
+    r.onerror = (e) => {
+      if (mySession !== voiceSessionId) return;
+      const err = e && e.error;
+      console.warn('Speech recognition status/error:', err);
+      if (err === 'not-allowed' || err === 'service-not-allowed') {
+        setVoiceText('⚠️ Quyền Micro bị chặn. Hãy cho phép quyền truy cập Micro trên trình duyệt rồi thử lại.');
+      } else if (err === 'network') {
+        setVoiceText('⚠️ Mạng chập chờn, không nhận dạng được giọng nói. Bấm "🎤 Nói lại".');
+      } else if (err === 'no-speech') {
+        if (!currentVoiceText) {
+          setVoiceText('Đang chờ nghe bạn nói tên bài hát...');
+        }
+      } else if (!currentVoiceText) {
+        setVoiceText('Chưa nghe rõ bài hát. Bấm "🎤 Nói lại" để thử lại.');
+      }
+    };
+
+    r.onend = () => {
+      if (mySession !== voiceSessionId) return;
+      voiceRecognition = null;
+      if (currentVoiceText) {
+        finishVoice(mySession);
+      } else {
+        clearTimeout(voiceMaxTimer);
+        const el = document.getElementById('voiceTranscript');
+        if (el && (el.textContent.indexOf('Đang nghe') === 0 || el.textContent.indexOf('Đang chờ') === 0)) {
+          setVoiceText('Chưa nghe rõ bài hát. Bấm "🎤 Nói lại" để thử lại.');
+        }
+      }
+    };
+
+    voiceRecognition = r;
+    try {
+      r.start();
+    } catch (e) {
+      console.warn('Microphone start error:', e);
+      setVoiceText('⚠️ Micro đang bận. Bấm "🎤 Nói lại".');
     }
-  }, 15000);
+
+    // Giới hạn tối đa 15 giây cho 1 lần nghe để không bao giờ bị treo
+    voiceMaxTimer = setTimeout(() => {
+      if (mySession !== voiceSessionId) return;
+      if (currentVoiceText) {
+        finishVoice(mySession);
+      } else {
+        killRecognition();
+        setVoiceText('Hết thời gian nghe. Bấm "🎤 Nói lại" để thử lại.');
+      }
+    }, 15000);
+  }, 80);
 }
 
 function initVoiceSearch() {
@@ -1288,32 +1537,94 @@ function initVoiceSearch() {
 }
 
 function initCinemaControls() {
-  const exitBtn = document.getElementById('cinemaExitBtn');
+  const micBtn = document.getElementById('cinemaMicBtn');
+  const playPauseBtn = document.getElementById('cinemaPlayPauseBtn');
   const prevBtn = document.getElementById('cinemaPrevBtn');
   const nextBtn = document.getElementById('cinemaNextBtn');
-  if (exitBtn) exitBtn.onclick = exitCinemaMode;
+  const exitBtn = document.getElementById('cinemaExitBtn');
+
+  if (micBtn) micBtn.onclick = startVoiceSearch;
+  if (playPauseBtn) playPauseBtn.onclick = togglePlayPause;
   if (prevBtn) prevBtn.onclick = playPrev;
   if (nextBtn) nextBtn.onclick = playNext;
+  if (exitBtn) exitBtn.onclick = exitCinemaMode;
 
-  // Nút trong popup: bấm = thao tác thật của người dùng => trình duyệt cho phép toàn màn hình
+  // Nút trong popup "Xem toàn màn hình"
   const fsGo = document.getElementById('fsPromptGo');
   const fsLater = document.getElementById('fsPromptLater');
   if (fsGo) fsGo.onclick = () => { hideFullscreenPrompt(); enterCinemaMode(); };
   if (fsLater) fsLater.onclick = hideFullscreenPrompt;
 
-  // Nút Back / Esc trên xe: đóng popup giọng nói / popup toàn màn hình trước, sau đó thoát toàn màn hình
+  // ĐIỀU KHIỂN BẰNG CON LĂN MAZDA / MERCEDES / BMW VÀ PHÍM BÀN PHÍM
   document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' && e.key !== 'BrowserBack' && e.key !== 'GoBack') return;
+    // 1. Phím Back / Escape trên vô lăng hoặc xe: đóng modal / thoát toàn màn hình
+    if (e.key === 'Escape' || e.key === 'BrowserBack' || e.key === 'GoBack') {
+      const voiceModal = document.getElementById('voiceModal');
+      const fsPrompt = document.getElementById('fsPrompt');
+      if (voiceModal && voiceModal.classList.contains('open')) {
+        stopVoiceSearch();
+      } else if (fsPrompt && fsPrompt.classList.contains('open')) {
+        hideFullscreenPrompt();
+      } else if (document.body.classList.contains('cinema')) {
+        exitCinemaMode();
+      }
+      return;
+    }
+
+    // 2. Khi đang ở chế độ toàn màn hình: điều khiển con lăn trực tiếp giữa các nút Cinema Bar
+    if (!document.body.classList.contains('cinema')) return;
     const voiceModal = document.getElementById('voiceModal');
-    const fsPrompt = document.getElementById('fsPrompt');
-    if (voiceModal && voiceModal.classList.contains('open')) {
-      stopVoiceSearch();
-    } else if (fsPrompt && fsPrompt.classList.contains('open')) {
-      hideFullscreenPrompt();
-    } else if (document.body.classList.contains('cinema')) {
-      exitCinemaMode();
+    if (voiceModal && voiceModal.classList.contains('open')) return;
+
+    const btns = getCinemaBarButtons();
+    if (!btns.length) return;
+
+    const currentIdx = btns.indexOf(document.activeElement);
+
+    // Xoay sang phải / gạt phải / gạt xuống / Tab: chuyển sang nút kế tiếp
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
+      e.preventDefault();
+      e.stopPropagation();
+      const nextIdx = currentIdx < 0 ? 0 : (currentIdx + 1) % btns.length;
+      focusCinemaButton(nextIdx);
+    }
+    // Xoay sang trái / gạt trái / gạt lên / Shift+Tab: chuyển về nút phía trước
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey)) {
+      e.preventDefault();
+      e.stopPropagation();
+      const prevIdx = currentIdx <= 0 ? btns.length - 1 : currentIdx - 1;
+      focusCinemaButton(prevIdx);
+    }
+    // Nhấn con lăn (Enter hoặc Space):
+    else if (e.key === 'Enter' || e.key === ' ') {
+      if (currentIdx >= 0) {
+        e.preventDefault();
+        btns[currentIdx].click();
+      } else {
+        e.preventDefault();
+        focusCinemaButton(0);
+      }
     }
   });
+
+  // Hỗ trợ sự kiện xoay con lăn (Wheel) trên màn hình xe hơi
+  window.addEventListener('wheel', (e) => {
+    if (!document.body.classList.contains('cinema')) return;
+    const voiceModal = document.getElementById('voiceModal');
+    if (voiceModal && voiceModal.classList.contains('open')) return;
+
+    const btns = getCinemaBarButtons();
+    if (!btns.length) return;
+
+    const currentIdx = btns.indexOf(document.activeElement);
+    if (e.deltaY > 15 || e.deltaX > 15) {
+      const nextIdx = currentIdx < 0 ? 0 : (currentIdx + 1) % btns.length;
+      focusCinemaButton(nextIdx);
+    } else if (e.deltaY < -15 || e.deltaX < -15) {
+      const prevIdx = currentIdx <= 0 ? btns.length - 1 : currentIdx - 1;
+      focusCinemaButton(prevIdx);
+    }
+  }, { passive: true });
 }
 
 function initRotaryKnobScroll() {
@@ -1426,7 +1737,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (prevBtn) prevBtn.onclick = playPrev;
   if (nextBtn) nextBtn.onclick = playNext;
-  if (playCurrentBtn) playCurrentBtn.onclick = () => current ? play(current, false) : toast('Chưa có video đang phát');
+  if (playCurrentBtn) playCurrentBtn.onclick = () => current ? togglePlayPause() : toast('Chưa có video đang phát');
   if (favCurrentBtn) favCurrentBtn.onclick = () => current && toggleFav(current);
 
   const loadM3uBtn = document.getElementById('loadM3u');
