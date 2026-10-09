@@ -108,30 +108,14 @@ function hashMD5(str) {
   return CryptoJS.MD5(str).toString();
 }
 
-// TẠO VÀ KHÓA DUY NHẤT 1 DEVICE ID CHO MỖI TRÌNH DUYỆT / ĐIỆN THOẠI (DỰA TRÊN FINGERPRINT PHẦN CỨNG)
+// TẠO MÃ ĐỊNH DANH DUY NHẤT CHO THIẾT BỊ / TRÌNH DUYỆT NÀY
 function getDeviceId() {
   let id = localStorage.getItem('aptv_device_id');
   if (id) return id;
 
-  const nav = window.navigator || {};
-  const scr = window.screen || {};
-  const str = [
-    nav.userAgent || '',
-    nav.platform || '',
-    nav.language || '',
-    nav.hardwareConcurrency || '',
-    scr.width || '',
-    scr.height || '',
-    scr.colorDepth || '',
-    new Date().getTimezoneOffset()
-  ].join('|');
-
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash) + str.charCodeAt(i);
-    hash |= 0;
-  }
-  id = 'DEV_' + Math.abs(hash).toString(36).toUpperCase();
+  const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const time = Date.now().toString(36).toUpperCase();
+  id = 'DEV_' + time + '_' + rand;
   try {
     localStorage.setItem('aptv_device_id', id);
   } catch(e){}
@@ -217,7 +201,96 @@ function clearAuthError() {
   }
 }
 
-// ĐỒNG BỘ SESSION CHÍNH XÁC KHÔNG BỊ LỖI F5 HẾT HẠN
+// BIẾN LẮNG NGHE PHIÊN ĐĂNG NHẬP REALTIME
+let userSessionUnsubscribe = null;
+
+// HÀM XỬ LÝ KHI BỊ ĐĂNG XUẤT DO THIẾT BỊ KHÁC ĐĂNG NHẬP HOẶC HẾT HẠN
+function handleKickedOut(msg) {
+  if (userSessionUnsubscribe) {
+    try { userSessionUnsubscribe(); } catch (e) {}
+    userSessionUnsubscribe = null;
+  }
+
+  // Dừng phát nhạc / video ngay lập tức
+  destroyPlayers();
+  exitCinemaMode();
+  hideFullscreenPrompt();
+  stopVoiceSearch();
+
+  current = null;
+  currentIndex = -1;
+  const nowTitle = document.getElementById('nowTitle');
+  const nowSub = document.getElementById('nowSub');
+  if (nowTitle) nowTitle.textContent = 'Chưa có media đang phát';
+  if (nowSub) nowSub.textContent = 'Danh sách phát sẽ hiển thị ở đây.';
+
+  // Xóa session lưu trữ trên thiết bị này
+  localStorage.removeItem('aptv_user');
+
+  // Ẩn badge thông tin tài khoản
+  const badge = document.getElementById('userBadge');
+  if (badge) badge.style.display = 'none';
+  const sideCard = document.getElementById('sideUserCard');
+  if (sideCard) sideCard.style.display = 'none';
+
+  // Đóng các modal khác nếu đang mở
+  document.querySelectorAll('.modal-back').forEach(m => {
+    if (m.id !== 'authModal') m.classList.remove('open');
+  });
+
+  // Hiển thị modal đăng nhập với thông báo rõ ràng
+  showAuthModal();
+  switchTab('login');
+  const errorMsg = msg || '⚠️ Tài khoản của bạn vừa được đăng nhập trên một thiết bị khác. Bạn đã bị đăng xuất!';
+  showAuthError(errorMsg);
+  toast('⚠️ Tài khoản đã được đăng nhập ở thiết bị khác!');
+}
+
+// LẮNG NGHE THỜI GIAN THỰC (REALTIME FIRESTORE LISTENER) ĐỂ PHÁT HIỆN THIẾT BỊ KHÁC ĐĂNG NHẬP
+function listenUserSession(phone) {
+  if (!phone) return;
+  if (!db) {
+    initFirebase();
+    if (!db) return;
+  }
+
+  if (userSessionUnsubscribe) {
+    try { userSessionUnsubscribe(); } catch (e) {}
+    userSessionUnsubscribe = null;
+  }
+
+  userSessionUnsubscribe = db.collection('users').doc(phone).onSnapshot((docSnap) => {
+    if (!docSnap.exists) {
+      handleKickedOut('⚠️ Tài khoản không tồn tại hoặc đã bị xóa!');
+      return;
+    }
+
+    const liveData = docSnap.data();
+    const currentDevId = getDeviceId();
+
+    // NẾU CÓ THIẾT BỊ KHÁC ĐĂNG NHẬP -> LOGOUT NGAY LẬP TỨC
+    if (liveData.device_id && liveData.device_id !== "" && liveData.device_id !== currentDevId) {
+      handleKickedOut('⚠️ Tài khoản của bạn vừa được đăng nhập trên một thiết bị khác. Bạn đã bị đăng xuất!');
+      return;
+    }
+
+    const liveExpire = getAccountExpireDate(liveData);
+    const now = new Date();
+
+    if (liveData.status === 'ACTIVE' && (liveExpire > now || liveExpire.getTime() === 0)) {
+      liveData.username = liveData.username || phone;
+      liveData.expire_date = liveExpire.getTime() > 0 ? liveExpire.toISOString() : new Date(now.getTime() + 365 * 86400000).toISOString();
+      localStorage.setItem('aptv_user', JSON.stringify(liveData));
+      updateUserUI(liveData);
+    } else if (liveData.status !== 'ACTIVE' || liveExpire <= now) {
+      handleKickedOut(liveData.status !== 'ACTIVE' ? 'Tài khoản đang chờ thanh toán (PENDING).' : 'Tài khoản đã hết hạn sử dụng.');
+    }
+  }, (err) => {
+    console.warn("Realtime user session listener warning:", err);
+  });
+}
+
+// ĐỒNG BỘ SESSION CHÍNH XÁC KHI MỞ TRANG HOẶC F5
 function checkPersistentSession() {
   const sessionStr = localStorage.getItem('aptv_user');
   if (!sessionStr) {
@@ -231,11 +304,9 @@ function checkPersistentSession() {
     let expireDate = getAccountExpireDate(user);
     const currentDevId = getDeviceId();
 
-    // Kiểm tra thiết bị trùng khớp (Khoá cứng 1 thiết bị)
+    // Kiểm tra nhanh trong cache cục bộ
     if (user.device_id && user.device_id !== "" && user.device_id !== currentDevId) {
-      localStorage.removeItem('aptv_user');
-      showAuthModal();
-      showAuthError('⚠️ Tài khoản này đã bị khóa trên 1 thiết bị khác!');
+      handleKickedOut('⚠️ Tài khoản này đã được đăng nhập trên thiết bị khác!');
       return false;
     }
 
@@ -247,7 +318,8 @@ function checkPersistentSession() {
     if (user.status === 'ACTIVE' && expireDate > now) {
       hideAuthModal();
       updateUserUI(user);
-      syncUserFromFirestore(user.username || user.phone);
+      // Bắt đầu lắng nghe thay đổi phiên đăng nhập theo thời gian thực
+      listenUserSession(user.username || user.phone);
       return true;
     } else {
       showAuthModal();
@@ -257,40 +329,6 @@ function checkPersistentSession() {
   } catch (e) {
     showAuthModal();
     return false;
-  }
-}
-
-async function syncUserFromFirestore(phone) {
-  if (!phone || !db) return;
-  try {
-    const docSnap = await db.collection('users').doc(phone).get();
-    if (docSnap.exists) {
-      const liveData = docSnap.data();
-      const currentDevId = getDeviceId();
-
-      if (liveData.device_id && liveData.device_id !== "" && liveData.device_id !== currentDevId) {
-        localStorage.removeItem('aptv_user');
-        showAuthModal();
-        showAuthError('⚠️ Tài khoản này đã được đăng nhập ở thiết bị khác!');
-        return;
-      }
-
-      const liveExpire = getAccountExpireDate(liveData);
-      const now = new Date();
-
-      if (liveData.status === 'ACTIVE' && (liveExpire > now || liveExpire.getTime() === 0)) {
-        liveData.username = liveData.username || phone;
-        liveData.expire_date = liveExpire.getTime() > 0 ? liveExpire.toISOString() : new Date(now.getTime() + 365 * 86400000).toISOString();
-        localStorage.setItem('aptv_user', JSON.stringify(liveData));
-        updateUserUI(liveData);
-      } else if (liveData.status !== 'ACTIVE' || liveExpire <= now) {
-        localStorage.removeItem('aptv_user');
-        showAuthModal();
-        showAuthError(liveData.status !== 'ACTIVE' ? 'Tài khoản đang chờ thanh toán (PENDING).' : 'Tài khoản đã hết hạn sử dụng.');
-      }
-    }
-  } catch (e) {
-    console.warn("Background user sync warning:", e);
   }
 }
 
@@ -371,16 +409,6 @@ async function handleLogin() {
       return showAuthError('Mật khẩu không chính xác. Vui lòng thử lại.');
     }
 
-    // KHÓA CỨNG 1 THIẾT BỊ: Nếu tài khoản đã được gắn với 1 thiết bị khác thì CHẶN đăng nhập ngay
-    if (userData.device_id && userData.device_id !== "" && userData.device_id !== currentDevId) {
-      return showAuthError('⚠️ Tài khoản này đã được liên kết với 1 thiết bị khác! Không thể đăng nhập trên thiết bị này.');
-    }
-
-    if (!userData.device_id || userData.device_id === "") {
-      await db.collection('users').doc(phone).update({ device_id: currentDevId });
-      userData.device_id = currentDevId;
-    }
-
     const now = new Date();
     const expireDate = getAccountExpireDate(userData);
 
@@ -388,6 +416,7 @@ async function handleLogin() {
       showAuthError('Tài khoản đang chờ kích hoạt. Vui lòng quét mã VietQR để thanh toán.');
       switchTab('reg');
       document.getElementById('regPhone').value = phone;
+      await docRef.update({ device_id: currentDevId });
       triggerQrGenerationForPhone(phone, 100000);
       return;
     }
@@ -396,11 +425,17 @@ async function handleLogin() {
       return showAuthError(`Tài khoản đã hết hạn vào ngày ${expireDate.toLocaleDateString('vi-VN')}. Vui lòng đăng ký gói mới.`);
     }
 
+    // CHIẾM PHIÊN ĐĂNG NHẬP: Cập nhật device_id của thiết bị này lên Firestore.
+    // Nếu có thiết bị khác đang mở cùng tài khoản, listener realtime trên thiết bị đó sẽ ngay lập tức tự động đăng xuất!
+    await docRef.update({ device_id: currentDevId });
+    userData.device_id = currentDevId;
+
     // ĐĂNG NHẬP THÀNH CÔNG -> LƯU SESSION CHUẨN ISO STRING
     userData.expire_date = expireDate.toISOString();
     localStorage.setItem('aptv_user', JSON.stringify(userData));
     hideAuthModal();
     updateUserUI(userData);
+    listenUserSession(phone);
     toast(`🎉 Đăng nhập thành công! Tài khoản: ${phone}`);
 
   } catch (err) {
@@ -491,19 +526,26 @@ function displayQrCode(qrUrl, price, contentText) {
 }
 
 function listenRealtimeStatus(phone) {
-  if (realtimeUnsubscribe) realtimeUnsubscribe();
+  if (realtimeUnsubscribe) {
+    try { realtimeUnsubscribe(); } catch(e){}
+    realtimeUnsubscribe = null;
+  }
   if (!db) return;
 
   realtimeUnsubscribe = db.collection('users').doc(phone).onSnapshot((docSnap) => {
     if (docSnap.exists) {
       const data = docSnap.data();
       if (data.status === 'ACTIVE') {
-        if (realtimeUnsubscribe) realtimeUnsubscribe();
+        if (realtimeUnsubscribe) {
+          try { realtimeUnsubscribe(); } catch(e){}
+          realtimeUnsubscribe = null;
+        }
         const d = parseExpireDate(data.expire_date);
         data.expire_date = d.toISOString();
         localStorage.setItem('aptv_user', JSON.stringify(data));
         hideAuthModal();
         updateUserUI(data);
+        listenUserSession(phone);
         toast('🎉 THANH TOÁN THÀNH CÔNG! Tài khoản đã được KÍCH HOẠT!');
       }
     }
