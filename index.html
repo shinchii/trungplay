@@ -581,6 +581,9 @@ body.cinema .cinema-bar {
 }
 
 /* POPUP VIETQR KÍCH HOẠT TÀI KHOẢN (#qrModal) */
+#qrModal {
+  z-index: 2147483647 !important;
+}
 .qr-modal-box {
   width: min(440px, 94vw);
   background: #111520;
@@ -858,27 +861,6 @@ body.cinema .cinema-bar {
   </div>
 </div>
 
-<!-- POPUP THANH TOÁN VIETQR (#qrModal) -->
-<div class="modal-back" id="qrModal">
-  <div class="qr-modal-box">
-    <div class="modal-head" style="margin-bottom:8px">
-      <h2 style="font-size:17px;color:#fff">Quét mã VietQR TPBank để kích hoạt</h2>
-      <button class="iconbtn" id="closeQrBtn" tabindex="0">×</button>
-    </div>
-    <img class="qr-img" id="qrImage" src="" alt="Mã VietQR TPBank">
-    <div class="qr-info">
-      Ngân hàng: <strong>TPBank (TPB)</strong> | Chủ TK: <strong>DOAN QUANG TRUNG</strong><br>
-      Số TK: <strong style="color:#fff;font-size:15px">15940510182</strong><br>
-      Số tiền: <strong id="qrAmountText" style="color:var(--good);font-size:16px">100.000 VNĐ</strong><br>
-      Nội dung CK: <strong id="qrContentText" style="color:#ff3650;font-size:15px;background:rgba(255,54,80,0.15);padding:2px 8px;border-radius:6px">TP 0965512394</strong>
-    </div>
-    <div class="qr-status">
-      <div class="qr-status-spin"></div>
-      <span>Đang chờ chuyển khoản... Kích hoạt tự động khi nhận tiền!</span>
-    </div>
-  </div>
-</div>
-
 <!-- MODAL BẢO MẬT & ĐĂNG NHẬP / ĐĂNG KÝ (#authModal) -->
 <div class="modal-back open" id="authModal">
   <div class="auth-box">
@@ -929,6 +911,27 @@ body.cinema .cinema-bar {
         </select>
       </div>
       <button class="btn-submit" id="btnCreateQr" tabindex="0">TẠO MÃ VIETQR KÍCH HOẠT</button>
+    </div>
+  </div>
+</div>
+
+<!-- POPUP THANH TOÁN VIETQR (#qrModal) -->
+<div class="modal-back" id="qrModal">
+  <div class="qr-modal-box">
+    <div class="modal-head" style="margin-bottom:8px">
+      <h2 style="font-size:17px;color:#fff">Quét mã VietQR TPBank để kích hoạt</h2>
+      <button class="iconbtn" id="closeQrBtn" tabindex="0">×</button>
+    </div>
+    <img class="qr-img" id="qrImage" src="" alt="Mã VietQR TPBank">
+    <div class="qr-info">
+      Ngân hàng: <strong>TPBank (TPB)</strong> | Chủ TK: <strong>DOAN QUANG TRUNG</strong><br>
+      Số TK: <strong style="color:#fff;font-size:15px">15940510182</strong><br>
+      Số tiền: <strong id="qrAmountText" style="color:var(--good);font-size:16px">100.000 VNĐ</strong><br>
+      Nội dung CK: <strong id="qrContentText" style="color:#ff3650;font-size:15px;background:rgba(255,54,80,0.15);padding:2px 8px;border-radius:6px">TP 0965512394</strong>
+    </div>
+    <div class="qr-status">
+      <div class="qr-status-spin"></div>
+      <span>Đang chờ chuyển khoản... Kích hoạt tự động khi nhận tiền!</span>
     </div>
   </div>
 </div>
