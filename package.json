@@ -1,0 +1,23 @@
+{
+  "name": "aptv-carplay-app",
+  "version": "1.0.0",
+  "description": "Trung Play - APTV CarPlay & Web Stream",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shinchii/trungplay.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/shinchii/trungplay/issues"
+  },
+  "homepage": "https://github.com/shinchii/trungplay#readme",
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  }
+}
