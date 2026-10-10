@@ -136,9 +136,11 @@ function getDeviceId() {
 // KHỞI TẠO STATE
 function loadState() {
   try {
-    return { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') };
+    const loaded = { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') };
+    if (!Array.isArray(loaded.favorites)) loaded.favorites = [];
+    return loaded;
   } catch (e) {
-    return { ...defaults };
+    return { ...defaults, favorites: [] };
   }
 }
 function saveState() {
@@ -363,6 +365,13 @@ function checkPersistentSession() {
       updateUserUI(user);
       // Bắt đầu lắng nghe thay đổi phiên đăng nhập theo thời gian thực
       listenUserSession(normalizePhone(user.username || user.phone));
+
+      const savedMode = localStorage.getItem('aptv_car_mode');
+      if (!savedMode) {
+        setTimeout(() => openCarModeModal(), 400);
+      } else {
+        applyCarMode(savedMode);
+      }
       return true;
     } else {
       showAuthModal();
@@ -507,6 +516,10 @@ async function handleLogin() {
     updateUserUI(userData);
     listenUserSession(phone);
     toast(`🎉 Đăng nhập thành công! Tài khoản: ${phone}`);
+
+    const savedMode = localStorage.getItem('aptv_car_mode') || 'rotary';
+    applyCarMode(savedMode);
+    setTimeout(() => openCarModeModal(), 400);
 
   } catch (err) {
     showAuthError('Lỗi Firestore: ' + err.message);
@@ -714,6 +727,9 @@ function listenRealtimeStatus(phone) {
       updateUserUI(data);
       listenUserSession(phone);
       toast('🎉 THANH TOÁN THÀNH CÔNG! Đang chuyển vào trang chính...');
+      const savedMode = localStorage.getItem('aptv_car_mode') || 'rotary';
+      applyCarMode(savedMode);
+      setTimeout(() => openCarModeModal(), 400);
     }
   }, (err) => {
     console.error('Lỗi Realtime Listener:', err);
@@ -762,6 +778,9 @@ async function checkPaymentNow(phone) {
       updateUserUI(data);
       listenUserSession(phone);
       toast('🎉 KÍCH HOẠT THÀNH CÔNG! Chào mừng bạn vào ứng dụng!');
+      const savedMode = localStorage.getItem('aptv_car_mode') || 'rotary';
+      applyCarMode(savedMode);
+      setTimeout(() => openCarModeModal(), 400);
     } else {
       toast('⏳ Ngân hàng đang xử lý giao dịch. Vui lòng đợi 5-10 giây rồi bấm lại...');
     }
@@ -905,6 +924,9 @@ function destroyPlayers(keepAnchor = false) {
   }
   const wrap = document.getElementById('playerWrap');
   if (wrap) wrap.innerHTML = '';
+
+  const playerContainer = document.getElementById('playerContainer');
+  if (playerContainer) playerContainer.classList.remove('active');
 
   if (carPlayAudioAnchor) {
     try { carPlayAudioAnchor.pause(); } catch(e){}
@@ -1100,7 +1122,19 @@ function play(item, add = true) {
   toast('Đang phát: ' + (item.title || videoId));
   renderAll();
   updateMediaSession(item);
-  enterCinemaMode(); // TỰ ĐỘNG VÀO FULL SCREEN TOÀN MÀN HÌNH NGAY LẬP TỨC
+
+  const nowPlayingTitle = document.getElementById('nowPlayingTitle');
+  if (nowPlayingTitle) nowPlayingTitle.textContent = item.title || videoId;
+
+  if (isTouchMode()) {
+    const playerContainer = document.getElementById('playerContainer');
+    if (playerContainer) {
+      playerContainer.classList.add('active');
+      playerContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  } else {
+    enterCinemaMode(); // TỰ ĐỘNG VÀO FULL SCREEN TOÀN MÀN HÌNH CHO XE DÙNG CON LĂN
+  }
 }
 
 // BẮT SỰ KIỆN POSTMESSAGE TỪ YOUTUBE IFRAME
@@ -1147,7 +1181,11 @@ function findItem(id) {
   return [current, ...state.playlist, ...state.favorites, ...state.history].filter(Boolean).find(x => x.id === id) || { id, title: 'YouTube video', thumb: ytThumb(id) };
 }
 
-function itemHtml(item) {
+function isFavorite(id) {
+  return Array.isArray(state.favorites) && state.favorites.some(x => x.id === id);
+}
+
+function itemHtml(item, isFavList = false) {
   const isPlaying = current && current.id === item.id;
   const id = item?.id || '';
   const ytThumbUrl = id ? `https://i.ytimg.com/vi/${esc(id)}/mqdefault.jpg` : '';
@@ -1158,14 +1196,25 @@ function itemHtml(item) {
   }
   if (!thumbUrl) thumbUrl = ytThumbUrl;
 
+  const faved = isFavorite(id);
+  const favBtnHtml = `
+    <button type="button" class="btn-fav-item ${faved ? 'active' : ''}" data-fav-id="${esc(id)}"
+      onclick="event.stopPropagation(); toggleFavorite('${esc(id)}');" 
+      title="${faved ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}" tabindex="0">
+      ${faved ? '❤️' : '🤍'}
+    </button>`;
+
   return `
-    <div class="item ${isPlaying ? 'active-play' : ''}" data-play-id="${esc(item.id)}" tabindex="0" title="Bấm để phát toàn màn hình">
-      <img class="thumb" src="${esc(thumbUrl)}" onerror="if(this.src!=='${fallbackThumbUrl}'){this.src='${fallbackThumbUrl}';}" decoding="async" alt="thumbnail">
+    <div class="item ${isPlaying ? 'active-play' : ''}" data-play-id="${esc(item.id)}" tabindex="0" title="Bấm để phát bài hát">
+      <img class="thumb" referrerpolicy="no-referrer" src="${esc(thumbUrl)}" onerror="if(this.src!=='${fallbackThumbUrl}'){this.src='${fallbackThumbUrl}';}" decoding="async" alt="thumbnail">
       <div class="item-info">
         <div class="item-title" title="${esc(item.title || 'YouTube video')}">${esc(item.title || 'YouTube video')}</div>
         <div class="item-sub">${esc(item.channel || 'YouTube')}</div>
       </div>
-      <button class="btn-play-item" data-play="${esc(item.id)}" tabindex="0">▶ Phát</button>
+      <div class="item-actions">
+        ${favBtnHtml}
+        <button class="btn-play-item" data-play="${esc(item.id)}" tabindex="0">▶ Phát</button>
+      </div>
     </div>`;
 }
 
@@ -1174,6 +1223,8 @@ function renderAll() {
   if (listToRender && listToRender.length > 0) {
     renderSearchResults(listToRender);
   }
+  renderFavoritesList();
+  updateFavoritesUI();
 }
 
 /* =========================================================================
@@ -1339,21 +1390,19 @@ async function search(q) {
     out.innerHTML = `
       <div class="empty-state">
         <div style="font-weight:700;color:#ff3650;margin-bottom:8px">Không tìm thấy bài hát</div>
-        <div>Vui lòng thử lại với từ khóa khác hoặc bấm nút 🎤 Giọng nói.</div>
+        <div>Vui lòng thử lại với từ khóa khác.</div>
       </div>`;
   }
   return [];
 }
 
-
-
 function renderSearchResults(arr) {
   const out = document.getElementById('results');
   if (!out) return;
   const countEl = document.getElementById('resultCount');
-  if (countEl) countEl.textContent = arr.length ? `(${arr.length} video)` : '';
+  if (countEl) countEl.textContent = arr.length ? `(${arr.length} bài hát)` : '';
 
-  state.playlist = [...arr]; // Lưu danh sách bài hát đang hiển thị để chuyển bài khi lái xe
+  state.playlist = [...arr];
 
   out.innerHTML = arr.length ? arr.map(x => itemHtml(x)).join('') : `
     <div class="empty-state">
@@ -1361,12 +1410,10 @@ function renderSearchResults(arr) {
     </div>`;
 
   out.querySelectorAll('[data-play-id]').forEach(itemEl => {
-    itemEl.onclick = () => {
+    itemEl.onclick = (e) => {
+      if (e.target.closest('.btn-fav-item')) return;
       const item = arr.find(x => x.id === itemEl.dataset.playId);
-      if (item) {
-        play(item);
-        enterCinemaMode();
-      }
+      if (item) play(item);
     };
   });
 }
@@ -1445,7 +1492,9 @@ function enterCinemaMode() {
 function exitCinemaMode(skipFocus = false) {
   document.body.classList.remove('cinema');
   exitPageFullscreen();
-  destroyPlayers(false); // Tắt nhạc khi thoát toàn màn hình theo đúng yêu cầu
+  if (!isTouchMode()) {
+    destroyPlayers(false); // Tắt nhạc khi thoát toàn màn hình theo đúng yêu cầu cho xe con lăn
+  }
   const input = document.getElementById('searchInput');
   if (input && !skipFocus) {
     setTimeout(() => {
@@ -1486,55 +1535,183 @@ function resolveQuery(raw) {
   return ACRONYM_MAP[clean] || raw.trim();
 }
 
-function saveRecentSearch(keyword) {
-  if (!keyword || keyword.length < 2) return;
-  try {
-    let recent = JSON.parse(localStorage.getItem('aptv_recent_searches') || '[]');
-    recent = [keyword, ...recent.filter(k => k.toLowerCase() !== keyword.toLowerCase())].slice(0, 6);
-    localStorage.setItem('aptv_recent_searches', JSON.stringify(recent));
-    renderRecentSearches();
-  } catch (e) {}
+function saveRecentSearch(keyword) {}
+function renderRecentSearches() {}
+function clearRecentSearches() {}
+
+/* =========================================================================
+   7. QUẢN LÝ CHẾ ĐỘ XE (TOUCH VS ROTARY) & BÀI HÁT YÊU THÍCH
+   ========================================================================= */
+
+function getCarMode() {
+  return localStorage.getItem('aptv_car_mode') || 'rotary';
 }
 
-function renderRecentSearches() {
-  const container = document.getElementById('recentTagsSection');
-  const list = document.getElementById('recentTagsList');
-  if (!container || !list) return;
+function isTouchMode() {
+  return getCarMode() === 'touch';
+}
 
-  try {
-    const recent = JSON.parse(localStorage.getItem('aptv_recent_searches') || '[]');
-    if (!recent || recent.length === 0) {
-      container.style.display = 'none';
-      list.innerHTML = '';
-      return;
-    }
+function setCarMode(mode) {
+  if (mode !== 'touch' && mode !== 'rotary') mode = 'rotary';
+  localStorage.setItem('aptv_car_mode', mode);
+  applyCarMode(mode);
+  closeCarModeModal();
+  toast(`🚗 Đã chọn: ${mode === 'touch' ? 'Màn hình Cảm ứng 🖐' : 'Xe dùng Con Lăn 🎛'}`);
+}
+window.setCarMode = setCarMode;
 
-    container.style.display = 'block';
-    list.innerHTML = recent.map(item => `
-      <button type="button" class="quick-tag-btn recent" data-query="${esc(item)}" tabindex="0">
-        🕒 ${esc(item)}
-      </button>
-    `).join('');
+function applyCarMode(mode) {
+  const isTouch = (mode === 'touch');
+  document.body.classList.toggle('mode-touch', isTouch);
+  document.body.classList.toggle('mode-rotary', !isTouch);
 
-    list.querySelectorAll('.quick-tag-btn').forEach(btn => {
-      btn.onclick = () => {
-        const q = btn.dataset.query;
-        if (q) quickSearch(q, true);
-      };
-    });
-  } catch (e) {
-    container.style.display = 'none';
+  // Cập nhật Topbar Badge
+  const iconEl = document.getElementById('modePillIcon');
+  const textEl = document.getElementById('modePillText');
+  const badgeEl = document.getElementById('modePillBadge');
+  if (iconEl) iconEl.textContent = isTouch ? '🖐' : '🎛';
+  if (textEl) textEl.textContent = isTouch ? 'Cảm ứng' : 'Con lăn';
+  if (badgeEl) badgeEl.title = isTouch ? 'Đang ở chế độ Màn hình Cảm ứng (Bấm để đổi)' : 'Đang ở chế độ Con lăn / Phím xoay (Bấm để đổi)';
+
+  // Nếu chuyển sang chế độ Con lăn thì thoát tab yêu thích về tìm kiếm
+  if (!isTouch) {
+    switchTouchTab('discover');
+    const playerContainer = document.getElementById('playerContainer');
+    if (playerContainer) playerContainer.classList.remove('active');
+  }
+
+  updateFavoritesUI();
+  renderAll();
+}
+
+function openCarModeModal() {
+  const modal = document.getElementById('carModeModal');
+  if (modal) {
+    modal.style.display = 'grid';
+    modal.classList.add('open');
   }
 }
+window.openCarModeModal = openCarModeModal;
 
-function clearRecentSearches() {
-  try {
-    localStorage.removeItem('aptv_recent_searches');
-    renderRecentSearches();
-    toast('Đã xóa lịch sử tìm kiếm');
-  } catch (e) {}
+function closeCarModeModal() {
+  const modal = document.getElementById('carModeModal');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+  }
 }
-window.clearRecentSearches = clearRecentSearches;
+window.closeCarModeModal = closeCarModeModal;
+
+function switchTouchTab(tab) {
+  const discoverSection = document.getElementById('discoverSection');
+  const favoritesSection = document.getElementById('favoritesSection');
+  const tabDiscoverBtn = document.getElementById('tabDiscoverBtn');
+  const tabFavoritesBtn = document.getElementById('tabFavoritesBtn');
+
+  if (tab === 'favorites') {
+    if (tabDiscoverBtn) tabDiscoverBtn.classList.remove('active');
+    if (tabFavoritesBtn) tabFavoritesBtn.classList.add('active');
+    if (discoverSection) discoverSection.style.display = 'none';
+    if (favoritesSection) favoritesSection.style.display = 'block';
+    renderFavoritesList();
+  } else {
+    if (tabDiscoverBtn) tabDiscoverBtn.classList.add('active');
+    if (tabFavoritesBtn) tabFavoritesBtn.classList.remove('active');
+    if (discoverSection) discoverSection.style.display = 'block';
+    if (favoritesSection) favoritesSection.style.display = 'none';
+  }
+}
+window.switchTouchTab = switchTouchTab;
+
+function toggleFavorite(id) {
+  const item = findItem(id);
+  if (!item) return;
+
+  if (!Array.isArray(state.favorites)) state.favorites = [];
+  const idx = state.favorites.findIndex(x => x.id === id);
+  if (idx >= 0) {
+    state.favorites.splice(idx, 1);
+    toast('Đã bỏ yêu thích: ' + (item.title || id));
+  } else {
+    state.favorites.unshift(item);
+    toast('❤️ Đã thêm vào bài hát yêu thích!');
+  }
+  saveState();
+  updateFavoritesUI();
+
+  // Cập nhật ngay lập tức các nút trái tim đang có trên màn hình
+  document.querySelectorAll(`.btn-fav-item[data-fav-id="${id}"]`).forEach(btn => {
+    const isNowFav = isFavorite(id);
+    btn.innerHTML = isNowFav ? '❤️' : '🤍';
+    btn.classList.toggle('active', isNowFav);
+    btn.title = isNowFav ? 'Bỏ yêu thích' : 'Thêm vào yêu thích';
+  });
+
+  const favoritesSection = document.getElementById('favoritesSection');
+  if (favoritesSection && favoritesSection.style.display !== 'none') {
+    renderFavoritesList();
+  }
+}
+window.toggleFavorite = toggleFavorite;
+
+function updateFavoritesUI() {
+  const favs = state.favorites || [];
+  const badge = document.getElementById('favBadgeCount');
+  const subCount = document.getElementById('favSubCount');
+  if (badge) badge.textContent = favs.length;
+  if (subCount) subCount.textContent = `${favs.length} bài hát đã lưu`;
+}
+
+function renderFavoritesList() {
+  const out = document.getElementById('favoritesList');
+  if (!out) return;
+  const favs = state.favorites || [];
+
+  updateFavoritesUI();
+
+  if (!favs.length) {
+    out.innerHTML = `
+      <div class="empty-state" style="padding:40px 20px;">
+        <div style="font-size:42px;margin-bottom:12px;">🤍</div>
+        <div style="font-weight:700;color:#fff;font-size:18px;margin-bottom:8px;">Chưa có bài hát yêu thích</div>
+        <div style="color:var(--muted);font-size:14px;max-width:340px;margin:0 auto;line-height:1.5;">
+          Khi tìm kiếm bài hát, hãy chạm vào biểu tượng trái tim <b>🤍</b> trên mỗi bài để lưu vào danh sách yêu thích của bạn!
+        </div>
+      </div>`;
+    return;
+  }
+
+  out.innerHTML = favs.map(x => itemHtml(x, true)).join('');
+
+  out.querySelectorAll('[data-play-id]').forEach(itemEl => {
+    itemEl.onclick = (e) => {
+      if (e.target.closest('.btn-fav-item')) return;
+      const item = favs.find(x => x.id === itemEl.dataset.playId);
+      if (item) {
+        state.playlist = [...favs];
+        play(item);
+      }
+    };
+  });
+}
+
+function playAllFavorites() {
+  const favs = state.favorites || [];
+  if (!favs.length) {
+    return toast('Chưa có bài hát nào trong danh sách yêu thích!');
+  }
+  state.playlist = [...favs];
+  toast(`▶ Đang phát tất cả ${favs.length} bài yêu thích...`);
+  play(favs[0], false);
+}
+window.playAllFavorites = playAllFavorites;
+
+function closeInlinePlayer() {
+  destroyPlayers(false);
+  const container = document.getElementById('playerContainer');
+  if (container) container.classList.remove('active');
+}
+window.closeInlinePlayer = closeInlinePlayer;
 
 async function quickSearch(q, autoPlay = true) {
   q = (q || '').trim();
@@ -1553,9 +1730,9 @@ async function quickSearch(q, autoPlay = true) {
   saveRecentSearch(resolved);
   const results = await search(resolved);
   if (results && results.length > 0) {
-    if (autoPlay) {
+    if (autoPlay && !isTouchMode()) {
       play(results[0], true);
-      if (typeof enterCinemaMode === 'function') enterCinemaMode();
+      enterCinemaMode();
     }
   } else {
     toast('Không tìm thấy bài hát: ' + resolved);
@@ -1563,31 +1740,13 @@ async function quickSearch(q, autoPlay = true) {
 }
 window.quickSearch = quickSearch;
 
-function initRotarySmartSearch() {
-  const hotList = document.getElementById('hotGenreList');
-  if (hotList) {
-    hotList.querySelectorAll('.quick-tag-btn').forEach(btn => {
-      btn.onclick = () => {
-        const q = btn.dataset.query;
-        if (q) quickSearch(q, true);
-      };
-    });
-  }
-  renderRecentSearches();
-}
-
 function stopVoiceSearch() {}
 function killRecognition() {}
 function initVoiceSearch() {}
+function initRotarySmartSearch() {}
 
 function initCinemaControls() {
-  const playPauseBtn = document.getElementById('cinemaPlayPauseBtn');
-  const prevBtn = document.getElementById('cinemaPrevBtn');
-  const nextBtn = document.getElementById('cinemaNextBtn');
   const exitBtn = document.getElementById('cinemaExitBtn');
-  if (playPauseBtn) playPauseBtn.onclick = togglePlayPause;
-  if (prevBtn) prevBtn.onclick = playPrev;
-  if (nextBtn) nextBtn.onclick = playNext;
   if (exitBtn) exitBtn.onclick = exitCinemaMode;
 
   // Lắng nghe sự kiện thoát Fullscreen của trình duyệt để tự tắt nhạc
@@ -1800,13 +1959,34 @@ document.addEventListener('DOMContentLoaded', () => {
         toast(`⚡ Viết tắt: ${raw.toUpperCase()} ➔ ${resolved}`);
       }
       saveRecentSearch(resolved);
-      toast('🔍 Đang tìm & tự phát: ' + resolved);
-      const results = await search(resolved);
-      if (results && results.length > 0) {
-        play(results[0], true);
-        if (typeof enterCinemaMode === 'function') enterCinemaMode();
+
+      if (isTouchMode()) {
+        switchTouchTab('discover');
+        toast('🔍 Đang tìm kiếm: ' + resolved);
+        await search(resolved);
+      } else {
+        toast('🔍 Đang tìm & tự phát: ' + resolved);
+        const results = await search(resolved);
+        if (results && results.length > 0) {
+          play(results[0], true);
+          if (typeof enterCinemaMode === 'function') enterCinemaMode();
+        }
       }
     };
+  }
+
+  const carModeModal = document.getElementById('carModeModal');
+  if (carModeModal) {
+    carModeModal.onclick = (e) => {
+      if (e.target === carModeModal) {
+        closeCarModeModal();
+      }
+    };
+  }
+
+  const modePillBadge = document.getElementById('modePillBadge');
+  if (modePillBadge) {
+    modePillBadge.onclick = () => openCarModeModal();
   }
 
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => {
@@ -1818,6 +1998,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  const initialCarMode = getCarMode();
+  applyCarMode(initialCarMode);
   renderAll();
   initRotarySmartSearch();
   initCinemaControls();
