@@ -1214,7 +1214,7 @@ function itemHtml(item, isFavList = false) {
       </div>
       <div class="item-actions">
         ${favBtnHtml}
-        <button class="btn-play-item" data-play="${esc(item.id)}" tabindex="0">▶ Phát</button>
+        <button class="btn-play-item" data-play="${esc(item.id)}" tabindex="-1">▶ Phát</button>
       </div>
     </div>`;
 }
@@ -1416,7 +1416,18 @@ function renderSearchResults(arr) {
       const item = arr.find(x => x.id === itemEl.dataset.playId);
       if (item) play(item);
     };
+    itemEl.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'NumpadEnter') {
+        e.preventDefault();
+        const item = arr.find(x => x.id === itemEl.dataset.playId);
+        if (item) play(item);
+      }
+    };
   });
+
+  if (typeof autoHighlightFirstSongInRotary === 'function') {
+    autoHighlightFirstSongInRotary();
+  }
 }
 
 function showView(v) {
@@ -1496,11 +1507,19 @@ function exitCinemaMode(skipFocus = false) {
   if (!isTouchMode()) {
     destroyPlayers(false); // Tắt nhạc khi thoát toàn màn hình theo đúng yêu cầu cho xe con lăn
   }
-  const input = document.getElementById('searchInput');
-  if (input && !skipFocus) {
+  if (!isTouchMode() && !skipFocus) {
     setTimeout(() => {
-      try { input.focus(); } catch(e){}
-    }, 120);
+      if (current && current.id) {
+        const itemEl = document.querySelector(`.item[data-play-id="${current.id}"]`);
+        if (itemEl && typeof setRotaryFocus === 'function') {
+          setRotaryFocus(itemEl, true);
+          return;
+        }
+      }
+      if (typeof autoHighlightFirstSongInRotary === 'function') {
+        autoHighlightFirstSongInRotary();
+      }
+    }, 150);
   }
 }
 
@@ -1593,6 +1612,11 @@ function applyCarMode(mode) {
   if (!isTouch) {
     switchTouchTab('discover');
     if (playerContainer) playerContainer.classList.remove('active');
+    setTimeout(() => {
+      if (typeof autoHighlightFirstSongInRotary === 'function') {
+        autoHighlightFirstSongInRotary();
+      }
+    }, 150);
   }
 
   updateFavoritesUI();
@@ -1707,6 +1731,16 @@ function renderFavoritesList() {
         play(item);
       }
     };
+    itemEl.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'NumpadEnter') {
+        e.preventDefault();
+        const item = favs.find(x => x.id === itemEl.dataset.playId);
+        if (item) {
+          state.playlist = [...favs];
+          play(item);
+        }
+      }
+    };
   });
 }
 
@@ -1760,11 +1794,112 @@ function killRecognition() {}
 function initVoiceSearch() {}
 function initRotarySmartSearch() {}
 
+/* =========================================================================
+   BỘ ĐIỀU KHIỂN CON LĂN MAZDA / BMW / MERCEDES THÔNG MINH (CHỐNG TRƯỢT & CHỐNG KẸT)
+   ========================================================================= */
+
+let currentRotaryIndex = -1;
+let rotaryThrottleTimer = 0;
+let rotaryDeltaAccum = 0;
+const ROTARY_COOLDOWN_MS = 140; // Độ trễ chuẩn 140ms giúp xoay 1 nấc = nhảy đúng 1 bài hát
+
+function getRotaryPageTargets() {
+  const targets = [];
+  const modePill = document.getElementById('modePillBadge');
+  const userBadge = document.getElementById('userBadge');
+  const searchInput = document.getElementById('searchInput');
+  const searchBtn = document.getElementById('btnTextSearch');
+
+  if (modePill && modePill.offsetParent !== null) targets.push(modePill);
+  if (userBadge && userBadge.style.display !== 'none' && userBadge.offsetParent !== null) targets.push(userBadge);
+  if (searchInput && searchInput.offsetParent !== null) targets.push(searchInput);
+  if (searchBtn && searchBtn.offsetParent !== null) targets.push(searchBtn);
+
+  const songItems = Array.from(document.querySelectorAll('#results .item[data-play-id]'));
+  targets.push(...songItems);
+  return targets;
+}
+
+function setRotaryFocus(targetOrIndex, shouldScroll = true) {
+  const targets = getRotaryPageTargets();
+  if (!targets.length) return;
+
+  let index = -1;
+  let targetEl = null;
+
+  if (typeof targetOrIndex === 'number') {
+    index = Math.max(0, Math.min(targetOrIndex, targets.length - 1));
+    targetEl = targets[index];
+  } else if (targetOrIndex && targetOrIndex.nodeType) {
+    index = targets.indexOf(targetOrIndex);
+    targetEl = targetOrIndex;
+  }
+
+  if (!targetEl) return;
+  currentRotaryIndex = index;
+
+  document.querySelectorAll('.rotary-focused').forEach(el => el.classList.remove('rotary-focused'));
+  targetEl.classList.add('rotary-focused');
+
+  try {
+    targetEl.focus({ preventScroll: true });
+  } catch (e) {
+    try { targetEl.focus(); } catch (err) {}
+  }
+
+  if (shouldScroll) {
+    if (targetEl.classList.contains('item')) {
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+}
+
+function stepRotaryFocus(direction) {
+  if (isTouchMode()) return;
+  if (document.body.classList.contains('cinema')) return;
+
+  const openModal = document.querySelector('.modal-back.open');
+  if (openModal) return;
+
+  const targets = getRotaryPageTargets();
+  if (!targets.length) return;
+
+  let activeIdx = targets.indexOf(document.activeElement);
+  if (activeIdx < 0) {
+    activeIdx = targets.findIndex(el => el.classList.contains('rotary-focused'));
+  }
+
+  let newIdx;
+  if (activeIdx < 0) {
+    const firstSongIdx = targets.findIndex(el => el.classList.contains('item'));
+    newIdx = firstSongIdx >= 0 ? firstSongIdx : 0;
+  } else {
+    newIdx = activeIdx + direction;
+  }
+
+  if (newIdx < 0) newIdx = 0;
+  if (newIdx >= targets.length) newIdx = targets.length - 1;
+
+  setRotaryFocus(newIdx, true);
+}
+
+function autoHighlightFirstSongInRotary() {
+  if (isTouchMode()) return;
+  if (document.body.classList.contains('cinema')) return;
+  setTimeout(() => {
+    const firstSong = document.querySelector('#results .item');
+    if (firstSong && !document.activeElement?.closest('#results') && document.activeElement?.id !== 'searchInput') {
+      setRotaryFocus(firstSong, false);
+    }
+  }, 120);
+}
+
 function initCinemaControls() {
   const exitBtn = document.getElementById('cinemaExitBtn');
   if (exitBtn) exitBtn.onclick = exitCinemaMode;
 
-  // Lắng nghe sự kiện thoát Fullscreen của trình duyệt để tự tắt nhạc
   const handleFullscreenChange = () => {
     const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
     if (!isFs && document.body.classList.contains('cinema')) {
@@ -1774,88 +1909,161 @@ function initCinemaControls() {
   document.addEventListener('fullscreenchange', handleFullscreenChange);
   document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
 
-  // ĐIỀU KHIỂN BẰNG CON LĂN MAZDA / MERCEDES / BMW VÀ PHÍM BÀN PHÍM
+  // 1. LẮNG NGHE PHÍM CỨNG VÔ LĂNG & NÚM XOAY MAZDA / BMW / MERCEDES (KEYDOWN)
   document.addEventListener('keydown', (e) => {
-    // 1. Phím Back / Escape trên vô lăng hoặc xe: đóng modal / thoát toàn màn hình
+    // Phím Back / Escape trên vô lăng hoặc xe: đóng modal / thoát toàn màn hình
     if (e.key === 'Escape' || e.key === 'BrowserBack' || e.key === 'GoBack') {
-      const voiceModal = document.getElementById('voiceModal');
-      const qrModal = document.getElementById('qrModal');
-      const accountModal = document.getElementById('accountModal');
-      if (voiceModal && voiceModal.classList.contains('open')) {
-        stopVoiceSearch();
-      } else if (accountModal && accountModal.classList.contains('open')) {
-        accountModal.classList.remove('open');
-      } else if (qrModal && qrModal.classList.remove('open')) {
-        qrModal.classList.remove('open');
+      const openModal = document.querySelector('.modal-back.open');
+      if (openModal) {
+        if (openModal.id !== 'authModal') {
+          openModal.classList.remove('open');
+          openModal.style.display = 'none';
+        }
       } else if (document.body.classList.contains('cinema')) {
         exitCinemaMode();
       }
       return;
     }
 
-    // 2. Khi đang ở chế độ toàn màn hình: điều khiển con lăn trực tiếp giữa các nút Cinema Bar
-    if (!document.body.classList.contains('cinema')) return;
-    const voiceModal = document.getElementById('voiceModal');
-    if (voiceModal && voiceModal.classList.contains('open')) return;
+    // A. KHI ĐANG XEM TOÀN MÀN HÌNH (CINEMA MODE)
+    if (document.body.classList.contains('cinema')) {
+      const btns = getCinemaBarButtons();
+      if (!btns.length) return;
+      const currentIdx = btns.indexOf(document.activeElement);
 
-    const btns = getCinemaBarButtons();
-    if (!btns.length) return;
-
-    const currentIdx = btns.indexOf(document.activeElement);
-
-    // Xoay sang phải / gạt phải / gạt xuống / Tab: chuyển sang nút kế tiếp
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
-      e.preventDefault();
-      e.stopPropagation();
-      const nextIdx = currentIdx < 0 ? 0 : (currentIdx + 1) % btns.length;
-      focusCinemaButton(nextIdx);
-    }
-    // Xoay sang trái / gạt trái / gạt lên / Shift+Tab: chuyển về nút phía trước
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey)) {
-      e.preventDefault();
-      e.stopPropagation();
-      const prevIdx = currentIdx <= 0 ? btns.length - 1 : currentIdx - 1;
-      focusCinemaButton(prevIdx);
-    }
-    // Nhấn con lăn (Enter hoặc Space):
-    else if (e.key === 'Enter' || e.key === ' ') {
-      if (currentIdx >= 0) {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
         e.preventDefault();
-        btns[currentIdx].click();
-      } else {
+        e.stopPropagation();
+        focusCinemaButton(currentIdx < 0 ? 0 : (currentIdx + 1) % btns.length);
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey)) {
         e.preventDefault();
-        focusCinemaButton(0);
+        e.stopPropagation();
+        focusCinemaButton(currentIdx <= 0 ? btns.length - 1 : currentIdx - 1);
+      } else if (e.key === 'Enter' || e.key === ' ' || e.key === 'NumpadEnter') {
+        e.preventDefault();
+        if (currentIdx >= 0) btns[currentIdx].click();
+        else focusCinemaButton(0);
+      }
+      return;
+    }
+
+    // B. KHI ĐANG Ở TRANG CHÍNH (CHẾ ĐỘ XE CON LĂN)
+    if (isTouchMode()) return;
+    if (document.querySelector('.modal-back.open')) return;
+
+    // Xoay sang phải / gạt xuống / Tab: nhảy tới phần tử kế tiếp
+    if (e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
+      e.preventDefault();
+      stepRotaryFocus(1);
+      return;
+    }
+    // Xoay sang trái / gạt lên / Shift+Tab: lùi về phần tử trước
+    if (e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey)) {
+      e.preventDefault();
+      stepRotaryFocus(-1);
+      return;
+    }
+    // PageDown / PageUp: nhảy nhanh 3 bài
+    if (e.key === 'PageDown') {
+      e.preventDefault();
+      stepRotaryFocus(3);
+      return;
+    }
+    if (e.key === 'PageUp') {
+      e.preventDefault();
+      stepRotaryFocus(-3);
+      return;
+    }
+    // Home / End:
+    if (e.key === 'Home') {
+      e.preventDefault();
+      setRotaryFocus(0);
+      return;
+    }
+    if (e.key === 'End') {
+      e.preventDefault();
+      const targets = getRotaryPageTargets();
+      setRotaryFocus(targets.length - 1);
+      return;
+    }
+    // Gạt ngang trên hàng tìm kiếm:
+    if (e.key === 'ArrowRight') {
+      const searchInput = document.getElementById('searchInput');
+      const searchBtn = document.getElementById('btnTextSearch');
+      if (document.activeElement === searchInput && searchBtn) {
+        e.preventDefault();
+        setRotaryFocus(searchBtn);
+        return;
+      }
+    }
+    if (e.key === 'ArrowLeft') {
+      const searchInput = document.getElementById('searchInput');
+      const searchBtn = document.getElementById('btnTextSearch');
+      if (document.activeElement === searchBtn && searchInput) {
+        e.preventDefault();
+        setRotaryFocus(searchInput);
+        return;
+      }
+    }
+    // Nhấn núm xoay (Enter / Space / NumpadEnter):
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'NumpadEnter') {
+      const active = document.activeElement;
+      if (active && active.classList && active.classList.contains('item')) {
+        e.preventDefault();
+        active.click();
+        return;
       }
     }
   });
 
-  // Hỗ trợ sự kiện xoay con lăn (Wheel) trên màn hình xe hơi
+  // 2. LẮNG NGHE SỰ KIỆN XOAY CON LĂN (WHEEL) - CHỐNG TRƯỢT & BỎ QUA BÀI HÁT
   window.addEventListener('wheel', (e) => {
-    if (!document.body.classList.contains('cinema')) return;
-    const voiceModal = document.getElementById('voiceModal');
-    if (voiceModal && voiceModal.classList.contains('open')) return;
-
-    const btns = getCinemaBarButtons();
-    if (!btns.length) return;
-
-    const currentIdx = btns.indexOf(document.activeElement);
-    if (e.deltaY > 15 || e.deltaX > 15) {
-      const nextIdx = currentIdx < 0 ? 0 : (currentIdx + 1) % btns.length;
-      focusCinemaButton(nextIdx);
-    } else if (e.deltaY < -15 || e.deltaX < -15) {
-      const prevIdx = currentIdx <= 0 ? btns.length - 1 : currentIdx - 1;
-      focusCinemaButton(prevIdx);
+    // Nếu đang xem toàn màn hình
+    if (document.body.classList.contains('cinema')) {
+      const btns = getCinemaBarButtons();
+      if (!btns.length) return;
+      const currentIdx = btns.indexOf(document.activeElement);
+      if (e.deltaY > 15 || e.deltaX > 15) {
+        focusCinemaButton(currentIdx < 0 ? 0 : (currentIdx + 1) % btns.length);
+      } else if (e.deltaY < -15 || e.deltaX < -15) {
+        focusCinemaButton(currentIdx <= 0 ? btns.length - 1 : currentIdx - 1);
+      }
+      return;
     }
-  }, { passive: true });
-}
 
-function initRotaryKnobScroll() {
+    if (isTouchMode()) return;
+    if (document.querySelector('.modal-back.open')) return;
+
+    // Ngăn chặn cuộn trang tự do bằng pixel làm trượt qua bài hát
+    e.preventDefault();
+
+    const rawDelta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    rotaryDeltaAccum += rawDelta;
+
+    const now = Date.now();
+    if (now - rotaryThrottleTimer < ROTARY_COOLDOWN_MS) {
+      return;
+    }
+
+    if (Math.abs(rotaryDeltaAccum) < 6) return;
+
+    const dir = rotaryDeltaAccum > 0 ? 1 : -1;
+    rotaryDeltaAccum = 0;
+    rotaryThrottleTimer = now;
+
+    stepRotaryFocus(dir);
+  }, { passive: false });
+
+  // Đồng bộ tiêu điểm khi người dùng chạm hoặc click
   document.addEventListener('focusin', (e) => {
-    if (e.target && typeof e.target.scrollIntoView === 'function') {
-      e.target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (e.target && e.target.classList && e.target.classList.contains('item')) {
+      document.querySelectorAll('.rotary-focused').forEach(el => el.classList.remove('rotary-focused'));
+      e.target.classList.add('rotary-focused');
     }
   });
 }
+
+function initRotaryKnobScroll() {}
 
 /* =========================================================================
    7. BẮT SỰ KIỆN NÚT BẤM VÀ KHỞI TẠO ỨNG DỤNG

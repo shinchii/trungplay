@@ -50,13 +50,62 @@ button, input, select, textarea { font: inherit; }
 button { cursor: pointer; border: 0; color: inherit; }
 
 /* HIỆU ỨNG VÒNG SÁNG CON LĂN MAZDA / MERCEDES / BMW (ROTARY FOCUS GLOW RING) */
-:focus-visible, button:focus-visible, .item:focus-visible, input:focus-visible, .user-badge:focus-visible {
-  outline: 4px solid var(--accent) !important;
+:focus-visible, button:focus-visible, input:focus-visible, .user-badge:focus-visible {
+  outline: 3px solid var(--accent) !important;
   outline-offset: 3px !important;
   box-shadow: 0 0 30px rgba(255, 54, 80, 0.9) !important;
   transform: scale(1.02);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   z-index: 10;
+}
+.item.rotary-focused,
+.item:focus,
+.item:focus-visible {
+  background: linear-gradient(135deg, #1d2536, #161c2b) !important;
+  border: 2px solid #ff3650 !important;
+  box-shadow: 0 0 30px rgba(255, 54, 80, 0.75), inset 0 0 15px rgba(255, 54, 80, 0.15) !important;
+  transform: scale(1.025) !important;
+  outline: none !important;
+  z-index: 5;
+}
+.item.rotary-focused .item-title,
+.item:focus .item-title {
+  color: #fff !important;
+  text-shadow: 0 0 10px rgba(255,255,255,0.4);
+}
+.item.rotary-focused .btn-play-item,
+.item:focus .btn-play-item {
+  background: #ff3650 !important;
+  color: #fff !important;
+  box-shadow: 0 0 18px rgba(255, 54, 80, 0.8) !important;
+  transform: scale(1.05);
+}
+#searchInput.rotary-focused,
+#searchInput:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 28px rgba(255, 54, 80, 0.6) !important;
+  outline: none !important;
+}
+#btnTextSearch.rotary-focused,
+#btnTextSearch:focus {
+  background: var(--accent) !important;
+  border-color: #fff !important;
+  box-shadow: 0 0 28px rgba(255, 54, 80, 0.8) !important;
+  transform: scale(1.04) !important;
+  outline: none !important;
+}
+.mode-pill-badge.rotary-focused,
+.mode-pill-badge:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 20px rgba(255, 54, 80, 0.7) !important;
+  background: rgba(255, 54, 80, 0.25) !important;
+  outline: none !important;
+}
+.user-badge.rotary-focused,
+.user-badge:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 20px rgba(255, 54, 80, 0.7) !important;
+  outline: none !important;
 }
 
 /* APP LAYOUT - FULL WIDTH KHÔNG CỘT TRÁI */
