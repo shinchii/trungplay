@@ -1467,6 +1467,10 @@ function stopVoiceSearch() {
   // Hàm trống để không gây lỗi
 }
 
+function killRecognition() {
+  // Hàm trống để không gây lỗi play()
+}
+
 function initVoiceSearch() {
   const btnVoice = document.getElementById('btnVoiceSearch');
   if (btnVoice) btnVoice.onclick = startVoiceSearch;
