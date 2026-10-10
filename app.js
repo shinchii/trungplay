@@ -859,6 +859,12 @@ function initCarPlayAudioAnchor() {
     carPlayAudioAnchor.src = silentAudioUrl;
   }
   carPlayAudioAnchor.loop = true;
+
+  if (window.WebKitPlaybackTargetAvailabilityEvent) {
+    carPlayAudioAnchor.addEventListener('webkitplaybacktargetavailabilitychanged', (e) => {
+      window._carPlayTargetAvailable = (e.availability === 'available');
+    });
+  }
 }
 
 // ĐẢM BẢO KHÔNG CÒN WEBAUDIO DUMMY NÀO CHẠY NGẦM GÂY XUNG ĐỘT LOA THOẠI
@@ -882,6 +888,7 @@ function forceCarAudioOutput() {
     } catch (e) {}
   }
 }
+
 
 function destroyPlayers(keepAnchor = false) {
   if (ytPlayer) {
@@ -1453,7 +1460,25 @@ function setVoiceHint(text) {
 }
 
 // Phục hồi và khóa chặt luồng âm thanh phát qua loa xe sau khi micro kết thúc
-function restoreCarAudioAfterVoice() {
+async function restoreCarAudioAfterVoice() {
+  if ('audioSession' in navigator) {
+    try { navigator.audioSession.type = 'playback'; } catch(e){}
+  }
+  // Kích hoạt audio element trên trang chính để WebKit Core gọi HTMLMediaElement::updateAudioSessionCategory()
+  // Ép hệ điều hành iOS hủy bỏ hoàn toàn trạng thái PlayAndRecord của Micro và chuyển thẳng sang Playback (CarPlay)
+  try {
+    initCarPlayAudioAnchor();
+    if (carPlayAudioAnchor) {
+      carPlayAudioAnchor.currentTime = 0;
+      const p = carPlayAudioAnchor.play();
+      if (p && typeof p.then === 'function') {
+        await p.catch(() => {});
+      }
+      setTimeout(() => {
+        try { carPlayAudioAnchor.pause(); } catch(e){}
+      }, 120);
+    }
+  } catch(e){}
   if ('audioSession' in navigator) {
     try { navigator.audioSession.type = 'playback'; } catch(e){}
   }
@@ -1500,9 +1525,9 @@ async function finishVoice(session) {
 
   toast('🔍 Đang tìm & tự phát: ' + text);
 
-  // CHỜ 250MS ĐỂ PHẦN CỨNG IOS GIẢI PHÓNG HOÀN TOÀN MICRO VÀ ĐƯA KÊNH ÂM THANH TRỞ LẠI LOA XE HƠI (CARPLAY)
-  await new Promise(res => setTimeout(res, 250));
-  restoreCarAudioAfterVoice();
+  // CHỜ 300MS ĐỂ PHẦN CỨNG IOS GIẢI PHÓNG HOÀN TOÀN MICRO VÀ ĐƯA KÊNH ÂM THANH TRỞ LẠI LOA XE HƠI (CARPLAY)
+  await new Promise(res => setTimeout(res, 300));
+  await restoreCarAudioAfterVoice();
 
   const results = await search(text);
   if (results && results.length > 0) {
