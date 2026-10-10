@@ -1451,6 +1451,8 @@ function getSpeechRecognition() {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
 
+let voiceIframe = null;
+let voiceTimeout = null;
 
 function startVoiceSearch(e) {
   if (e && e.preventDefault) e.preventDefault();
@@ -1459,73 +1461,90 @@ function startVoiceSearch(e) {
     exitCinemaMode(true);
   }
 
-  const SR = getSpeechRecognition();
-  if (!SR) {
+  if (!getSpeechRecognition()) {
     toast('Trình duyệt của xe chưa hỗ trợ Web Speech. Vui lòng gõ chữ.');
     return;
   }
 
-  // Tạm dừng nhạc nếu đang phát để Micro bắt giọng tốt hơn
+  // Tạm dừng nhạc
   if (typeof destroyPlayers === 'function') destroyPlayers(false);
   
-  // Đóng bất kỳ phiên nhận diện nào trước đó
   killRecognition();
-
   toast('🎤 Đang nghe... Hãy đọc tên bài hát!');
 
-  const r = new SR();
-  r.lang = 'vi-VN';
-  r.continuous = false;
-  r.interimResults = false;
-  r.maxAlternatives = 1;
-
-  r.onresult = (e) => {
-    let text = '';
-    for (let i = 0; i < e.results.length; i++) {
-      text += e.results[i][0].transcript;
-    }
-    text = text.trim();
-    if (!text) return;
-    
-    toast('✅ Đã bắt được: ' + text + '. Đang xử lý...');
-    try { sessionStorage.setItem('aptv_auto_search', text); } catch(e){}
-    
-    // TẢI LẠI TRANG ĐỂ ÉP IOS NHẢ MICRO, TRẢ ÂM THANH VỀ LOA MEDIA CỦA XE
-    setTimeout(() => {
-      window.location.reload();
-    }, 300);
-  };
-
-  r.onerror = (evt) => {
-    console.warn('Voice error:', evt.error);
-    toast('⚠️ Lỗi nghe giọng nói (hoặc bị từ chối quyền). Hãy thử lại!');
-  };
+  // TẠO IFRAME CÁCH LY ĐỂ NHẬN DIỆN GIỌNG NÓI
+  voiceIframe = document.createElement('iframe');
+  voiceIframe.allow = "microphone";
+  voiceIframe.style.display = "none";
   
-  r.onend = () => {
-    // Không làm gì thêm, onresult đã lo
-  };
-
-  voiceRecognition = r;
-  try {
-    r.start();
-  } catch (err) {
-    toast('⚠️ Micro đang bận. Vui lòng bấm thử lại!');
-  }
+  const scriptContent = `
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SR) {
+      const r = new SR();
+      r.lang = 'vi-VN';
+      r.continuous = false;
+      r.interimResults = false;
+      r.maxAlternatives = 1;
+      r.onresult = (e) => {
+        let text = '';
+        for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
+        window.parent.postMessage({ type: 'VOICE_OK', text: text.trim() }, '*');
+      };
+      r.onerror = (e) => window.parent.postMessage({ type: 'VOICE_ERR', error: e.error }, '*');
+      r.onend = () => window.parent.postMessage({ type: 'VOICE_END' }, '*');
+      r.start();
+    }
+  `;
+  
+  voiceIframe.srcdoc = `<html><body><script>${scriptContent}</script></body></html>`;
+  document.body.appendChild(voiceIframe);
+  
+  // Timeout an toàn
+  voiceTimeout = setTimeout(() => {
+    killRecognition();
+    toast('⚠️ Hết thời gian chờ giọng nói.');
+  }, 10000);
 }
 
-function killRecognition() {
-  if (voiceRecognition) {
-    try { voiceRecognition.abort(); } catch(e){}
-    try { voiceRecognition.stop(); } catch(e){}
-    voiceRecognition = null;
+// Bắt Message từ Iframe
+window.addEventListener('message', async (e) => {
+  const data = e.data;
+  if (!data || !data.type || !data.type.startsWith('VOICE_')) return;
+  
+  if (data.type === 'VOICE_OK') {
+    const text = data.text;
+    if (text) {
+      toast('✅ Đã bắt được: ' + text + '. Đang xử lý...');
+      killRecognition(); // Hủy iframe ngay lập tức để ép iOS nhả Micro
+      
+      // Chờ 800ms cho WebKit dọn dẹp AudioSession rồi mới play
+      setTimeout(async () => {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) searchInput.value = text;
+        
+        const results = await search(text);
+        if (results && results.length > 0) {
+          play(results[0], true);
+          if (typeof enterCinemaMode === 'function') enterCinemaMode();
+        } else {
+          toast('Không tìm thấy bài hát: ' + text);
+        }
+      }, 800);
+    }
+  } else if (data.type === 'VOICE_ERR') {
+    killRecognition();
+    toast('⚠️ Lỗi nghe giọng nói. Hãy thử lại!');
+  } else if (data.type === 'VOICE_END') {
+    // Chỉ dọn dẹp nếu chưa có kết quả (chống đụng độ)
+    setTimeout(() => killRecognition(), 500);
   }
-  // HACK: Ép WebKit giải phóng hoàn toàn phần cứng Micro bằng cách mở WebRTC rỗng rồi tắt ngay lập tức
-  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    navigator.mediaDevices.getUserMedia({ audio: true })
-      .then(stream => {
-        stream.getTracks().forEach(track => track.stop());
-      })
-      .catch(err => console.warn('WebRTC Mic Release Hack failed:', err));
+});
+
+function killRecognition() {
+  clearTimeout(voiceTimeout);
+  if (voiceIframe) {
+    try { voiceIframe.remove(); } catch(e){}
+    voiceIframe = null;
   }
 }
 
@@ -1649,6 +1668,7 @@ function initRotaryKnobScroll() {
    ========================================================================= */
 
 document.addEventListener('DOMContentLoaded', () => {
+
   initFirebase();
   checkPersistentSession();
   initRotaryKnobScroll();
