@@ -1519,6 +1519,14 @@ function killRecognition() {
     try { voiceRecognition.stop(); } catch(e){}
     voiceRecognition = null;
   }
+  // HACK: Ép WebKit giải phóng hoàn toàn phần cứng Micro bằng cách mở WebRTC rỗng rồi tắt ngay lập tức
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        stream.getTracks().forEach(track => track.stop());
+      })
+      .catch(err => console.warn('WebRTC Mic Release Hack failed:', err));
+  }
 }
 
 function stopVoiceSearch() {
@@ -1786,24 +1794,5 @@ document.addEventListener('DOMContentLoaded', () => {
   initVoiceSearch();
   initCinemaControls();
 
-  // Xử lý nốt quy trình tìm kiếm tự động sau khi trang load lại từ Voice Search
-  try {
-    const autoSearchQuery = sessionStorage.getItem('aptv_auto_search');
-    if (autoSearchQuery) {
-      sessionStorage.removeItem('aptv_auto_search');
-      setTimeout(async () => {
-        toast('🔍 Đang tự động phát: ' + autoSearchQuery);
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) searchInput.value = autoSearchQuery;
-        
-        const results = await search(autoSearchQuery);
-        if (results && results.length > 0) {
-          play(results[0], true);
-          if (typeof enterCinemaMode === 'function') enterCinemaMode();
-        } else {
-          toast('Không tìm thấy bài hát: ' + autoSearchQuery);
-        }
-      }, 500);
-    }
-  } catch (e) { console.warn("Lỗi đọc sessionStorage:", e); }
+
 });
