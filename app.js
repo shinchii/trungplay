@@ -39,7 +39,11 @@ const defaults = {
   proxyUrl: '',
   playlist: [
     { id: 'L_LUpnjgPso', title: 'Tuyển Tập Nhạc Sàn Xe Hơi CarPlay Hot 2026', channel: 'CarPlay Music', thumb: 'https://i.ytimg.com/vi/L_LUpnjgPso/mqdefault.jpg' },
-    { id: 'dQw4w9WgXcQ', title: 'Nhạc Trẻ Remix Sôi Động Hay Nhất', channel: 'Music Official', thumb: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg' }
+    { id: 'dQw4w9WgXcQ', title: 'Nhạc Trẻ Remix Sôi Động Hay Nhất', channel: 'Music Official', thumb: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg' },
+    { id: 'a9l_3ZzC2yY', title: 'Liên Khúc Bolero Trữ Tình Hay Nhất', channel: 'Bolero Tuyển Chọn', thumb: 'https://i.ytimg.com/vi/a9l_3ZzC2yY/mqdefault.jpg' },
+    { id: '9vMh9f41PQE', title: 'Lofi Chill Buổi Tối Lái Xe Cực Thư Giãn', channel: 'Lofi Vietnam', thumb: 'https://i.ytimg.com/vi/9vMh9f41PQE/mqdefault.jpg' },
+    { id: 'kJQP7kiw5Fk', title: 'Top Nhạc Trẻ EDM Sôi Động Bốc Lửa 2026', channel: 'Remix Official', thumb: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/mqdefault.jpg' },
+    { id: 'JGwWNGJdvx8', title: 'Acoustic Guitar Nhẹ Nhàng Thư Giãn Trên Xe', channel: 'Acoustic Chill', thumb: 'https://i.ytimg.com/vi/JGwWNGJdvx8/mqdefault.jpg' }
   ],
   favorites: [],
   history: [],
@@ -1028,13 +1032,17 @@ function play(item, add = true) {
   if (add) addHistory(item);
 
   const wrap = document.getElementById('playerWrap');
-  const embedUrl = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&playsinline=1&rel=0&modestbranding=1&fs=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`;
+  const validOrigin = (window.location.origin && window.location.origin !== 'null' && window.location.protocol.startsWith('http'))
+    ? `&origin=${encodeURIComponent(window.location.origin)}`
+    : '';
+  const embedUrl = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&playsinline=1&rel=0&modestbranding=1&fs=0&enablejsapi=1${validOrigin}`;
 
   // Tạo trực tiếp Iframe với đầy đủ đặc quyền phát âm thanh ra loa xe hơi (AirPlay / CarPlay)
   wrap.innerHTML = `
     <iframe id="ytPlayerFrame" 
       src="${embedUrl}" 
-      allow="accelerometer; autoplay *; encrypted-media *; gyroscope; picture-in-picture; web-share; speaker-selection *; airplay *;" 
+      referrerpolicy="strict-origin-when-cross-origin"
+      allow="accelerometer; autoplay *; clipboard-write *; encrypted-media *; gyroscope; picture-in-picture; web-share; speaker-selection *; airplay *;" 
       x-webkit-airplay="allow"
       webkit-playsinline="1"
       playsinline="1"
@@ -1069,8 +1077,8 @@ function play(item, add = true) {
   const onPlayerError = (event) => {
     const errCode = event.data;
     console.warn('YouTube Player Error code:', errCode);
-    if (errCode === 101 || errCode === 150 || errCode === 100 || errCode === 2) {
-      toast('⚠️ Video này bị hạn chế phát ngoài YouTube, đang tự chuyển bài kế tiếp...');
+    if (errCode === 101 || errCode === 150 || errCode === 153 || errCode === 100 || errCode === 2 || errCode === 5) {
+      toast('⚠️ Video này bị hạn chế phát (' + errCode + '), đang chuyển bài kế tiếp...');
       setTimeout(() => playNext(), 1200);
     }
   };
@@ -1162,7 +1170,10 @@ function itemHtml(item) {
 }
 
 function renderAll() {
-  // Đồng bộ trạng thái nếu cần
+  const listToRender = (state.playlist && state.playlist.length > 0) ? state.playlist : defaults.playlist;
+  if (listToRender && listToRender.length > 0) {
+    renderSearchResults(listToRender);
+  }
 }
 
 /* =========================================================================
@@ -1334,12 +1345,7 @@ async function search(q) {
   return [];
 }
 
-function quickSearch(q) {
-  const input = document.getElementById('searchInput');
-  if (input) input.value = q;
-  search(q);
-}
-window.quickSearch = quickSearch;
+
 
 function renderSearchResults(arr) {
   const out = document.getElementById('results');
