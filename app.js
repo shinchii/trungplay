@@ -1451,7 +1451,6 @@ function getSpeechRecognition() {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
 
-let voiceRecognition = null;
 
 function startVoiceSearch(e) {
   if (e && e.preventDefault) e.preventDefault();
@@ -1489,7 +1488,7 @@ function startVoiceSearch(e) {
     if (!text) return;
     
     toast('✅ Đã bắt được: ' + text + '. Đang xử lý...');
-    sessionStorage.setItem('aptv_auto_search', text);
+    try { sessionStorage.setItem('aptv_auto_search', text); } catch(e){}
     
     // TẢI LẠI TRANG ĐỂ ÉP IOS NHẢ MICRO, TRẢ ÂM THANH VỀ LOA MEDIA CỦA XE
     setTimeout(() => {
@@ -1788,21 +1787,23 @@ document.addEventListener('DOMContentLoaded', () => {
   initCinemaControls();
 
   // Xử lý nốt quy trình tìm kiếm tự động sau khi trang load lại từ Voice Search
-  const autoSearchQuery = sessionStorage.getItem('aptv_auto_search');
-  if (autoSearchQuery) {
-    sessionStorage.removeItem('aptv_auto_search');
-    setTimeout(async () => {
-      toast('🔍 Đang tự động phát: ' + autoSearchQuery);
-      const searchInput = document.getElementById('searchInput');
-      if (searchInput) searchInput.value = autoSearchQuery;
-      
-      const results = await search(autoSearchQuery);
-      if (results && results.length > 0) {
-        play(results[0], true);
-        if (typeof enterCinemaMode === 'function') enterCinemaMode();
-      } else {
-        toast('Không tìm thấy bài hát: ' + autoSearchQuery);
-      }
-    }, 500);
-  }
+  try {
+    const autoSearchQuery = sessionStorage.getItem('aptv_auto_search');
+    if (autoSearchQuery) {
+      sessionStorage.removeItem('aptv_auto_search');
+      setTimeout(async () => {
+        toast('🔍 Đang tự động phát: ' + autoSearchQuery);
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) searchInput.value = autoSearchQuery;
+        
+        const results = await search(autoSearchQuery);
+        if (results && results.length > 0) {
+          play(results[0], true);
+          if (typeof enterCinemaMode === 'function') enterCinemaMode();
+        } else {
+          toast('Không tìm thấy bài hát: ' + autoSearchQuery);
+        }
+      }, 500);
+    }
+  } catch (e) { console.warn("Lỗi đọc sessionStorage:", e); }
 });
