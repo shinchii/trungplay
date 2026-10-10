@@ -192,7 +192,8 @@ button { cursor: pointer; border: 0; color: inherit; }
   display: flex;
   gap: 12px;
 }
-.btn-search-big {
+.btn-search-big,
+.btn-voice-big {
   height: 64px;
   padding: 0 30px;
   border-radius: 20px;
@@ -209,31 +210,11 @@ button { cursor: pointer; border: 0; color: inherit; }
   transition: all .2s;
   white-space: nowrap;
 }
-.btn-search-big:hover {
+.btn-search-big:hover,
+.btn-voice-big:hover {
   background: #273145;
   border-color: #4a5670;
-}
-.btn-voice-big {
-  height: 64px;
-  padding: 0 32px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, #ff3650, #d90029);
-  border: 2px solid #ff5368;
-  color: #fff;
-  font-size: 18px;
-  font-weight: 800;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  cursor: pointer;
-  box-shadow: 0 8px 25px rgba(255, 54, 80, 0.45);
-  transition: all .2s;
-  white-space: nowrap;
-}
-.btn-voice-big:hover {
-  transform: scale(1.03);
-  box-shadow: 0 12px 35px rgba(255, 54, 80, 0.7);
+  transform: scale(1.02);
 }
 
 /* DANH SÁCH KẾT QUẢ TÌM KIẾM */
@@ -821,7 +802,7 @@ body.cinema .cinema-bar {
 
 <!-- THANH ĐIỀU KHIỂN KHI XEM TOÀN MÀN HÌNH (CINEMA BAR) -->
 <div class="cinema-bar" id="cinemaBar">
-  <button id="cinemaMicBtn" class="primary" title="Tìm bằng giọng nói" tabindex="0">🎤 Giọng nói</button>
+  <button id="cinemaMicBtn" title="Tìm bằng giọng nói" tabindex="0">🎤 Giọng nói</button>
   <button id="cinemaPlayPauseBtn" title="Tạm dừng / Tiếp tục" tabindex="0">⏸ Tạm dừng</button>
   <button id="cinemaPrevBtn" title="Bài trước" tabindex="0">⏮ Trước</button>
   <button id="cinemaNextBtn" title="Bài sau" tabindex="0">Sau ⏭</button>
@@ -839,7 +820,7 @@ body.cinema .cinema-bar {
     <div class="voice-transcript" id="voiceTranscript">Hãy nói tên bài hát bạn muốn nghe!</div>
     <div class="voice-hint" id="voiceHint">Dừng nói 3 giây sẽ tự tìm kiếm &amp; tự phát bài #1</div>
     <div class="controls" style="margin-top:16px;display:flex;gap:10px;justify-content:center">
-      <button class="pill primary" id="retryVoiceBtn" tabindex="0">🎤 Nói lại</button>
+      <button class="pill" id="retryVoiceBtn" tabindex="0">🎤 Nói lại</button>
       <button class="pill" id="cancelVoiceBtn" tabindex="0">Hủy bỏ</button>
     </div>
   </div>
