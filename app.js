@@ -1445,240 +1445,31 @@ function exitCinemaMode() {
   }
 }
 
-function getSpeechRecognition() {
-  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
-}
-
-function setVoiceText(text) {
-  const el = document.getElementById('voiceTranscript');
-  if (el) el.textContent = text;
-}
-
-function setVoiceHint(text) {
-  const el = document.getElementById('voiceHint');
-  if (el) el.textContent = text;
-}
-
-// Phục hồi và khóa chặt luồng âm thanh phát qua loa xe sau khi micro kết thúc
-async function restoreCarAudioAfterVoice() {
-  if ('audioSession' in navigator) {
-    try { navigator.audioSession.type = 'playback'; } catch(e){}
+// Thay thế chức năng tìm kiếm giọng nói bằng Web Speech API gây lỗi AudioSession
+// Bằng cách focus vào ô input để gọi bàn phím iOS, yêu cầu người dùng bấm nút Micro trên bàn phím.
+function startVoiceSearch() {
+  // Thoát chế độ toàn màn hình trước khi tìm kiếm để thấy ô input
+  if (typeof exitCinemaMode === 'function') {
+    exitCinemaMode();
   }
-  // Kích hoạt audio element trên trang chính để WebKit Core gọi HTMLMediaElement::updateAudioSessionCategory()
-  // Ép hệ điều hành iOS hủy bỏ hoàn toàn trạng thái PlayAndRecord của Micro và chuyển thẳng sang Playback (CarPlay)
-  try {
-    initCarPlayAudioAnchor();
-    if (carPlayAudioAnchor) {
-      carPlayAudioAnchor.currentTime = 0;
-      const p = carPlayAudioAnchor.play();
-      if (p && typeof p.then === 'function') {
-        await p.catch(() => {});
-      }
-      setTimeout(() => {
-        try { carPlayAudioAnchor.pause(); } catch(e){}
-      }, 120);
-    }
-  } catch(e){}
-  if ('audioSession' in navigator) {
-    try { navigator.audioSession.type = 'playback'; } catch(e){}
-  }
-}
 
-// Hủy hoàn toàn phiên nhận giọng nói cũ để giải phóng tài nguyên micro phần cứng
-function killRecognition() {
-  clearInterval(voiceCountdownInterval);
-  clearTimeout(voiceSilenceTimer);
-  clearTimeout(voiceMaxTimer);
-  const r = voiceRecognition;
-  voiceRecognition = null;
-  if (r) {
-    r.onresult = null;
-    r.onerror = null;
-    r.onend = null;
-    try { r.abort(); } catch (e) { try { r.stop(); } catch (e2) {} }
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) {
+    searchInput.value = '';
+    setTimeout(() => {
+      searchInput.focus();
+      toast('🎤 Bấm phím Micro trên bàn phím để nói');
+    }, 100);
   }
-  restoreCarAudioAfterVoice();
-}
-
-function closeVoiceModal() {
-  const modal = document.getElementById('voiceModal');
-  if (modal) modal.classList.remove('open');
 }
 
 function stopVoiceSearch() {
-  voiceSessionId++;
-  killRecognition();
-  closeVoiceModal();
-  setTimeout(restoreCarAudioAfterVoice, 200);
-  if (document.body.classList.contains('cinema')) {
-    setTimeout(() => focusCinemaButton(0), 100);
-  }
-}
-
-async function finishVoice(session) {
-  if (session !== voiceSessionId || voiceHandled) return;
-  voiceHandled = true;
-  const text = currentVoiceText.trim();
-  killRecognition();
-  closeVoiceModal();
-  if (!text) return;
-
-  toast('🔍 Đang tìm & tự phát: ' + text);
-
-  // CHỜ 300MS ĐỂ PHẦN CỨNG IOS GIẢI PHÓNG HOÀN TOÀN MICRO VÀ ĐƯA KÊNH ÂM THANH TRỞ LẠI LOA XE HƠI (CARPLAY)
-  await new Promise(res => setTimeout(res, 300));
-  await restoreCarAudioAfterVoice();
-
-  const results = await search(text);
-  if (results && results.length > 0) {
-    play(results[0], true);
-    // TỰ ĐỘNG VÀO FULL SCREEN TOÀN MÀN HÌNH THEO ĐÚNG YÊU CẦU
-    enterCinemaMode();
-  } else {
-    toast('Không tìm thấy bài hát: ' + text);
-    if (document.body.classList.contains('cinema')) {
-      setTimeout(() => focusCinemaButton(0), 100);
-    }
-  }
-}
-
-// BẤM VÀO TÌM KIẾM GIỌNG NÓI -> GỌI TRỰC TIẾP ĐỂ TRÌNH DUYỆT BẬT POPUP HỎI QUYỀN NGUYÊN BẢN (NHƯ CŨ)
-function startVoiceSearch() {
-  const SR = getSpeechRecognition();
-  if (!SR) {
-    toast('Trình duyệt của xe chưa hỗ trợ Web Speech. Vui lòng gõ tên bài hát để tìm kiếm.');
-    return;
-  }
-
-  // TẠM DỪNG MỌI ÂM THANH ĐANG PHÁT TRƯỚC KHI MỞ MICRO ĐỂ TRÁNH DÍNH TIẾNG VÀ TRÁNH KẸT LOA THOẠI
-  destroyPlayers(false);
-  killRecognition();
-
-  const mySession = ++voiceSessionId;
-  currentVoiceText = '';
-  voiceHandled = false;
-
-  const modal = document.getElementById('voiceModal');
-  if (modal) modal.classList.add('open');
-  setVoiceText('Đang nghe qua Micro xe... Hãy nói tên bài hát!');
-  setVoiceHint('Dừng nói 3 giây sẽ tự tìm kiếm & tự phát bài #1');
-
-  setTimeout(() => {
-    if (mySession !== voiceSessionId) return;
-
-    let r;
-    try {
-      r = new SR();
-    } catch (e) {
-      setVoiceText('⚠️ Không khởi động được micro. Bấm "🎤 Nói lại".');
-      return;
-    }
-
-    r.lang = 'vi-VN';
-    r.continuous = false;
-    r.interimResults = true;
-    r.maxAlternatives = 1;
-
-    r.onresult = (e) => {
-      if (mySession !== voiceSessionId) return;
-      let text = '';
-      for (let i = 0; i < e.results.length; i++) {
-        text += e.results[i][0].transcript;
-      }
-      text = text.trim();
-      if (!text) return;
-
-      currentVoiceText = text;
-      setVoiceText(`"${text}"`);
-      const searchInput = document.getElementById('searchInput');
-      if (searchInput) searchInput.value = text;
-
-      // ĐÚNG 3 GIÂY KHÔNG NÓI THÊM -> TỰ ĐỘNG TÌM KIẾM & PHÁT BÀI ĐẦU TIÊN & FULL SCREEN
-      clearTimeout(voiceSilenceTimer);
-      clearInterval(voiceCountdownInterval);
-
-      let secondsLeft = 3;
-      setVoiceHint(`⏱️ Đang chờ... Tự phát sau ${secondsLeft}s`);
-
-      voiceCountdownInterval = setInterval(() => {
-        secondsLeft--;
-        if (secondsLeft > 0) {
-          setVoiceHint(`⏱️ Đang chờ... Tự phát sau ${secondsLeft}s`);
-        } else {
-          clearInterval(voiceCountdownInterval);
-        }
-      }, 1000);
-
-      voiceSilenceTimer = setTimeout(() => {
-        clearInterval(voiceCountdownInterval);
-        finishVoice(mySession);
-      }, 3000);
-    };
-
-    r.onerror = (e) => {
-      if (mySession !== voiceSessionId) return;
-      const err = e && e.error;
-      console.warn('Speech recognition status/error:', err);
-      if (err === 'not-allowed' || err === 'service-not-allowed') {
-        setVoiceText('⚠️ Quyền Micro bị chặn. Hãy bấm "Cho phép" khi trình duyệt hỏi quyền, hoặc kiểm tra Cài đặt.');
-      } else if (err === 'network') {
-        setVoiceText('⚠️ Mạng chập chờn, không nhận dạng được giọng nói. Bấm "🎤 Nói lại".');
-      } else if (err === 'no-speech') {
-        if (!currentVoiceText) {
-          setVoiceText('Đang chờ nghe bạn nói tên bài hát...');
-        }
-      } else if (!currentVoiceText) {
-        setVoiceText('Chưa nghe rõ bài hát. Bấm "🎤 Nói lại" để thử lại.');
-      }
-    };
-
-    r.onend = () => {
-      if (mySession !== voiceSessionId) return;
-      voiceRecognition = null;
-      if (currentVoiceText) {
-        if (!voiceSilenceTimer) {
-          voiceSilenceTimer = setTimeout(() => finishVoice(mySession), 3000);
-        }
-      } else {
-        clearTimeout(voiceMaxTimer);
-        const el = document.getElementById('voiceTranscript');
-        if (el && (el.textContent.indexOf('Đang nghe') === 0 || el.textContent.indexOf('Đang chờ') === 0)) {
-          setVoiceText('Chưa nghe rõ bài hát. Bấm "🎤 Nói lại" để thử lại.');
-        }
-      }
-    };
-
-    voiceRecognition = r;
-    try {
-      r.start();
-    } catch (e) {
-      console.warn('Microphone start error:', e);
-      setVoiceText('⚠️ Micro đang bận. Bấm "🎤 Nói lại".');
-    }
-
-    // Giới hạn tối đa 20 giây cho 1 lần nghe
-    voiceMaxTimer = setTimeout(() => {
-      if (mySession !== voiceSessionId) return;
-      if (currentVoiceText) {
-        finishVoice(mySession);
-      } else {
-        killRecognition();
-        setVoiceText('Hết thời gian nghe. Bấm "🎤 Nói lại" để thử lại.');
-      }
-    }, 20000);
-  }, 80);
+  // Hàm trống để không gây lỗi
 }
 
 function initVoiceSearch() {
   const btnVoice = document.getElementById('btnVoiceSearch');
-  const retryVoiceBtn = document.getElementById('retryVoiceBtn');
-  const closeVoiceBtn = document.getElementById('closeVoiceBtn');
-  const cancelVoiceBtn = document.getElementById('cancelVoiceBtn');
-
   if (btnVoice) btnVoice.onclick = startVoiceSearch;
-  if (retryVoiceBtn) retryVoiceBtn.onclick = startVoiceSearch;
-  if (closeVoiceBtn) closeVoiceBtn.onclick = stopVoiceSearch;
-  if (cancelVoiceBtn) cancelVoiceBtn.onclick = stopVoiceSearch;
 }
 
 function initCinemaControls() {
