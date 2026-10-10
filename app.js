@@ -1053,6 +1053,17 @@ function play(item, add = true) {
 
   if (add) addHistory(item);
 
+  // KÍCH HOẠT VÀ HIỂN THỊ CONTAINER TRƯỚC KHI TẠO IFRAME ĐỂ ĐẢM BẢO KHUNG HÌNH CÓ KÍCH THƯỚC TRÊN XE
+  if (isTouchMode()) {
+    const playerContainer = document.getElementById('playerContainer');
+    if (playerContainer) {
+      playerContainer.classList.add('active');
+      playerContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  } else {
+    enterCinemaMode(); // TỰ ĐỘNG VÀO FULL SCREEN TOÀN MÀN HÌNH CHO XE DÙNG CON LĂN TRƯỚC KHI TẠO IFRAME
+  }
+
   const wrap = document.getElementById('playerWrap');
   const validOrigin = (window.location.origin && window.location.origin !== 'null' && window.location.protocol.startsWith('http'))
     ? `&origin=${encodeURIComponent(window.location.origin)}`
@@ -1125,16 +1136,6 @@ function play(item, add = true) {
 
   const nowPlayingTitle = document.getElementById('nowPlayingTitle');
   if (nowPlayingTitle) nowPlayingTitle.textContent = item.title || videoId;
-
-  if (isTouchMode()) {
-    const playerContainer = document.getElementById('playerContainer');
-    if (playerContainer) {
-      playerContainer.classList.add('active');
-      playerContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  } else {
-    enterCinemaMode(); // TỰ ĐỘNG VÀO FULL SCREEN TOÀN MÀN HÌNH CHO XE DÙNG CON LĂN
-  }
 }
 
 // BẮT SỰ KIỆN POSTMESSAGE TỪ YOUTUBE IFRAME
@@ -1565,6 +1566,21 @@ function applyCarMode(mode) {
   document.body.classList.toggle('mode-touch', isTouch);
   document.body.classList.toggle('mode-rotary', !isTouch);
 
+  // ĐẢM BẢO #playerWrap NẰM ĐÚNG VỊ TRÍ CHO TỪNG CHẾ ĐỘ
+  const playerWrap = document.getElementById('playerWrap');
+  const playerContainer = document.getElementById('playerContainer');
+  if (playerWrap) {
+    if (isTouch) {
+      if (playerContainer && playerWrap.parentElement !== playerContainer) {
+        playerContainer.insertBefore(playerWrap, playerContainer.firstChild);
+      }
+    } else {
+      if (playerWrap.parentElement !== document.body) {
+        document.body.appendChild(playerWrap);
+      }
+    }
+  }
+
   // Cập nhật Topbar Badge
   const iconEl = document.getElementById('modePillIcon');
   const textEl = document.getElementById('modePillText');
@@ -1576,7 +1592,6 @@ function applyCarMode(mode) {
   // Nếu chuyển sang chế độ Con lăn thì thoát tab yêu thích về tìm kiếm
   if (!isTouch) {
     switchTouchTab('discover');
-    const playerContainer = document.getElementById('playerContainer');
     if (playerContainer) playerContainer.classList.remove('active');
   }
 
