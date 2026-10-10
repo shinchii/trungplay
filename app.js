@@ -38,12 +38,16 @@ const defaults = {
   apiKey: '',
   proxyUrl: '',
   playlist: [
-    { id: 'L_LUpnjgPso', title: 'Tuyển Tập Nhạc Sàn Xe Hơi CarPlay Hot 2026', channel: 'CarPlay Music', thumb: 'https://i.ytimg.com/vi/L_LUpnjgPso/mqdefault.jpg' },
-    { id: 'dQw4w9WgXcQ', title: 'Nhạc Trẻ Remix Sôi Động Hay Nhất', channel: 'Music Official', thumb: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg' },
-    { id: 'a9l_3ZzC2yY', title: 'Liên Khúc Bolero Trữ Tình Hay Nhất', channel: 'Bolero Tuyển Chọn', thumb: 'https://i.ytimg.com/vi/a9l_3ZzC2yY/mqdefault.jpg' },
-    { id: '9vMh9f41PQE', title: 'Lofi Chill Buổi Tối Lái Xe Cực Thư Giãn', channel: 'Lofi Vietnam', thumb: 'https://i.ytimg.com/vi/9vMh9f41PQE/mqdefault.jpg' },
-    { id: 'kJQP7kiw5Fk', title: 'Top Nhạc Trẻ EDM Sôi Động Bốc Lửa 2026', channel: 'Remix Official', thumb: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/mqdefault.jpg' },
-    { id: 'JGwWNGJdvx8', title: 'Acoustic Guitar Nhẹ Nhàng Thư Giãn Trên Xe', channel: 'Acoustic Chill', thumb: 'https://i.ytimg.com/vi/JGwWNGJdvx8/mqdefault.jpg' }
+    { id: '3cWWUr6w7z8', title: 'Nonstop Nhạc Trend TikTok Remix 2026 - Bass Cực Căng Lái Xe Đường Dài', channel: 'Việt Mix Official', thumb: 'https://i.ytimg.com/vi/3cWWUr6w7z8/mqdefault.jpg' },
+    { id: 'ri9GuMiNIy0', title: 'Deep House MIX 2026 - Best Music for Night Drive | Luxury Car Music', channel: 'Deep House Nation', thumb: 'https://i.ytimg.com/vi/ri9GuMiNIy0/mqdefault.jpg' },
+    { id: 'WzKS0KJIMl4', title: 'NONSTOP 2026 VINAHOUSE BASS CỰC MẠNH | Tuyển Chọn Lái Xe Đường Dài', channel: 'Vinahouse DJ', thumb: 'https://i.ytimg.com/vi/WzKS0KJIMl4/mqdefault.jpg' },
+    { id: 'kcuXE8euHNg', title: 'DRAVYN - Bass Boosted Night Drive Mix Deep House (Nhạc Nghe Trên Xe)', channel: 'DRAVYN Music', thumb: 'https://i.ytimg.com/vi/kcuXE8euHNg/mqdefault.jpg' },
+    { id: 'GP59_ecBABk', title: 'Lái Xe Là Phải Nghe - DJ HYENA REMIX Liên Khúc Nhạc Trẻ Hot Trend', channel: 'DJ Hyena Remix', thumb: 'https://i.ytimg.com/vi/GP59_ecBABk/mqdefault.jpg' },
+    { id: 'k7zgGmpypf0', title: 'Midnight Executive — Luxury Deep House Night Drive Mix 2026', channel: 'Night Drive Mix', thumb: 'https://i.ytimg.com/vi/k7zgGmpypf0/mqdefault.jpg' },
+    { id: 'dN66qkXDeyc', title: 'Nonstop Vinahouse 2026 - Nhạc Sàn Siêu Xe Bass Cực Căng Đập Tung Loa', channel: 'Car Audio Club', thumb: 'https://i.ytimg.com/vi/dN66qkXDeyc/mqdefault.jpg' },
+    { id: 'cucMdYrlOVE', title: 'Nhạc Nghe Trên Xe Cực Chill 2026 - Mixtape Deep Chill Roadtrip', channel: 'Chill Music VN', thumb: 'https://i.ytimg.com/vi/cucMdYrlOVE/mqdefault.jpg' },
+    { id: 'sjQgYzkXjW8', title: 'Nhạc Trẻ Remix Triệu View 2026 - Nonstop Vinahouse Bay Phòng Lái Xe', channel: 'Nonstop Việt', thumb: 'https://i.ytimg.com/vi/sjQgYzkXjW8/mqdefault.jpg' },
+    { id: 'FkdP-OcvT30', title: 'Chạy Qua Những Ngày Đẹp Trời - Playlist Chill Lái Xe Đường Dài Không Buồn Ngủ', channel: 'Acoustic Chill Lofi', thumb: 'https://i.ytimg.com/vi/FkdP-OcvT30/mqdefault.jpg' }
   ],
   favorites: [],
   history: [],
@@ -138,6 +142,18 @@ function loadState() {
   try {
     const loaded = { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') };
     if (!Array.isArray(loaded.favorites)) loaded.favorites = [];
+
+    // Tự động nâng cấp danh sách mặc định lên tuyển tập liên khúc nhạc dài xe hơi (TikTok Remix, Deep House, Vinahouse)
+    const PLAYLIST_CACHE_VERSION = 'aptv_carmix_long_v3';
+    const isOldPlaylist = !loaded.playlist || !loaded.playlist.length || loaded.playlist.some(x => x.id === 'abPmZCZZrFA' || x.id === 'GpmOn4RyzZI' || x.id === 'L_LUpnjgPso' || x.id === 'a9l_3ZzC2yY');
+    if (localStorage.getItem('aptv_playlist_ver') !== PLAYLIST_CACHE_VERSION || isOldPlaylist) {
+      loaded.playlist = [...defaults.playlist];
+      localStorage.setItem('aptv_playlist_ver', PLAYLIST_CACHE_VERSION);
+      try {
+        localStorage.setItem(KEY, JSON.stringify(loaded));
+      } catch(e){}
+    }
+
     return loaded;
   } catch (e) {
     return { ...defaults, favorites: [] };
@@ -537,7 +553,7 @@ async function handleRegister() {
     return showAuthError('Vui lòng nhập Số điện thoại của bạn.');
   }
   if (!/^0\d{8,10}$/.test(phone)) {
-    return showAuthError('Số điện thoại không hợp lệ (Ví dụ: 0965512394).');
+    return showAuthError('Số điện thoại không hợp lệ.');
   }
   if (!pass) {
     return showAuthError('Vui lòng nhập Mật khẩu đăng nhập.');
