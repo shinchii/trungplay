@@ -1447,19 +1447,20 @@ function exitCinemaMode() {
 
 // Thay thế chức năng tìm kiếm giọng nói bằng Web Speech API gây lỗi AudioSession
 // Bằng cách focus vào ô input để gọi bàn phím iOS, yêu cầu người dùng bấm nút Micro trên bàn phím.
-function startVoiceSearch() {
-  // Thoát chế độ toàn màn hình trước khi tìm kiếm để thấy ô input
-  if (typeof exitCinemaMode === 'function') {
-    exitCinemaMode();
-  }
+window.isVoiceDictationMode = false;
+window.dictationTimeout = null;
 
+function startVoiceSearch() {
+  window.isVoiceDictationMode = true;
   const searchInput = document.getElementById('searchInput');
   if (searchInput) {
     searchInput.value = '';
-    setTimeout(() => {
-      searchInput.focus();
-      toast('🎤 Bấm phím Micro trên bàn phím để nói');
-    }, 100);
+    searchInput.focus();
+    toast('🎤 Bấm phím Micro trên bàn phím để nói');
+  }
+  
+  if (typeof exitCinemaMode === 'function') {
+    exitCinemaMode();
   }
 }
 
@@ -1688,10 +1689,35 @@ document.addEventListener('DOMContentLoaded', () => {
   if (searchForm) {
     searchForm.onsubmit = e => {
       e.preventDefault();
+      clearTimeout(window.dictationTimeout);
+      window.isVoiceDictationMode = false;
       const val = document.getElementById('searchInput').value.trim();
       if (val) search(val);
       else toast('Vui lòng nhập tên bài hát cần tìm');
     };
+  }
+
+  // Lắng nghe thay đổi văn bản để tự động tìm và phát (giống hành vi cũ) khi dùng giọng nói
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      if (!window.isVoiceDictationMode) return;
+      clearTimeout(window.dictationTimeout);
+      window.dictationTimeout = setTimeout(async () => {
+        const val = searchInput.value.trim();
+        if (val) {
+          window.isVoiceDictationMode = false;
+          toast('🔍 Đang tìm & tự phát: ' + val);
+          const results = await search(val);
+          if (results && results.length > 0) {
+            play(results[0], true);
+            if (typeof enterCinemaMode === 'function') enterCinemaMode();
+          } else {
+            toast('Không tìm thấy bài hát: ' + val);
+          }
+        }
+      }, 2500); // Đợi 2.5 giây sau khi ngừng nói
+    });
   }
 
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => {
