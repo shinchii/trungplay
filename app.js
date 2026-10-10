@@ -257,7 +257,7 @@ function handleKickedOut(msg) {
   }
 
   // Dừng phát nhạc / video ngay lập tức
-  destroyPlayers();
+  destroyPlayers(false);
   exitCinemaMode();
   stopVoiceSearch();
 
@@ -795,37 +795,115 @@ let ytPlayer = null;
 // =========================================================================
 // CẤU HÌNH ĐỊNH TUYẾN ÂM THANH RA HỆ THỐNG LOA XE HƠI (CARPLAY / BLUETOOTH / USB)
 // =========================================================================
-const SILENT_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+
+// TẠO FILE ÂM THANH IM LẶNG 2 GIÂY CHUẨN PCM ĐỂ DUY TRÌ KÊNH ÂM THANH XE HƠI (CARPLAY STEREO)
+function createSilentAudioBlobUrl() {
+  try {
+    const sampleRate = 8000;
+    const numSamples = sampleRate * 2; // 2 giây im lặng
+    const buffer = new Uint8Array(44 + numSamples);
+    const view = new DataView(buffer.buffer);
+
+    // RIFF identifier
+    view.setUint32(0, 0x52494646, false); // "RIFF"
+    view.setUint32(4, 36 + numSamples, true);
+    view.setUint32(8, 0x57415645, false); // "WAVE"
+
+    // "fmt " chunk
+    view.setUint32(12, 0x666d7420, false); // "fmt "
+    view.setUint32(16, 16, true);          // 16 bytes for PCM format
+    view.setUint16(20, 1, true);           // AudioFormat 1 (PCM)
+    view.setUint16(22, 1, true);           // Mono (1 channel)
+    view.setUint32(24, sampleRate, true);  // Sample rate
+    view.setUint32(28, sampleRate, true);  // Byte rate (SampleRate * 1 * 1)
+    view.setUint16(32, 1, true);           // Block align
+    view.setUint16(34, 8, true);           // Bits per sample (8-bit)
+
+    // "data" chunk
+    view.setUint32(36, 0x64617461, false); // "data"
+    view.setUint32(40, numSamples, true);
+
+    // Dữ liệu PCM 8-bit im lặng là 128 (0x80)
+    buffer.fill(128, 44);
+
+    const blob = new Blob([buffer], { type: 'audio/wav' });
+    return URL.createObjectURL(blob);
+  } catch (e) {
+    return 'data:audio/wav;base64,UklGRqQ+AABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YYA+AACA';
+  }
+}
+
 let carPlayAudioAnchor = null;
+let silentAudioUrl = null;
 
 function initCarPlayAudioAnchor() {
-  if (carPlayAudioAnchor) return;
-  carPlayAudioAnchor = document.getElementById('carPlayAudioAnchor');
+  if (!silentAudioUrl) {
+    silentAudioUrl = createSilentAudioBlobUrl();
+  }
+  if (!carPlayAudioAnchor) {
+    carPlayAudioAnchor = document.getElementById('carPlayAudioAnchor');
+  }
   if (!carPlayAudioAnchor) {
     carPlayAudioAnchor = document.createElement('audio');
     carPlayAudioAnchor.id = 'carPlayAudioAnchor';
-    carPlayAudioAnchor.style.display = 'none';
     document.body.appendChild(carPlayAudioAnchor);
   }
+
   carPlayAudioAnchor.setAttribute('playsinline', '');
   carPlayAudioAnchor.setAttribute('webkit-playsinline', '');
   carPlayAudioAnchor.setAttribute('x-webkit-airplay', 'allow');
-  carPlayAudioAnchor.src = SILENT_WAV;
+  carPlayAudioAnchor.setAttribute('preload', 'auto');
+  carPlayAudioAnchor.style.cssText = 'position:fixed;bottom:0;left:0;width:1px;height:1px;opacity:0.001;pointer-events:none;z-index:-9999;';
+
+  if (!carPlayAudioAnchor.src || carPlayAudioAnchor.src.length < 20) {
+    carPlayAudioAnchor.src = silentAudioUrl;
+  }
   carPlayAudioAnchor.loop = true;
-  carPlayAudioAnchor.volume = 0.01;
 }
 
-// HÀM ÉP HỆ THỐNG IOS/SAFARI CHUYỂN ÂM THANH RA LOA XE HƠI THAY VÌ LOA ĐIỆN THOẠI
+// BẬT VÀ GIỮ VỮNG LUỒNG WEB AUDIO LIÊN TỤC VÀO DESTINATION CỦA HỆ THỐNG XE
+function ensureCarPlayWebAudio() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    if (!window._carAudioCtx) {
+      window._carAudioCtx = new AudioCtx();
+    }
+    const ctx = window._carAudioCtx;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+    if (!window._carAudioSource) {
+      // Bộ đệm im lặng 2 giây
+      const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      const gain = ctx.createGain();
+      gain.gain.value = 0.001; // không nghe thấy tiếng nhưng duy trì chiếm kênh loa xe
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      source.start(0);
+      window._carAudioSource = source;
+    }
+  } catch(e) {
+    console.warn("Lỗi khởi tạo CarPlay WebAudio:", e);
+  }
+}
+
+// HÀM ÉP HỆ THỐNG IOS/SAFARI CHUYỂN TOÀN BỘ ÂM THANH RA LOA XE HƠI (CARPLAY / BLUETOOTH / CỔNG USB)
 function forceCarAudioOutput() {
   // 1. Ép Safari iOS sử dụng chế độ phát âm thanh độc quyền (AVAudioSessionCategoryPlayback)
-  // Đây là mấu chốt để iOS tự động chuyển toàn bộ âm thanh ra CarPlay / Bluetooth / Cổng USB xe hơi thay vì loa điện thoại
   if ('audioSession' in navigator) {
     try {
       navigator.audioSession.type = 'playback';
     } catch (e) {}
   }
 
-  // 2. Kích hoạt Audio Anchor trên trang chủ để chiếm kênh âm thanh của hệ thống
+  // 2. Chạy Web Audio pipeline vào destination để chiếm cổng âm thanh xe hơi
+  ensureCarPlayWebAudio();
+
+  // 3. Kích hoạt Audio Anchor HTML5
   try {
     initCarPlayAudioAnchor();
     if (carPlayAudioAnchor) {
@@ -835,22 +913,9 @@ function forceCarAudioOutput() {
       }
     }
   } catch(e){}
-
-  // 3. Khởi tạo Web Audio Context nếu có để giữ route âm thanh ổn định
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (AudioCtx) {
-      if (!window._carAudioCtx) {
-        window._carAudioCtx = new AudioCtx();
-      }
-      if (window._carAudioCtx.state === 'suspended') {
-        window._carAudioCtx.resume().catch(() => {});
-      }
-    }
-  } catch(e){}
 }
 
-function destroyPlayers() {
+function destroyPlayers(keepAnchor = true) {
   if (ytPlayer) {
     try { ytPlayer.destroy(); } catch(e){}
     ytPlayer = null;
@@ -861,10 +926,16 @@ function destroyPlayers() {
   }
   const wrap = document.getElementById('playerWrap');
   if (wrap) wrap.innerHTML = '';
-  if (carPlayAudioAnchor) {
+
+  // CHỈ DỪNG AUDIO ANCHOR KHI THỰC SỰ THOÁT HẲN KHỎI CHẾ ĐỘ PHÁT (keepAnchor === false)
+  // Khi chuyển bài hoặc bắt đầu bài mới, PHẢI GIỮ carPlayAudioAnchor chạy để không bị ngắt loa xe!
+  if (!keepAnchor && carPlayAudioAnchor) {
     try { carPlayAudioAnchor.pause(); } catch(e){}
   }
-  if ('mediaSession' in navigator) {
+  if (!keepAnchor && window._carAudioCtx) {
+    try { window._carAudioCtx.suspend().catch(()=>{}); } catch(e){}
+  }
+  if (!keepAnchor && 'mediaSession' in navigator) {
     try { navigator.mediaSession.playbackState = 'none'; } catch(e){}
   }
   updatePlayPauseButton(false);
@@ -957,7 +1028,9 @@ function fallbackIframePlay(videoId, wrap) {
   wrap.innerHTML = `
     <iframe id="ytIframe" 
       src="${embedUrl}" 
-      allow="accelerometer; autoplay *; encrypted-media *; gyroscope; picture-in-picture; web-share; speaker-selection *;" 
+      allow="accelerometer; autoplay *; encrypted-media *; gyroscope; picture-in-picture; web-share; speaker-selection *; airplay *;" 
+      x-webkit-airplay="allow"
+      webkit-playsinline="1"
       style="width:100%;height:100%;border:0;background:#000">
     </iframe>`;
 }
@@ -974,7 +1047,7 @@ function play(item, add = true) {
   if (!videoId) return toast('Không tìm thấy Video ID');
 
   forceCarAudioOutput();
-  destroyPlayers();
+  destroyPlayers(true);
 
   current = item;
   currentIndex = state.playlist.findIndex(x => x.id === videoId);
@@ -986,6 +1059,14 @@ function play(item, add = true) {
 
   const onPlayerReady = (event) => {
     forceCarAudioOutput();
+    try {
+      const iframe = document.getElementById('playerWrap')?.querySelector('iframe');
+      if (iframe) {
+        iframe.setAttribute('allow', 'accelerometer; autoplay *; encrypted-media *; gyroscope; picture-in-picture; web-share; speaker-selection *; airplay *;');
+        iframe.setAttribute('x-webkit-airplay', 'allow');
+        iframe.setAttribute('webkit-playsinline', '1');
+      }
+    } catch(e){}
     try { event.target.playVideo(); } catch(e){}
     updatePlayPauseButton(true);
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
@@ -1000,6 +1081,7 @@ function play(item, add = true) {
         setTimeout(() => playNext(), 600);
       }
     } else if (event.data === 1) { // 1 = PLAYING
+      forceCarAudioOutput();
       updatePlayPauseButton(true);
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     } else if (event.data === 2) { // 2 = PAUSED
@@ -1390,7 +1472,7 @@ function enterCinemaMode() {
 function exitCinemaMode() {
   document.body.classList.remove('cinema');
   exitPageFullscreen();
-  destroyPlayers(); // Tắt nhạc khi thoát toàn màn hình theo đúng yêu cầu
+  destroyPlayers(false); // Tắt nhạc khi thoát toàn màn hình theo đúng yêu cầu
   const input = document.getElementById('searchInput');
   if (input) {
     setTimeout(() => {
@@ -1413,6 +1495,19 @@ function setVoiceHint(text) {
   if (el) el.textContent = text;
 }
 
+// Phục hồi và khóa chặt luồng âm thanh phát qua loa xe sau khi micro kết thúc
+function restoreCarAudioAfterVoice() {
+  const tryRestore = () => {
+    if ('audioSession' in navigator) {
+      try { navigator.audioSession.type = 'playback'; } catch(e){}
+    }
+    forceCarAudioOutput();
+  };
+  tryRestore();
+  setTimeout(tryRestore, 120);
+  setTimeout(tryRestore, 350);
+}
+
 // Hủy hoàn toàn phiên nhận giọng nói cũ để giải phóng tài nguyên micro
 function killRecognition() {
   clearInterval(voiceCountdownInterval);
@@ -1427,10 +1522,7 @@ function killRecognition() {
     try { r.stop(); } catch (e) { try { r.abort(); } catch (e2) {} }
   }
   // KHÔI PHỤC KÊNH PHÁT LOA XE HƠI: Tránh tình trạng micro chuyển iOS sang PlayAndRecord làm kẹt âm thanh ở loa thoại điện thoại
-  if ('audioSession' in navigator) {
-    try { navigator.audioSession.type = 'playback'; } catch(e){}
-  }
-  forceCarAudioOutput();
+  restoreCarAudioAfterVoice();
 }
 
 function closeVoiceModal() {
@@ -1442,7 +1534,7 @@ function stopVoiceSearch() {
   voiceSessionId++;
   killRecognition();
   closeVoiceModal();
-  forceCarAudioOutput();
+  restoreCarAudioAfterVoice();
   if (document.body.classList.contains('cinema')) {
     setTimeout(() => focusCinemaButton(0), 100);
   }
@@ -1454,7 +1546,7 @@ async function finishVoice(session) {
   const text = currentVoiceText.trim();
   killRecognition();
   closeVoiceModal();
-  forceCarAudioOutput();
+  restoreCarAudioAfterVoice();
   if (!text) return;
 
   toast('🔍 Đang tìm & tự phát: ' + text);
@@ -1723,10 +1815,11 @@ document.addEventListener('DOMContentLoaded', () => {
   initRotaryKnobScroll();
   initCarPlayAudioAnchor();
 
-  // Tự động mở khóa âm thanh ra loa xe khi chạm / bấm lần đầu
-  const unlockAudioOnTouch = () => { forceCarAudioOutput(); };
-  document.addEventListener('touchstart', unlockAudioOnTouch, { once: true, passive: true });
-  document.addEventListener('click', unlockAudioOnTouch, { once: true, passive: true });
+  // Luôn đảm bảo kênh âm thanh ra loa xe trên mỗi tương tác người dùng (chạm màn hình, click chuột, phím/con lăn vô lăng)
+  const maintainCarAudioOnUserAction = () => { forceCarAudioOutput(); };
+  document.addEventListener('touchstart', maintainCarAudioOnUserAction, { passive: true });
+  document.addEventListener('click', maintainCarAudioOnUserAction, { passive: true });
+  document.addEventListener('keydown', maintainCarAudioOnUserAction, { passive: true });
 
   const loginTabBtn = document.getElementById('tabLoginBtn');
   const regTabBtn = document.getElementById('tabRegBtn');
