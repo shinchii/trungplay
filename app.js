@@ -1433,12 +1433,12 @@ function enterCinemaMode() {
   }, 120);
 }
 
-function exitCinemaMode() {
+function exitCinemaMode(skipFocus = false) {
   document.body.classList.remove('cinema');
   exitPageFullscreen();
   destroyPlayers(false); // Tắt nhạc khi thoát toàn màn hình theo đúng yêu cầu
   const input = document.getElementById('searchInput');
-  if (input) {
+  if (input && !skipFocus) {
     setTimeout(() => {
       try { input.focus(); } catch(e){}
     }, 120);
@@ -1452,15 +1452,18 @@ window.dictationTimeout = null;
 
 function startVoiceSearch() {
   window.isVoiceDictationMode = true;
+  
+  if (typeof exitCinemaMode === 'function') {
+    exitCinemaMode(true); // true = skip focus
+  }
+
   const searchInput = document.getElementById('searchInput');
   if (searchInput) {
     searchInput.value = '';
-    searchInput.focus();
-    toast('🎤 Bấm phím Micro trên bàn phím để nói');
-  }
-  
-  if (typeof exitCinemaMode === 'function') {
-    exitCinemaMode();
+    // <label> native action will handle focus automatically
+    setTimeout(() => {
+      toast('🎤 Bấm phím Micro trên bàn phím để nói');
+    }, 200);
   }
 }
 
