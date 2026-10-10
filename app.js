@@ -1141,9 +1141,18 @@ function findItem(id) {
 
 function itemHtml(item) {
   const isPlaying = current && current.id === item.id;
+  const id = item?.id || '';
+  const ytThumbUrl = id ? `https://i.ytimg.com/vi/${esc(id)}/mqdefault.jpg` : '';
+  const fallbackThumbUrl = id ? `https://i.ytimg.com/vi/${esc(id)}/hqdefault.jpg` : '';
+  let thumbUrl = ytThumbUrl;
+  if (item.thumb && typeof item.thumb === 'string' && item.thumb.startsWith('http') && !item.thumb.includes('/vi/')) {
+    thumbUrl = item.thumb;
+  }
+  if (!thumbUrl) thumbUrl = ytThumbUrl;
+
   return `
     <div class="item ${isPlaying ? 'active-play' : ''}" data-play-id="${esc(item.id)}" tabindex="0" title="Bấm để phát toàn màn hình">
-      <img class="thumb" src="${esc(item.thumb || ytThumb(item.id))}" loading="lazy">
+      <img class="thumb" src="${esc(thumbUrl)}" onerror="if(this.src!=='${fallbackThumbUrl}'){this.src='${fallbackThumbUrl}';}" decoding="async" alt="thumbnail">
       <div class="item-info">
         <div class="item-title" title="${esc(item.title || 'YouTube video')}">${esc(item.title || 'YouTube video')}</div>
         <div class="item-sub">${esc(item.channel || 'YouTube')}</div>
@@ -1224,13 +1233,7 @@ async function searchSingleEndpoint(apiUrl, timeoutMs = 4500) {
         const title = item.title || 'YouTube Video';
         const channel = item.author || item.uploaderName || item.channel || 'YouTube';
 
-        let thumb = '';
-        if (Array.isArray(item.videoThumbnails) && item.videoThumbnails.length > 0) {
-          thumb = item.videoThumbnails[0].url || item.videoThumbnails[item.videoThumbnails.length - 1].url;
-        }
-        if (!thumb && item.thumbnail) thumb = item.thumbnail;
-        if (!thumb) thumb = ytThumb(id);
-
+        const thumb = ytThumb(id);
         items.push({ id, title, channel, thumb });
       }
     }
@@ -1288,7 +1291,7 @@ async function search(q) {
           id: x.id?.videoId || x.id,
           title: x.snippet?.title || 'YouTube Video',
           channel: x.snippet?.channelTitle || 'YouTube',
-          thumb: x.snippet?.thumbnails?.medium?.url || ytThumb(x.id?.videoId)
+          thumb: ytThumb(x.id?.videoId || x.id)
         })).filter(x => x.id && /^[\w-]{11}$/.test(x.id));
 
         if (arr.length > 0) {
@@ -1445,126 +1448,137 @@ function exitCinemaMode(skipFocus = false) {
   }
 }
 
-// Thay thế chức năng tìm kiếm giọng nói bằng Web Speech API gây lỗi AudioSession
-// Bằng cách focus vào ô input để gọi bàn phím iOS, yêu cầu người dùng bấm nút Micro trên bàn phím.
-function getSpeechRecognition() {
-  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+/* =========================================================================
+   6. GÓI TÌM KIẾM THÔNG MINH CHO XE CON LĂN (QUICK TAGS & VIẾT TẮT)
+   ========================================================================= */
+
+const ACRONYM_MAP = {
+  'lq': 'Lệ Quyên Bolero',
+  'st': 'Sơn Tùng M-TP',
+  'mtp': 'Sơn Tùng M-TP',
+  'ntr': 'Nhạc Trẻ Remix 2026',
+  'bl': 'Bolero Tuyển Chọn Hay Nhất',
+  'bolero': 'Bolero Tuyển Chọn Hay Nhất',
+  'hat': 'Hà Anh Tuấn Acoustic',
+  'dv': 'Đen Vâu Tuyển Tập',
+  'vnh': 'Vinahouse Cực Căng Bass Mạnh',
+  'edm': 'EDM Tik Tok Gây Nghiện',
+  'ns': 'Nonstop Vinahouse 2026 Hay Nhất',
+  'lofi': 'Lofi Chill Lái Xe Buổi Tối',
+  'remix': 'Nhạc Trẻ Remix 2026',
+  'nhactre': 'Nhạc Trẻ Hay Nhất Hiện Nay',
+  'chua': 'Nhạc Thiền Tịnh Tâm Cửa Phật',
+  'quehuong': 'Nhạc Quê Hương Dạt Dào',
+  'tet': 'Nhạc Tết Remix Mới Nhất',
+  'xuan': 'Nhạc Xuân Sôi Động 2026',
+  'ballad': 'Nhạc Ballad Buồn Tâm Trạng'
+};
+
+function resolveQuery(raw) {
+  if (!raw) return '';
+  const clean = raw.trim().toLowerCase();
+  return ACRONYM_MAP[clean] || raw.trim();
 }
 
-let voiceIframe = null;
-let voiceTimeout = null;
+function saveRecentSearch(keyword) {
+  if (!keyword || keyword.length < 2) return;
+  try {
+    let recent = JSON.parse(localStorage.getItem('aptv_recent_searches') || '[]');
+    recent = [keyword, ...recent.filter(k => k.toLowerCase() !== keyword.toLowerCase())].slice(0, 6);
+    localStorage.setItem('aptv_recent_searches', JSON.stringify(recent));
+    renderRecentSearches();
+  } catch (e) {}
+}
 
-function startVoiceSearch(e) {
-  if (e && e.preventDefault) e.preventDefault();
-  
-  if (typeof exitCinemaMode === 'function') {
-    exitCinemaMode(true);
-  }
+function renderRecentSearches() {
+  const container = document.getElementById('recentTagsSection');
+  const list = document.getElementById('recentTagsList');
+  if (!container || !list) return;
 
-  if (!getSpeechRecognition()) {
-    toast('Trình duyệt của xe chưa hỗ trợ Web Speech. Vui lòng gõ chữ.');
-    return;
-  }
+  try {
+    const recent = JSON.parse(localStorage.getItem('aptv_recent_searches') || '[]');
+    if (!recent || recent.length === 0) {
+      container.style.display = 'none';
+      list.innerHTML = '';
+      return;
+    }
 
-  // Tạm dừng nhạc
-  if (typeof destroyPlayers === 'function') destroyPlayers(false);
-  
-  killRecognition();
-  toast('🎤 Đang nghe... Hãy đọc tên bài hát!');
+    container.style.display = 'block';
+    list.innerHTML = recent.map(item => `
+      <button type="button" class="quick-tag-btn recent" data-query="${esc(item)}" tabindex="0">
+        🕒 ${esc(item)}
+      </button>
+    `).join('');
 
-  // TẠO IFRAME CÁCH LY ĐỂ NHẬN DIỆN GIỌNG NÓI
-  voiceIframe = document.createElement('iframe');
-  voiceIframe.allow = "microphone";
-  voiceIframe.style.display = "none";
-  
-  const scriptContent = `
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SR) {
-      const r = new SR();
-      r.lang = 'vi-VN';
-      r.continuous = false;
-      r.interimResults = false;
-      r.maxAlternatives = 1;
-      r.onresult = (e) => {
-        let text = '';
-        for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
-        window.parent.postMessage({ type: 'VOICE_OK', text: text.trim() }, '*');
+    list.querySelectorAll('.quick-tag-btn').forEach(btn => {
+      btn.onclick = () => {
+        const q = btn.dataset.query;
+        if (q) quickSearch(q, true);
       };
-      r.onerror = (e) => window.parent.postMessage({ type: 'VOICE_ERR', error: e.error }, '*');
-      r.onend = () => window.parent.postMessage({ type: 'VOICE_END' }, '*');
-      r.start();
-    }
-  `;
-  
-  voiceIframe.srcdoc = `<html><body><script>${scriptContent}</script></body></html>`;
-  document.body.appendChild(voiceIframe);
-  
-  // Timeout an toàn
-  voiceTimeout = setTimeout(() => {
-    killRecognition();
-    toast('⚠️ Hết thời gian chờ giọng nói.');
-  }, 10000);
-}
-
-// Bắt Message từ Iframe
-window.addEventListener('message', async (e) => {
-  const data = e.data;
-  if (!data || !data.type || !data.type.startsWith('VOICE_')) return;
-  
-  if (data.type === 'VOICE_OK') {
-    const text = data.text;
-    if (text) {
-      toast('✅ Đã bắt được: ' + text + '. Đang xử lý...');
-      killRecognition(); // Hủy iframe ngay lập tức để ép iOS nhả Micro
-      
-      // Chờ 800ms cho WebKit dọn dẹp AudioSession rồi mới play
-      setTimeout(async () => {
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) searchInput.value = text;
-        
-        const results = await search(text);
-        if (results && results.length > 0) {
-          play(results[0], true);
-          if (typeof enterCinemaMode === 'function') enterCinemaMode();
-        } else {
-          toast('Không tìm thấy bài hát: ' + text);
-        }
-      }, 800);
-    }
-  } else if (data.type === 'VOICE_ERR') {
-    killRecognition();
-    toast('⚠️ Lỗi nghe giọng nói. Hãy thử lại!');
-  } else if (data.type === 'VOICE_END') {
-    // Chỉ dọn dẹp nếu chưa có kết quả (chống đụng độ)
-    setTimeout(() => killRecognition(), 500);
-  }
-});
-
-function killRecognition() {
-  clearTimeout(voiceTimeout);
-  if (voiceIframe) {
-    try { voiceIframe.remove(); } catch(e){}
-    voiceIframe = null;
+    });
+  } catch (e) {
+    container.style.display = 'none';
   }
 }
 
-function stopVoiceSearch() {
-  killRecognition();
+function clearRecentSearches() {
+  try {
+    localStorage.removeItem('aptv_recent_searches');
+    renderRecentSearches();
+    toast('Đã xóa lịch sử tìm kiếm');
+  } catch (e) {}
+}
+window.clearRecentSearches = clearRecentSearches;
+
+async function quickSearch(q, autoPlay = true) {
+  q = (q || '').trim();
+  if (!q) return;
+
+  const resolved = resolveQuery(q);
+  const input = document.getElementById('searchInput');
+  if (input) input.value = resolved;
+
+  if (resolved !== q) {
+    toast(`⚡ Viết tắt: ${q.toUpperCase()} ➔ ${resolved}`);
+  } else {
+    toast('🔍 Đang tìm: ' + resolved);
+  }
+
+  saveRecentSearch(resolved);
+  const results = await search(resolved);
+  if (results && results.length > 0) {
+    if (autoPlay) {
+      play(results[0], true);
+      if (typeof enterCinemaMode === 'function') enterCinemaMode();
+    }
+  } else {
+    toast('Không tìm thấy bài hát: ' + resolved);
+  }
+}
+window.quickSearch = quickSearch;
+
+function initRotarySmartSearch() {
+  const hotList = document.getElementById('hotGenreList');
+  if (hotList) {
+    hotList.querySelectorAll('.quick-tag-btn').forEach(btn => {
+      btn.onclick = () => {
+        const q = btn.dataset.query;
+        if (q) quickSearch(q, true);
+      };
+    });
+  }
+  renderRecentSearches();
 }
 
-function initVoiceSearch() {
-  const btnVoice = document.getElementById('btnVoiceSearch');
-  if (btnVoice) btnVoice.onclick = startVoiceSearch;
-}
+function stopVoiceSearch() {}
+function killRecognition() {}
+function initVoiceSearch() {}
 
 function initCinemaControls() {
-  const micBtn = document.getElementById('cinemaMicBtn');
   const playPauseBtn = document.getElementById('cinemaPlayPauseBtn');
   const prevBtn = document.getElementById('cinemaPrevBtn');
   const nextBtn = document.getElementById('cinemaNextBtn');
   const exitBtn = document.getElementById('cinemaExitBtn');
-
-  if (micBtn) micBtn.onclick = startVoiceSearch;
   if (playPauseBtn) playPauseBtn.onclick = togglePlayPause;
   if (prevBtn) prevBtn.onclick = playPrev;
   if (nextBtn) nextBtn.onclick = playNext;
@@ -1768,37 +1782,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const searchForm = document.getElementById('searchForm');
   if (searchForm) {
-    searchForm.onsubmit = e => {
+    searchForm.onsubmit = async e => {
       e.preventDefault();
-      clearTimeout(window.dictationTimeout);
-      window.isVoiceDictationMode = false;
-      const val = document.getElementById('searchInput').value.trim();
-      if (val) search(val);
-      else toast('Vui lòng nhập tên bài hát cần tìm');
-    };
-  }
+      const input = document.getElementById('searchInput');
+      const raw = input ? input.value.trim() : '';
+      if (!raw) return toast('Vui lòng nhập tên bài hát cần tìm');
 
-  // Lắng nghe thay đổi văn bản để tự động tìm và phát (giống hành vi cũ) khi dùng giọng nói
-  const searchInput = document.getElementById('searchInput');
-  if (searchInput) {
-    searchInput.addEventListener('input', () => {
-      if (!window.isVoiceDictationMode) return;
-      clearTimeout(window.dictationTimeout);
-      window.dictationTimeout = setTimeout(async () => {
-        const val = searchInput.value.trim();
-        if (val) {
-          window.isVoiceDictationMode = false;
-          toast('🔍 Đang tìm & tự phát: ' + val);
-          const results = await search(val);
-          if (results && results.length > 0) {
-            play(results[0], true);
-            if (typeof enterCinemaMode === 'function') enterCinemaMode();
-          } else {
-            toast('Không tìm thấy bài hát: ' + val);
-          }
-        }
-      }, 2500); // Đợi 2.5 giây sau khi ngừng nói
-    });
+      const resolved = resolveQuery(raw);
+      if (resolved !== raw) {
+        if (input) input.value = resolved;
+        toast(`⚡ Viết tắt: ${raw.toUpperCase()} ➔ ${resolved}`);
+      }
+      saveRecentSearch(resolved);
+      toast('🔍 Đang tìm & tự phát: ' + resolved);
+      const results = await search(resolved);
+      if (results && results.length > 0) {
+        play(results[0], true);
+        if (typeof enterCinemaMode === 'function') enterCinemaMode();
+      }
+    };
   }
 
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => {
@@ -1811,8 +1813,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   renderAll();
-  initVoiceSearch();
+  initRotarySmartSearch();
   initCinemaControls();
 
-
+  // Hỗ trợ tự tìm kiếm nếu URL có tham số ?q= hoặc ?search=
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const qParam = urlParams.get('q') || urlParams.get('search') || urlParams.get('s');
+    if (qParam && qParam.trim()) {
+      setTimeout(() => {
+        quickSearch(qParam.trim(), true);
+      }, 500);
+    }
+  } catch (e) {}
 });

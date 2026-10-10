@@ -2,6 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -192,15 +193,14 @@ button { cursor: pointer; border: 0; color: inherit; }
   display: flex;
   gap: 12px;
 }
-.btn-search-big,
-.btn-voice-big {
+.btn-search-big {
   height: 64px;
-  padding: 0 30px;
+  padding: 0 36px;
   border-radius: 20px;
-  background: #1e2534;
-  border: 2px solid #313b4e;
+  background: linear-gradient(135deg, #1e2638, #181e2c);
+  border: 2px solid #333e54;
   color: #fff;
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 800;
   display: inline-flex;
   align-items: center;
@@ -211,10 +211,89 @@ button { cursor: pointer; border: 0; color: inherit; }
   white-space: nowrap;
 }
 .btn-search-big:hover,
-.btn-voice-big:hover {
-  background: #273145;
-  border-color: #4a5670;
-  transform: scale(1.02);
+.btn-search-big:focus,
+.btn-search-big:focus-visible {
+  outline: none;
+  background: var(--accent);
+  border-color: #fff;
+  box-shadow: 0 0 24px rgba(255, 54, 80, 0.55);
+  transform: scale(1.03);
+}
+
+/* GÓI TÌM KIẾM THÔNG MINH CHO XE CON LĂN */
+.quick-tags-section {
+  width: 100%;
+  max-width: 960px;
+  margin: 16px auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.quick-tags-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: #8da0ba;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 0 4px;
+}
+.quick-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.quick-tag-btn {
+  height: 46px;
+  padding: 0 18px;
+  border-radius: 14px;
+  background: #141923;
+  border: 1.5px solid #273244;
+  color: #e2e8f0;
+  font-size: 15px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all .15s ease-in-out;
+  white-space: nowrap;
+  user-select: none;
+}
+.quick-tag-btn:hover,
+.quick-tag-btn:focus,
+.quick-tag-btn:focus-visible {
+  outline: none;
+  background: #242d3d;
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 18px rgba(255, 54, 80, 0.45);
+  transform: translateY(-2px);
+}
+.quick-tag-btn.recent {
+  border-color: #3b475d;
+  background: #10141d;
+  color: #93a3b8;
+}
+.quick-tag-btn.recent:hover,
+.quick-tag-btn.recent:focus,
+.quick-tag-btn.recent:focus-visible {
+  border-color: #38d39f;
+  color: #fff;
+  box-shadow: 0 0 16px rgba(56, 211, 159, 0.45);
+}
+.acronym-hint {
+  font-size: 13px;
+  color: #7d8c9e;
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.acronym-hint b {
+  color: #ff6b7d;
 }
 
 /* DANH SÁCH KẾT QUẢ TÌM KIẾM */
@@ -263,9 +342,10 @@ button { cursor: pointer; border: 0; color: inherit; }
   height: 78px;
   border-radius: 12px;
   object-fit: cover;
-  background: #000;
+  background: linear-gradient(135deg, #1b212d, #0d1117);
   flex-shrink: 0;
   box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+  display: block;
 }
 .item-info {
   flex: 1;
@@ -773,18 +853,43 @@ body.cinema .cinema-bar {
   <main class="main">
     <div class="search-hero">
       <form class="search-box-center" id="searchForm">
-        <input id="searchInput" class="search-input-big" placeholder="Nhập tên bài hát hoặc ca sĩ..." autocomplete="off" tabindex="0">
+        <input id="searchInput" class="search-input-big" placeholder="Nhập tên bài hát, ca sĩ, hoặc gõ tắt (lq, st, ntr...)" autocomplete="off" tabindex="0">
         <div class="search-buttons-row">
           <button type="submit" id="btnTextSearch" class="btn-search-big" tabindex="0">
             <span>🔍</span>
             <span>Tìm kiếm</span>
           </button>
-          <button type="button" id="btnVoiceSearch" class="btn-voice-big" tabindex="0">
-            <span>🎤</span>
-            <span>Giọng nói</span>
-          </button>
         </div>
       </form>
+
+      <!-- GÓI TÌM KIẾM THÔNG MINH CHO XE DÙNG CON LĂN -->
+      <div class="quick-tags-section">
+        <div class="acronym-hint">
+          <span>⚡ <b>Mẹo con lăn:</b> Gõ tắt <b>lq</b> (Lệ Quyên), <b>st</b> (Sơn Tùng), <b>ntr</b> (Nhạc Trẻ Remix), <b>bl</b> (Bolero), <b>hat</b> (Hà Anh Tuấn)...</span>
+        </div>
+
+        <div id="recentTagsSection" style="display:none;">
+          <div class="quick-tags-header">
+            <span>🕒 Tìm kiếm gần đây</span>
+            <span style="font-size:11px;color:#6b7c93;cursor:pointer;" onclick="clearRecentSearches()">Xóa lịch sử</span>
+          </div>
+          <div class="quick-tags-list" id="recentTagsList"></div>
+        </div>
+
+        <div class="quick-tags-header">
+          <span>🔥 Thể loại Hot (Bấm phát ngay)</span>
+        </div>
+        <div class="quick-tags-list" id="hotGenreList">
+          <button type="button" class="quick-tag-btn" data-query="Nhạc Trẻ Remix 2026" tabindex="0">🔥 Nhạc Trẻ Remix</button>
+          <button type="button" class="quick-tag-btn" data-query="Vinahouse Cực Căng Bass Mạnh" tabindex="0">💃 Vinahouse Cực Căng</button>
+          <button type="button" class="quick-tag-btn" data-query="Bolero Tuyển Chọn Hay Nhất" tabindex="0">📻 Bolero Chọn Lọc</button>
+          <button type="button" class="quick-tag-btn" data-query="Lofi Chill Lái Xe Buổi Tối" tabindex="0">🚗 Lofi Chill Lái Xe</button>
+          <button type="button" class="quick-tag-btn" data-query="Acoustic Việt Thư Giãn" tabindex="0">🎸 Acoustic Thư Giãn</button>
+          <button type="button" class="quick-tag-btn" data-query="Nonstop Vinahouse 2026 Hay Nhất" tabindex="0">🎧 Nonstop 2026</button>
+          <button type="button" class="quick-tag-btn" data-query="Top Trending Âm Nhạc Việt Nam" tabindex="0">🏆 Top Thịnh Hành</button>
+          <button type="button" class="quick-tag-btn" data-query="Nhạc Quán Cafe Thư Giãn Buổi Sáng" tabindex="0">☕ Cà Phê Sáng</button>
+        </div>
+      </div>
     </div>
 
     <div class="results-container">
@@ -802,28 +907,10 @@ body.cinema .cinema-bar {
 
 <!-- THANH ĐIỀU KHIỂN KHI XEM TOÀN MÀN HÌNH (CINEMA BAR) -->
 <div class="cinema-bar" id="cinemaBar">
-  <button id="cinemaMicBtn" title="Tìm bằng giọng nói" tabindex="0">🎤 Giọng nói</button>
   <button id="cinemaPlayPauseBtn" title="Tạm dừng / Tiếp tục" tabindex="0">⏸ Tạm dừng</button>
   <button id="cinemaPrevBtn" title="Bài trước" tabindex="0">⏮ Trước</button>
   <button id="cinemaNextBtn" title="Bài sau" tabindex="0">Sau ⏭</button>
   <button id="cinemaExitBtn" class="danger" title="Thoát toàn màn hình và tắt nhạc" tabindex="0">✕ Thoát</button>
-</div>
-
-<!-- POPUP TÌM KIẾM GIỌNG NÓI (#voiceModal) -->
-<div class="modal-back" id="voiceModal">
-  <div class="voice-modal-box">
-    <button class="iconbtn close-voice-btn" id="closeVoiceBtn" tabindex="0">×</button>
-    <div class="voice-mic-ring">
-      <div class="voice-mic-icon">🎤</div>
-    </div>
-    <div class="voice-title">Đang nghe giọng nói...</div>
-    <div class="voice-transcript" id="voiceTranscript">Hãy nói tên bài hát bạn muốn nghe!</div>
-    <div class="voice-hint" id="voiceHint">Dừng nói 3 giây sẽ tự tìm kiếm &amp; tự phát bài #1</div>
-    <div class="controls" style="margin-top:16px;display:flex;gap:10px;justify-content:center">
-      <button class="pill" id="retryVoiceBtn" tabindex="0">🎤 Nói lại</button>
-      <button class="pill" id="cancelVoiceBtn" tabindex="0">Hủy bỏ</button>
-    </div>
-  </div>
 </div>
 
 <!-- MODAL THÔNG TIN TÀI KHOẢN (#accountModal) -->
