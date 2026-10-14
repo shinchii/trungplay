@@ -17,6 +17,7 @@ const firebaseConfig = {
 
 // Khởi tạo Firebase SDK an toàn
 let db = null;
+let analytics = null;
 function initFirebase() {
   try {
     if (window.firebase && !firebase.apps.length) {
@@ -24,6 +25,10 @@ function initFirebase() {
     }
     if (window.firebase && firebase.apps.length) {
       db = firebase.firestore();
+      if (typeof firebase.analytics === 'function') {
+        analytics = firebase.analytics();
+        console.log("✅ Firebase Analytics đã kích hoạt:", firebaseConfig.measurementId);
+      }
     }
   } catch (e) {
     console.warn("Lỗi khởi tạo Firebase:", e);
