@@ -270,6 +270,144 @@ button { cursor: pointer; border: 0; color: inherit; }
   transform: scale(1.03);
 }
 
+.btn-voice-big {
+  height: 64px;
+  padding: 0 26px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(255, 54, 80, 0.18), rgba(217, 0, 41, 0.1));
+  border: 2px solid rgba(248, 113, 113, 0.45);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+}
+.btn-voice-big:hover,
+.btn-voice-big:focus,
+.btn-voice-big:focus-visible {
+  outline: none;
+  background: rgba(255, 54, 80, 0.32);
+  border-color: #ff5368;
+  box-shadow: 0 0 24px rgba(255, 54, 80, 0.5);
+  transform: scale(1.03);
+}
+.btn-voice-big.is-listening,
+.cinema-bar button.is-listening {
+  background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+  border-color: #fca5a5 !important;
+  color: #fff !important;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.35), 0 0 30px rgba(220, 38, 38, 0.85) !important;
+  animation: hdVoiceBtnPulse 1.2s ease-in-out infinite;
+}
+.btn-voice-big.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+@keyframes hdVoiceBtnPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.search-voice-notice {
+  margin-top: 12px;
+  padding: 12px 18px;
+  border-radius: 16px;
+  background: rgba(19, 25, 38, 0.92);
+  border: 1.5px solid #2b364d;
+  color: #e2e8f0;
+  font-size: 15px;
+  font-weight: 600;
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  line-height: 1.45;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.search-voice-notice.show {
+  display: flex;
+}
+.search-voice-notice.listening {
+  background: rgba(220, 38, 38, 0.16);
+  border-color: rgba(248, 113, 113, 0.65);
+  color: #fecaca;
+}
+
+/* NÚT RELOAD YOUTUBE PLAYER & BONG BÓNG HƯỚNG DẪN KHÔI PHỤC ÂM THANH (HD_VOICE_RELOAD_HINT_V1) */
+#btnReloadYoutube,
+#cinemaReloadBtn {
+  color: #a5d9fa;
+  border-color: rgba(125, 211, 252, 0.32);
+  background: rgba(56, 189, 248, 0.12);
+}
+#btnReloadYoutube.hd-voice-reload-target,
+#cinemaReloadBtn.hd-voice-reload-target {
+  border-color: #fbbf24 !important;
+  color: #fde68a !important;
+  background: rgba(251, 191, 36, 0.22) !important;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.35), 0 0 25px rgba(251, 191, 36, 0.55) !important;
+}
+#btnReloadYoutube[aria-busy='true'] .reload-icon,
+#cinemaReloadBtn[aria-busy='true'] .reload-icon {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+#hdVoiceReloadHint {
+  position: fixed;
+  z-index: 2147483200;
+  box-sizing: border-box;
+  width: 360px;
+  max-width: calc(100vw - 24px);
+  padding: 13px 16px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border: 2px solid #fbbf24;
+  color: #fef3c7;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 24px rgba(251, 191, 36, 0.35);
+  pointer-events: auto;
+  cursor: pointer;
+}
+#hdVoiceReloadHint[hidden] {
+  display: none !important;
+}
+#hdVoiceReloadHint::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: calc(var(--hd-hint-arrow, 50%) - 6px);
+  width: 12px;
+  height: 12px;
+  border-right: 2px solid #fbbf24;
+  border-bottom: 2px solid #fbbf24;
+  background: #0f172a;
+  transform: rotate(45deg);
+}
+#hdVoiceReloadHint.arrow-top::after {
+  bottom: auto;
+  top: -8px;
+  border-right: none;
+  border-bottom: none;
+  border-left: 2px solid #fbbf24;
+  border-top: 2px solid #fbbf24;
+  background: #1e293b;
+}
+#hdVoiceReloadHint span {
+  display: block;
+  animation: hdVoiceReloadHintPulse 1.8s ease-in-out infinite;
+}
+@keyframes hdVoiceReloadHintPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
 /* =========================================================================
    CHẾ ĐỘ MÀN HÌNH XE (TOUCH VS ROTARY) & TÍNH NĂNG YÊU THÍCH
    ========================================================================= */
@@ -1159,6 +1297,10 @@ body.cinema .cinema-bar {
           <span class="now-playing-title" id="nowPlayingTitle">Đang phát nhạc</span>
         </div>
         <div class="inline-player-actions">
+          <button type="button" class="btn-inline-action" id="btnReloadYoutube" aria-busy="false" onclick="hdReloadYoutubePlayer(); return false;" title="Tải lại trình phát &amp; khôi phục âm thanh nếu bị nhỏ sau khi dùng mic" tabindex="0">
+            <span class="reload-icon">🔄</span>
+            <span>Khôi phục âm thanh</span>
+          </button>
           <button type="button" class="btn-inline-action" onclick="enterCinemaMode()" title="Xem toàn màn hình" tabindex="0">⛶ Toàn màn hình</button>
           <button type="button" class="btn-inline-action danger" onclick="closeInlinePlayer()" title="Đóng trình phát" tabindex="0">✕ Đóng</button>
         </div>
@@ -1175,8 +1317,13 @@ body.cinema .cinema-bar {
               <span>🔍</span>
               <span>Tìm kiếm</span>
             </button>
+            <button type="button" id="btnVoiceSearch" class="btn-voice-big" aria-pressed="false" onclick="toggleVoiceSearch(); return false;" title="Tìm kiếm bằng giọng nói" tabindex="0">
+              <span class="voice-mic-icon">🎤</span>
+              <span id="btnVoiceSearchLabel">Giọng nói</span>
+            </button>
           </div>
         </form>
+        <div id="searchVoiceNotice" class="search-voice-notice" role="status" aria-live="polite"></div>
       </div>
 
       <div class="results-container">
@@ -1209,15 +1356,43 @@ body.cinema .cinema-bar {
 <div id="playerWrap"></div>
 
 <!-- THANH ĐIỀU KHIỂN KHI XEM TOÀN MÀN HÌNH (CINEMA BAR) -->
-<div class="cinema-bar" id="cinemaBar">
+<div class="cinema-bar" id="cinemaBar" style="gap:10px;">
+  <button id="cinemaMicBtn" type="button" onclick="hdStartCinemaVoiceSearch(); return false;" title="Tìm kiếm bằng giọng nói" tabindex="0">🎤 Giọng nói</button>
+  <button id="cinemaReloadBtn" type="button" aria-busy="false" onclick="hdReloadYoutubePlayer(); return false;" title="Khôi phục âm thanh nếu bị nhỏ sau khi dùng mic" tabindex="0"><span class="reload-icon">🔄</span> Khôi phục tiếng</button>
   <button id="cinemaExitBtn" class="danger" title="Thoát toàn màn hình và tắt nhạc" tabindex="0">✕ Thoát</button>
+</div>
+
+<!-- BONG BÓNG HƯỚNG DẪN KHÔI PHỤC ÂM THANH SAU KHI DÙNG MIC (HD_VOICE_RELOAD_HINT_V1) -->
+<div aria-live="polite" hidden="hidden" id="hdVoiceReloadHint" role="status" onclick="hdReloadYoutubePlayer(); return false;">
+  <span>💡 Nếu âm thanh bị nhỏ sau khi dùng Mic, hãy bấm nút này để khôi phục &amp; tải lại đúng giây đang nghe</span>
+</div>
+
+<!-- MODAL XÁC NHẬN KHÔI PHỤC ÂM THANH & PHÁT TIẾP ĐÚNG GIÂY (HDC_MANUAL_PLAYER_RELOAD_V14) -->
+<div class="modal-back" id="hdPlayerReloadModal" aria-hidden="true" hidden="hidden" style="z-index:2147483600;">
+  <div class="modal" style="max-width:440px;text-align:center;">
+    <div class="modal-head" style="justify-content:center;">
+      <h2 style="font-size:19px;color:#fff;">🔊 Khôi phục Âm thanh Chuẩn</h2>
+      <button class="iconbtn" onclick="hdClosePlayerReload(); return false;" style="position:absolute;right:16px;" tabindex="0">×</button>
+    </div>
+    <p id="hdReloadSongTitle" style="color:#fff;font-weight:700;font-size:15px;margin:4px 0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Video đang chọn</p>
+    <p style="color:var(--muted);font-size:13px;line-height:1.5;margin:0 0 18px;">Trình phát đã được làm mới để giải phóng kênh Microphone trên iOS/CarPlay. Bấm tiếp tục để phát với âm lượng tối đa:</p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button type="button" class="btn-submit" id="hdReloadContinue" onclick="hdConfirmPlayerReload(false); return false;" style="margin-top:0;background:linear-gradient(135deg,#00d26a,#059669);color:#000;" tabindex="0">
+        ▶ <span id="hdReloadSavedTime">Tiếp tục từ 0:00</span>
+      </button>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="pill" style="flex:1;justify-content:center;" onclick="hdConfirmPlayerReload(true); return false;" tabindex="0">↺ Phát lại từ đầu</button>
+        <button type="button" class="pill" style="flex:1;justify-content:center;color:var(--muted);" onclick="hdClosePlayerReload(); return false;" tabindex="0">Đóng</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL THÔNG TIN TÀI KHOẢN (#accountModal) -->
 <div class="modal-back" id="accountModal">
-  <div class="modal" style="max-width:440px">
+  <div class="modal" style="max-width:460px">
     <div class="modal-head">
-      <h2>Thông tin Tài khoản</h2>
+      <h2>Thông tin Tài khoản &amp; Cài đặt</h2>
       <button class="iconbtn" id="closeAccountModalBtn" onclick="closeAccountModal()" data-close tabindex="0">×</button>
     </div>
     <div class="setting">
@@ -1235,6 +1410,15 @@ body.cinema .cinema-bar {
     <div class="setting">
       <label>Mã thiết bị (Device ID)</label>
       <input class="field" id="accModalDevId" readonly style="font-size:11px;color:#8792a1">
+    </div>
+    <div class="setting">
+      <label>Nút Vô-lăng / Bluetooth gọi Tìm kiếm Giọng nói</label>
+      <div id="hdBluetoothCaptureStatus" style="font-size:12px;color:#a5d9fa;margin-bottom:8px;line-height:1.4;">Chưa gán nút cứng. Bạn có thể gán nút trên vô lăng hoặc tẩu Bluetooth để bật nhanh Voice Search.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="pill" id="hdBluetoothCaptureBtn" style="flex:1;height:40px;font-size:13px;" onclick="hdStartCaptureBluetoothButton(); return false;" tabindex="0">🎧 Bắt nút vô lăng</button>
+        <button type="button" class="pill primary" id="hdBluetoothSaveButton" style="flex:1;height:40px;font-size:13px;" onclick="hdSaveCapturedBluetoothButton(); return false;" disabled tabindex="0">💾 Gán nút này</button>
+        <button type="button" class="pill" style="height:40px;padding:0 12px;font-size:13px;color:#ff6b7d;" onclick="hdClearBluetoothVoiceBinding(); return false;" title="Xóa nút đã gán" tabindex="0">✕</button>
+      </div>
     </div>
     <div class="setting">
       <label>Chế độ màn hình xe</label>
