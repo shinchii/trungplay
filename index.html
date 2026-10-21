@@ -1394,22 +1394,22 @@ body.cinema .cinema-bar {
   <span>💡 Nếu âm thanh bị nhỏ sau khi dùng Mic, hãy bấm nút này để khôi phục &amp; tải lại đúng giây đang nghe</span>
 </div>
 
-<!-- MODAL XÁC NHẬN KHÔI PHỤC ÂM THANH & PHÁT TIẾP ĐÚNG GIÂY (HDC_MANUAL_PLAYER_RELOAD_V14) -->
+<!-- MODAL XÁC NHẬN PHÁT NHẠC / KHÔI PHỤC ÂM THANH LOA XE (HD_VOICE_CLEAN_DOCUMENT_RELOAD_V15) -->
 <div class="modal-back" id="hdPlayerReloadModal" aria-hidden="true" hidden="hidden" style="z-index:2147483600;">
-  <div class="modal" style="max-width:440px;text-align:center;">
-    <div class="modal-head" style="justify-content:center;">
-      <h2 style="font-size:19px;color:#fff;">🔊 Khôi phục Âm thanh Chuẩn</h2>
+  <div class="modal" style="max-width:480px;text-align:center;padding:22px;">
+    <div class="modal-head" style="justify-content:center;margin-bottom:6px;">
+      <h2 id="hdReloadModalHeading" style="font-size:20px;color:#fff;">🔊 Sẵn sàng phát ra Loa Xe</h2>
       <button class="iconbtn" onclick="hdClosePlayerReload(); return false;" style="position:absolute;right:16px;" tabindex="0">×</button>
     </div>
-    <p id="hdReloadSongTitle" style="color:#fff;font-weight:700;font-size:15px;margin:4px 0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Video đang chọn</p>
-    <p style="color:var(--muted);font-size:13px;line-height:1.5;margin:0 0 18px;">Trình phát đã được làm mới để giải phóng kênh Microphone trên iOS/CarPlay. Bấm tiếp tục để phát với âm lượng tối đa:</p>
-    <div style="display:flex;flex-direction:column;gap:10px;">
-      <button type="button" class="btn-submit" id="hdReloadContinue" onclick="hdConfirmPlayerReload(false); return false;" style="margin-top:0;background:linear-gradient(135deg,#00d26a,#059669);color:#000;" tabindex="0">
-        ▶ <span id="hdReloadSavedTime">Tiếp tục từ 0:00</span>
+    <p id="hdReloadSongTitle" style="color:#38bdf8;font-weight:800;font-size:16px;margin:6px 0 10px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">Bài hát đã chọn</p>
+    <p id="hdReloadModalDesc" style="color:var(--muted);font-size:13.5px;line-height:1.5;margin:0 0 18px;">Kênh âm thanh CarPlay đã được làm mới hoàn toàn sau khi tắt Mic. Bấm nút xanh bên dưới (hoặc ấn Enter) để phát ra loa xe với âm lượng 100%:</p>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <button type="button" class="btn-submit" id="hdReloadContinue" onclick="hdConfirmPlayerReload(false); return false;" style="margin-top:0;min-height:58px;font-size:17px;font-weight:800;border-radius:14px;background:linear-gradient(135deg,#00d26a,#059669);color:#000;box-shadow:0 8px 24px rgba(0,210,106,0.35);" tabindex="0">
+        ▶ <span id="hdReloadSavedTime">PHÁT NGAY RA LOA XE</span>
       </button>
       <div style="display:flex;gap:10px;">
-        <button type="button" class="pill" style="flex:1;justify-content:center;" onclick="hdConfirmPlayerReload(true); return false;" tabindex="0">↺ Phát lại từ đầu</button>
-        <button type="button" class="pill" style="flex:1;justify-content:center;color:var(--muted);" onclick="hdClosePlayerReload(); return false;" tabindex="0">Đóng</button>
+        <button type="button" class="pill" id="hdReloadRestartBtn" style="flex:1;justify-content:center;height:44px;" onclick="hdConfirmPlayerReload(true); return false;" tabindex="0">↺ Phát từ đầu</button>
+        <button type="button" class="pill" id="hdReloadCancelBtn" style="flex:1;justify-content:center;height:44px;color:#e2e8f0;" onclick="hdClosePlayerReload(); return false;" tabindex="0">📋 Chọn bài khác</button>
       </div>
     </div>
   </div>
@@ -1567,6 +1567,6 @@ body.cinema .cinema-bar {
 <div class="toast" id="toast"></div>
 
 <!-- APPLICATION LOGIC JS -->
-<script src="app.js?v=20261021_v5"></script>
+<script src="app.js?v=20261021_v6"></script>
 </body>
 </html>
