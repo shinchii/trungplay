@@ -835,125 +835,23 @@ function switchTab(tab) {
    ========================================================================= */
 
 let ytPlayer = null;
+let ytApiReady = false;
+let pendingVideoRequest = null;
 
 // =========================================================================
-// CẤU HÌNH ĐỊNH TUYẾN ÂM THANH RA HỆ THỐNG LOA XE HƠI (CARPLAY / BLUETOOTH / USB)
+// QUẢN LÝ PLAYER YOUTUBE ĐƠN LUỒNG CHUẨN HDC_NATURAL_AUDIO_V13 (IOS / CARPLAY)
+// Không ghi audioSession.type, không tạo audio im lặng, không hủy/tạo lại iframe khi chuyển bài
 // =========================================================================
 
-// TẠO FILE ÂM THANH IM LẶNG 2 GIÂY CHUẨN PCM ĐỂ DUY TRÌ KÊNH ÂM THANH XE HƠI (CARPLAY STEREO)
-function createSilentAudioBlobUrl() {
-  try {
-    const sampleRate = 8000;
-    const numSamples = sampleRate * 2; // 2 giây im lặng
-    const buffer = new Uint8Array(44 + numSamples);
-    const view = new DataView(buffer.buffer);
-
-    // RIFF identifier
-    view.setUint32(0, 0x52494646, false); // "RIFF"
-    view.setUint32(4, 36 + numSamples, true);
-    view.setUint32(8, 0x57415645, false); // "WAVE"
-
-    // "fmt " chunk
-    view.setUint32(12, 0x666d7420, false); // "fmt "
-    view.setUint32(16, 16, true);          // 16 bytes for PCM format
-    view.setUint16(20, 1, true);           // AudioFormat 1 (PCM)
-    view.setUint16(22, 1, true);           // Mono (1 channel)
-    view.setUint32(24, sampleRate, true);  // Sample rate
-    view.setUint32(28, sampleRate, true);  // Byte rate (SampleRate * 1 * 1)
-    view.setUint16(32, 1, true);           // Block align
-    view.setUint16(34, 8, true);           // Bits per sample (8-bit)
-
-    // "data" chunk
-    view.setUint32(36, 0x64617461, false); // "data"
-    view.setUint32(40, numSamples, true);
-
-    // Dữ liệu PCM 8-bit im lặng là 128 (0x80)
-    buffer.fill(128, 44);
-
-    const blob = new Blob([buffer], { type: 'audio/wav' });
-    return URL.createObjectURL(blob);
-  } catch (e) {
-    return 'data:audio/wav;base64,UklGRqQ+AABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YYA+AACA';
-  }
-}
-
-let carPlayAudioAnchor = null;
-let silentAudioUrl = null;
-
-function initCarPlayAudioAnchor() {
-  if (!silentAudioUrl) {
-    silentAudioUrl = createSilentAudioBlobUrl();
-  }
-  if (!carPlayAudioAnchor) {
-    carPlayAudioAnchor = document.getElementById('carPlayAudioAnchor');
-  }
-  if (!carPlayAudioAnchor) {
-    carPlayAudioAnchor = document.createElement('audio');
-    carPlayAudioAnchor.id = 'carPlayAudioAnchor';
-    document.body.appendChild(carPlayAudioAnchor);
-  }
-
-  carPlayAudioAnchor.setAttribute('playsinline', '');
-  carPlayAudioAnchor.setAttribute('webkit-playsinline', '');
-  carPlayAudioAnchor.setAttribute('x-webkit-airplay', 'allow');
-  carPlayAudioAnchor.setAttribute('preload', 'auto');
-  carPlayAudioAnchor.style.cssText = 'position:fixed;bottom:0;left:0;width:1px;height:1px;opacity:0.001;pointer-events:none;z-index:-9999;';
-
-  if (!carPlayAudioAnchor.src || carPlayAudioAnchor.src.length < 20) {
-    carPlayAudioAnchor.src = silentAudioUrl;
-  }
-  carPlayAudioAnchor.loop = true;
-
-  if (window.WebKitPlaybackTargetAvailabilityEvent) {
-    carPlayAudioAnchor.addEventListener('webkitplaybacktargetavailabilitychanged', (e) => {
-      window._carPlayTargetAvailable = (e.availability === 'available');
-    });
-  }
-}
-
-// ĐẢM BẢO KHÔNG CÒN WEBAUDIO DUMMY NÀO CHẠY NGẦM GÂY XUNG ĐỘT LOA THOẠI
-try {
-  if (window._carAudioCtx) {
-    window._carAudioCtx.close().catch(()=>{});
-    window._carAudioCtx = null;
-  }
-  if (window._carAudioSource) {
-    window._carAudioSource = null;
-  }
-} catch(e){}
-
-// HÀM ÉP HỆ THỐNG IOS/SAFARI CHUYỂN TOÀN BỘ ÂM THANH RA LOA XE HƠI (CARPLAY / BLUETOOTH / CỔNG USB)
-function forceCarAudioOutput() {
-  // Ép Safari iOS sử dụng chế độ phát âm thanh độc quyền (AVAudioSessionCategoryPlayback)
-  // Đây là chuẩn W3C WebKit chính thức để iOS tự động chuyển âm thanh ra hệ thống loa xe hơi qua CarPlay
-  if ('audioSession' in navigator) {
-    try {
-      navigator.audioSession.type = 'playback';
-    } catch (e) {}
-  }
-}
-
+function initCarPlayAudioAnchor() {}
+function forceCarAudioOutput() {}
 
 function destroyPlayers(keepAnchor = false) {
-  if (ytPlayer) {
-    try { ytPlayer.destroy(); } catch(e){}
-    ytPlayer = null;
-  }
-  if (hlsPlayer) {
-    try { hlsPlayer.destroy(); } catch(e){}
-    hlsPlayer = null;
-  }
-  const wrap = document.getElementById('playerWrap');
-  if (wrap) wrap.innerHTML = '';
-
+  pauseMusicForVoiceSearch();
   const playerContainer = document.getElementById('playerContainer');
   if (playerContainer) playerContainer.classList.remove('active');
-
-  if (carPlayAudioAnchor) {
-    try { carPlayAudioAnchor.pause(); } catch(e){}
-  }
   if ('mediaSession' in navigator) {
-    try { navigator.mediaSession.playbackState = 'none'; } catch(e){}
+    try { navigator.mediaSession.playbackState = 'paused'; } catch (e) {}
   }
   updatePlayPauseButton(false);
 }
@@ -973,7 +871,6 @@ function updateMediaSession(item) {
       artwork: thumb ? [{ src: thumb, sizes: '512x512', type: 'image/jpeg' }] : []
     });
 
-    // BẮT SỰ KIỆN PHÍM BẤM TRÊN VÔ LĂNG XE HƠI (STEERING WHEEL BUTTONS)
     navigator.mediaSession.setActionHandler('play', () => {
       togglePlayPause();
     });
@@ -1001,57 +898,94 @@ function updatePlayPauseButton(isPlaying) {
 }
 
 function togglePlayPause() {
-  if (ytPlayer && typeof ytPlayer.getPlayerState === 'function') {
+  if (window.hdVoiceBusy && window.hdVoiceBusy()) return;
+  if (window.hdVoiceAudio && typeof window.hdVoiceAudio.allowPlayback === 'function') {
+    window.hdVoiceAudio.allowPlayback();
+  }
+  if (ytPlayer && ytApiReady && typeof ytPlayer.getPlayerState === 'function') {
     const s = ytPlayer.getPlayerState();
     if (s === 1) { // 1 = PLAYING
-      try { ytPlayer.pauseVideo(); } catch(e){}
+      if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(false);
+      try { ytPlayer.pauseVideo(); } catch (e) {}
       updatePlayPauseButton(false);
-      if (carPlayAudioAnchor) try { carPlayAudioAnchor.pause(); } catch(e){}
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     } else {
-      forceCarAudioOutput();
-      try { ytPlayer.playVideo(); } catch(e){}
+      if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(true);
+      try { ytPlayer.playVideo(); } catch (e) {}
       updatePlayPauseButton(true);
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     }
     return;
   }
 
-  const tvVid = document.getElementById('tvVideo');
-  if (tvVid) {
-    if (tvVid.paused) {
-      forceCarAudioOutput();
-      tvVid.play().catch(() => {});
-      updatePlayPauseButton(true);
-      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
-    } else {
-      tvVid.pause();
-      updatePlayPauseButton(false);
-      if (carPlayAudioAnchor) try { carPlayAudioAnchor.pause(); } catch(e){}
-      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
-    }
-    return;
-  }
-
-  const iframe = document.getElementById('ytPlayerFrame') || document.getElementById('ytIframe');
+  const iframe = document.getElementById('ytPlayerFrame');
   if (iframe && iframe.contentWindow) {
     iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
   }
 }
 
-function fallbackIframePlay(videoId, wrap) {
-  forceCarAudioOutput();
-  const embedUrl = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&playsinline=1&rel=0&modestbranding=1&fs=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`;
-  wrap.innerHTML = `
-    <iframe id="ytPlayerFrame" 
-      src="${embedUrl}" 
-      allow="accelerometer; autoplay *; encrypted-media *; gyroscope; picture-in-picture; web-share; speaker-selection *; airplay *;" 
-      x-webkit-airplay="allow"
-      webkit-playsinline="1"
-      playsinline="1"
-      style="width:100%;height:100%;border:0;background:#000">
-    </iframe>`;
+function onYoutubePlayerReady(event) {
+  ytApiReady = true;
+  if (typeof hdHandlePlayerReloadReady === 'function' && hdHandlePlayerReloadReady(event)) {
+    return;
+  }
+  if (pendingVideoRequest && pendingVideoRequest.id) {
+    const req = pendingVideoRequest;
+    pendingVideoRequest = null;
+    try {
+      event.target.loadVideoById({ videoId: req.id, startSeconds: req.time || 0 });
+      if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(true);
+      updatePlayPauseButton(true);
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+    } catch (e) {}
+  }
 }
+
+function onYoutubePlayerStateChange(event) {
+  if (!ytPlayer) return;
+  if (event.data === 0) { // ENDED
+    if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(false);
+    updatePlayPauseButton(false);
+    if (state.autoNext) {
+      toast('🔄 Hết bài, tự động phát bài kế tiếp...');
+      setTimeout(() => playNext(), 600);
+    }
+  } else if (event.data === 1) { // PLAYING
+    if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(true);
+    updatePlayPauseButton(true);
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+  } else if (event.data === 2) { // PAUSED
+    if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(false);
+    updatePlayPauseButton(false);
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+  }
+}
+
+function onYoutubePlayerError(event) {
+  const errCode = event ? event.data : 0;
+  console.warn('YouTube Player Error code:', errCode);
+  if (errCode === 101 || errCode === 150 || errCode === 153 || errCode === 100 || errCode === 2 || errCode === 5) {
+    toast('⚠️ Video này bị hạn chế phát (' + errCode + '), đang chuyển bài kế tiếp...');
+    setTimeout(() => playNext(), 1200);
+  }
+}
+
+window.onYouTubeIframeAPIReady = function () {
+  const frame = document.getElementById('ytPlayerFrame');
+  if (ytPlayer || !frame) return;
+  if (!window.YT || typeof window.YT.Player !== 'function') return;
+  try {
+    ytPlayer = new YT.Player('ytPlayerFrame', {
+      events: {
+        onReady: onYoutubePlayerReady,
+        onStateChange: onYoutubePlayerStateChange,
+        onError: onYoutubePlayerError
+      }
+    });
+  } catch (e) {
+    console.warn('YT.Player init warning:', e);
+  }
+};
 
 function play(item, add = true, startSeconds = 0) {
   let videoId = '';
@@ -1064,20 +998,27 @@ function play(item, add = true, startSeconds = 0) {
 
   if (!videoId) return toast('Không tìm thấy Video ID');
 
-  // ĐẢM BẢO MICRO ĐÃ NGẮT HOÀN TOÀN VÀ KÊNH ÂM THANH Ở TRẠNG THÁI PLAYBACK CHO CARPLAY
-  killRecognition();
+  if (hdPlayerReloadRequest) {
+    hdDismissPlayerReload();
+  }
+
+  if (window.hdVoiceBusy && window.hdVoiceBusy()) {
+    stopVoiceSearch();
+  }
   if (window.hdVoiceAudio && typeof window.hdVoiceAudio.allowPlayback === 'function') {
     window.hdVoiceAudio.allowPlayback();
   }
-  destroyPlayers(false);
-  forceCarAudioOutput();
+  if (window.hdVoiceAudio && typeof window.hdVoiceAudio.notePlayback === 'function') {
+    window.hdVoiceAudio.notePlayback(true);
+  }
 
   current = item;
   currentIndex = state.playlist.findIndex(x => x.id === videoId);
-
   if (add) addHistory(item);
 
-  // KÍCH HOẠT VÀ HIỂN THỊ CONTAINER TRƯỚC KHI TẠO IFRAME ĐỂ ĐẢM BẢO KHUNG HÌNH CÓ KÍCH THƯỚC TRÊN XE
+  const pos = Math.max(0, Math.floor(Number(startSeconds) || 0));
+
+  // Hiển thị vùng player nhưng KHÔNG tháo/tạo lại thẻ iframe để giữ nguyên AudioSession của iOS/CarPlay
   if (isTouchMode()) {
     const playerContainer = document.getElementById('playerContainer');
     if (playerContainer) {
@@ -1085,85 +1026,22 @@ function play(item, add = true, startSeconds = 0) {
       playerContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   } else {
-    enterCinemaMode(); // TỰ ĐỘNG VÀO FULL SCREEN TOÀN MÀN HÌNH CHO XE DÙNG CON LĂN TRƯỚC KHI TẠO IFRAME
+    enterCinemaMode();
   }
 
-  const wrap = document.getElementById('playerWrap');
-  const validOrigin = (window.location.origin && window.location.origin !== 'null' && window.location.protocol.startsWith('http'))
-    ? `&origin=${encodeURIComponent(window.location.origin)}`
-    : '';
-  const startParam = (startSeconds && startSeconds > 0) ? `&start=${Math.floor(startSeconds)}` : '';
-  const embedUrl = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&playsinline=1&rel=0&modestbranding=1&fs=0&enablejsapi=1${startParam}${validOrigin}`;
-
-  // Tạo trực tiếp Iframe với đầy đủ đặc quyền phát âm thanh ra loa xe hơi (AirPlay / CarPlay)
-  wrap.innerHTML = `
-    <iframe id="ytPlayerFrame" 
-      src="${embedUrl}" 
-      referrerpolicy="strict-origin-when-cross-origin"
-      allow="accelerometer; autoplay *; clipboard-write *; encrypted-media *; gyroscope; picture-in-picture; web-share; speaker-selection *; airplay *;" 
-      x-webkit-airplay="allow"
-      webkit-playsinline="1"
-      playsinline="1"
-      style="width:100%;height:100%;border:0;background:#000">
-    </iframe>`;
-
-  const onPlayerReady = (event) => {
-    forceCarAudioOutput();
-    if (typeof hdHandlePlayerReloadReady === 'function' && hdHandlePlayerReloadReady(event)) {
-      return;
-    }
+  // Gọi loadVideoById đồng bộ ngay trong sự kiện chạm/click của người dùng trên 1 player duy nhất
+  if (ytApiReady && ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
     try {
-      if (startSeconds && startSeconds > 0 && typeof event.target.seekTo === 'function') {
-        event.target.seekTo(startSeconds, true);
-      }
-      event.target.playVideo();
-    } catch(e){}
-    if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(true);
-    updatePlayPauseButton(true);
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
-  };
-
-  const onPlayerStateChange = (event) => {
-    // 0 = YT.PlayerState.ENDED -> TỰ ĐỘNG CHUYỂN BÀI KẾ TIẾP KHI HẾT BÀI
-    if (event.data === 0) {
-      if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(false);
-      updatePlayPauseButton(false);
-      if (state.autoNext) {
-        toast('🔄 Hết bài, tự động phát bài kế tiếp...');
-        setTimeout(() => playNext(), 600);
-      }
-    } else if (event.data === 1) { // 1 = PLAYING
-      forceCarAudioOutput();
-      if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(true);
+      ytPlayer.loadVideoById({ videoId: videoId, startSeconds: pos });
       updatePlayPauseButton(true);
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
-    } else if (event.data === 2) { // 2 = PAUSED
-      if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(false);
-      updatePlayPauseButton(false);
-      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    } catch (e) {
+      console.warn('loadVideoById error:', e);
     }
-  };
-
-  const onPlayerError = (event) => {
-    const errCode = event.data;
-    console.warn('YouTube Player Error code:', errCode);
-    if (errCode === 101 || errCode === 150 || errCode === 153 || errCode === 100 || errCode === 2 || errCode === 5) {
-      toast('⚠️ Video này bị hạn chế phát (' + errCode + '), đang chuyển bài kế tiếp...');
-      setTimeout(() => playNext(), 1200);
-    }
-  };
-
-  if (window.YT && window.YT.Player) {
-    try {
-      ytPlayer = new YT.Player('ytPlayerFrame', {
-        events: {
-          onReady: onPlayerReady,
-          onStateChange: onPlayerStateChange,
-          onError: onPlayerError
-        }
-      });
-    } catch(e) {
-      console.warn('YT.Player attach warning:', e);
+  } else {
+    pendingVideoRequest = { id: videoId, time: pos };
+    if (window.YT && typeof window.YT.Player === 'function') {
+      window.onYouTubeIframeAPIReady();
     }
   }
 
@@ -1632,20 +1510,9 @@ function applyCarMode(mode) {
   document.body.classList.toggle('mode-touch', isTouch);
   document.body.classList.toggle('mode-rotary', !isTouch);
 
-  // ĐẢM BẢO #playerWrap NẰM ĐÚNG VỊ TRÍ CHO TỪNG CHẾ ĐỘ
-  const playerWrap = document.getElementById('playerWrap');
+  // HDC_NATURAL_AUDIO_V13: KHÔNG BAO GIỜ di chuyển #playerWrap trong DOM
+  // vì di chuyển thẻ chứa iframe sẽ làm WebKit tải lại iframe và làm hỏng kết nối YT.Player!
   const playerContainer = document.getElementById('playerContainer');
-  if (playerWrap) {
-    if (isTouch) {
-      if (playerContainer && playerWrap.parentElement !== playerContainer) {
-        playerContainer.insertBefore(playerWrap, playerContainer.firstChild);
-      }
-    } else {
-      if (playerWrap.parentElement !== document.body) {
-        document.body.appendChild(playerWrap);
-      }
-    }
-  }
 
   // Cập nhật Topbar Badge
   const iconEl = document.getElementById('modePillIcon');
@@ -1658,12 +1525,16 @@ function applyCarMode(mode) {
   // Nếu chuyển sang chế độ Con lăn thì thoát tab yêu thích về tìm kiếm
   if (!isTouch) {
     switchTouchTab('discover');
-    if (playerContainer) playerContainer.classList.remove('active');
+    if (playerContainer && !document.body.classList.contains('cinema')) {
+      playerContainer.classList.remove('active');
+    }
     setTimeout(() => {
       if (typeof autoHighlightFirstSongInRotary === 'function') {
         autoHighlightFirstSongInRotary();
       }
     }, 150);
+  } else if (current && playerContainer) {
+    playerContainer.classList.add('active');
   }
 
   updateFavoritesUI();
@@ -2114,15 +1985,19 @@ async function hdSubmitVoiceSearch(text) {
     if (isTouchMode()) {
       switchTouchTab('discover');
     }
+    // Nếu đang ở chế độ Cinema, thoát về danh sách kết quả để người dùng bấm chọn bài (cung cấp User Gesture thật cho iOS)
+    if (document.body.classList.contains('cinema')) {
+      document.body.classList.remove('cinema');
+      exitPageFullscreen();
+    }
     const results = await search(resolved);
     if (results && results.length > 0) {
-      setVoiceSearchNotice(`✅ Đã tìm thấy ${results.length} bài hát cho "${resolved}". Hãy chạm chọn bài để phát!`, 7000);
-      if (!isTouchMode()) {
-        play(results[0], true);
-        enterCinemaMode();
-        if (window.hdVoiceReloadHint && typeof window.hdVoiceReloadHint.activateNow === 'function') {
-          window.hdVoiceReloadHint.activateNow();
-        }
+      // QUAN TRỌNG (HDC_NATURAL_AUDIO_V13): Tuyệt đối KHÔNG gọi play() tự động trong callback bất đồng bộ sau khi đóng Mic!
+      // Trên iOS/CarPlay, phát nhạc không có User Gesture trực tiếp ngay sau SpeechRecognition sẽ bị iOS đẩy ra loa điện thoại & nhỏ tiếng.
+      setVoiceSearchNotice(`✅ Đã tìm thấy ${results.length} bài hát cho "${resolved}". Chạm vào bài (hoặc ấn Enter) để phát ra loa xe!`, 8000);
+      toast(`✅ Đã tìm thấy ${results.length} bài — Chạm hoặc ấn Enter để phát!`);
+      if (!isTouchMode() && typeof autoHighlightFirstSongInRotary === 'function') {
+        setTimeout(() => autoHighlightFirstSongInRotary(), 80);
       }
     } else {
       setVoiceSearchNotice(`⚠️ Không tìm thấy bài hát cho "${resolved}". Bấm Giọng nói để thử lại.`, 6000);
@@ -2315,8 +2190,9 @@ function toggleVoiceSearch() {
 window.toggleVoiceSearch = toggleVoiceSearch;
 
 function hdStartCinemaVoiceSearch() {
-  if (document.body.classList.contains('cinema') && isTouchMode()) {
-    exitCinemaMode(true);
+  if (document.body.classList.contains('cinema')) {
+    document.body.classList.remove('cinema');
+    exitPageFullscreen();
   }
   toggleVoiceSearch();
   return false;
@@ -2397,13 +2273,12 @@ window.hdConfirmPlayerReload = function (fromStart) {
   const pos = fromStart ? 0 : request.time;
   window.hdVoiceAudio.allowPlayback();
   hdDismissPlayerReload();
-  forceCarAudioOutput();
 
-  // Nếu iframe mới đã cue sẵn, gọi loadVideoById/playVideo trực tiếp ngay trong User Gesture
+  // Gọi loadVideoById + playVideo trực tiếp ngay trong User Gesture (click vào nút Tiếp tục)
   if (ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
     try {
       ytPlayer.loadVideoById({ videoId: request.id, startSeconds: pos });
-      ytPlayer.playVideo();
+      if (typeof ytPlayer.playVideo === 'function') ytPlayer.playVideo();
       updatePlayPauseButton(true);
       toast(`🔊 Đã khôi phục âm thanh (${formatYoutubeTime(pos)})`);
       return false;
@@ -2418,7 +2293,7 @@ window.hdConfirmPlayerReload = function (fromStart) {
 function hdHandlePlayerReloadReady(event) {
   const request = hdPlayerReloadRequest;
   if (!request || !current || request.id !== current.id) return false;
-  if (request.timer) clearTimeout(request.timer);
+  if (request.timer) clearTimeout(reqTimer(request));
   request.ready = true;
   hdReloadButtonBusy(false);
 
@@ -2448,6 +2323,10 @@ function hdHandlePlayerReloadReady(event) {
   return true;
 }
 
+function reqTimer(req) {
+  return req && req.timer ? req.timer : null;
+}
+
 window.hdReloadYoutubePlayer = function () {
   if (window.hdVoiceReloadHint && typeof window.hdVoiceReloadHint.dismiss === 'function') {
     window.hdVoiceReloadHint.dismiss();
@@ -2458,6 +2337,12 @@ window.hdReloadYoutubePlayer = function () {
   }
   if (!current || !current.id) {
     toast('⚠️ Chưa có bài hát nào đang phát để tải lại.');
+    return false;
+  }
+
+  const oldFrame = document.getElementById('ytPlayerFrame');
+  if (!oldFrame || !oldFrame.parentNode) {
+    play(current, false, 0);
     return false;
   }
 
@@ -2477,13 +2362,15 @@ window.hdReloadYoutubePlayer = function () {
 
   if (duration > 0 && position >= duration - 2) position = 0;
 
+  // Luôn đặt ask: true để khi iframe mới tải xong (với autoplay=0), người dùng bấm "▶ Tiếp tục"
+  // giúp YouTube nhận được User Gesture trực tiếp và định tuyến âm thanh chuẩn ra loa xe!
   const request = {
     id: current.id,
     title: current.title || 'Bài hát đang phát',
     time: position,
     volume: volume,
     muted: muted,
-    ask: position > 1,
+    ask: true,
     ready: false
   };
 
@@ -2491,16 +2378,34 @@ window.hdReloadYoutubePlayer = function () {
   hdPlayerReloadRequest = request;
   hdReloadButtonBusy(true);
 
+  const originParam = (location.origin && location.origin !== 'null')
+    ? `&origin=${encodeURIComponent(location.origin)}`
+    : '';
+  const freshFrame = oldFrame.cloneNode(false);
+  freshFrame.src = `https://www.youtube.com/embed/${encodeURIComponent(request.id)}?enablejsapi=1&playsinline=1&rel=0&autoplay=0${originParam}`;
+
+  const oldPlayer = ytPlayer;
+  ytPlayer = null;
+  ytApiReady = false;
+  try {
+    if (oldPlayer && typeof oldPlayer.destroy === 'function') oldPlayer.destroy();
+  } catch (e) {}
+
+  if (oldFrame.parentNode) {
+    oldFrame.parentNode.replaceChild(freshFrame, oldFrame);
+  }
+
+  if (window.YT && typeof window.YT.Player === 'function' && typeof window.onYouTubeIframeAPIReady === 'function') {
+    window.onYouTubeIframeAPIReady();
+  }
+
   request.timer = setTimeout(() => {
     if (hdPlayerReloadRequest === request && !request.ready) {
-      hdDismissPlayerReload();
-      play(current, false, position);
-      toast('🔊 Đã tải lại trình phát YouTube!');
+      hdReloadButtonBusy(false);
+      hdShowPlayerReload(request);
     }
   }, 5500);
 
-  // Xóa hẳn iframe cũ đang bị kẹt AudioSession của iOS và khởi tạo iframe mới
-  play(current, false, position);
   return false;
 };
 
@@ -3156,6 +3061,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initVoiceSearch();
   initRotarySmartSearch();
   initCinemaControls();
+  if (window.YT && typeof window.YT.Player === 'function' && typeof window.onYouTubeIframeAPIReady === 'function') {
+    window.onYouTubeIframeAPIReady();
+  }
 
   // Hỗ trợ tự tìm kiếm nếu URL có tham số ?q= hoặc ?search=
   try {

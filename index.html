@@ -548,15 +548,31 @@ body.mode-rotary .btn-fav-item {
 
 /* INLINE PLAYER CONTAINER (TOUCH MODE) */
 .player-container {
-  display: none;
+  position: fixed;
+  left: -9999px;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0.001;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: -1;
+}
+body.mode-touch .player-container.active {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  display: flex;
+  flex-direction: column;
   width: 100%;
+  height: auto;
   max-width: 960px;
   margin: 0 auto 20px;
   padding: 0 20px;
-}
-body.mode-touch .player-container.active {
-  display: flex;
-  flex-direction: column;
+  opacity: 1;
+  pointer-events: auto;
+  overflow: visible;
+  z-index: 10;
 }
 body.mode-touch:not(.cinema) .player-container.active #playerWrap {
   width: 100%;
@@ -792,9 +808,12 @@ body.mode-touch:not(.cinema) .player-container.active #playerWrap {
   font-size: 15px;
 }
 
-/* KHUNG PHÁT VIDEO CHÍNH - ẨN KHI Ở TRANG CHỦ, TOÀN MÀN HÌNH KHI PHÁT */
+/* KHUNG PHÁT VIDEO CHÍNH - LUÔN GIỮ TRONG DOM ĐỂ BẢO TOÀN KÊNH ÂM THANH IOS/CARPLAY */
 #playerWrap {
-  display: none;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #000;
 }
 #playerWrap iframe,
 #ytPlayerFrame {
@@ -817,6 +836,10 @@ body.cinema .player-container {
   border: none !important;
   background: transparent !important;
   box-shadow: none !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  overflow: visible !important;
+  z-index: 2147483000 !important;
 }
 body.cinema .inline-player-bar {
   display: none !important;
@@ -1289,8 +1312,17 @@ body.cinema .cinema-bar {
       </button>
     </div>
 
-    <!-- KHUNG PHÁT EMBEDDED DÀNH CHO MÀN HÌNH CẢM ỨNG (KHÔNG BẮT BUỘC FULL MÀN HÌNH) -->
+    <!-- KHUNG PHÁT EMBEDDED DÀNH CHO MÀN HÌNH CẢM ỨNG & TOÀN MÀN HÌNH (1 IFRAME DUY NHẤT CHUẨN HDC_NATURAL_AUDIO_V13) -->
     <div class="player-container" id="playerContainer">
+      <div id="playerWrap">
+        <iframe id="ytPlayerFrame"
+          src="https://www.youtube.com/embed/3cWWUr6w7z8?enablejsapi=1&amp;playsinline=1&amp;rel=0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; web-share"
+          allowfullscreen="allowfullscreen"
+          referrerpolicy="strict-origin-when-cross-origin"
+          title="YouTube Video">
+        </iframe>
+      </div>
       <div class="inline-player-bar" id="inlinePlayerBar">
         <div class="now-playing-info">
           <span class="now-playing-dot"></span>
@@ -1351,9 +1383,6 @@ body.cinema .cinema-bar {
     </div>
   </main>
 </div>
-
-<!-- KHUNG PHÁT VIDEO CHÍNH (FULL SCREEN KHI PHÁT Ở CHẾ ĐỘ CON LĂN) -->
-<div id="playerWrap"></div>
 
 <!-- THANH ĐIỀU KHIỂN KHI XEM TOÀN MÀN HÌNH (CINEMA BAR) -->
 <div class="cinema-bar" id="cinemaBar" style="gap:10px;">
@@ -1538,9 +1567,6 @@ body.cinema .cinema-bar {
 </div>
 
 <div class="toast" id="toast"></div>
-
-<!-- AUDIO ANCHOR: ÉP SAFARI/IOS KÍCH HOẠT KÊNH ÂM THANH CARPLAY / LOA XE HƠI -->
-<audio id="carPlayAudioAnchor" loop playsinline webkit-playsinline x-webkit-airplay="allow" preload="auto" style="position:fixed;bottom:0;left:0;width:1px;height:1px;opacity:0.001;pointer-events:none;z-index:-9999;"></audio>
 
 <!-- APPLICATION LOGIC JS -->
 <script src="app.js" defer></script>
