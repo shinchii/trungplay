@@ -2,6 +2,9 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -10,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <title>Trung Play - CarPlay &amp; Car Stream</title>
 
-<!-- YouTube Iframe API cho Auto-Next & Error Handling -->
-<script src="https://www.youtube.com/iframe_api"></script>
+<link href="https://www.youtube.com" rel="preconnect">
+<link href="https://i.ytimg.com" rel="preconnect">
 
 <!-- CryptoJS MD5 & SHA256 Hashing -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
@@ -546,22 +549,11 @@ body.mode-rotary .btn-fav-item {
   transform: scale(1.03);
 }
 
-/* INLINE PLAYER CONTAINER (TOUCH MODE) */
-.player-container {
-  position: fixed;
-  left: -9999px;
-  bottom: 0;
-  width: 1px;
-  height: 1px;
-  opacity: 0.001;
-  pointer-events: none;
-  overflow: hidden;
-  z-index: -1;
-}
-body.mode-touch .player-container.active {
+/* INLINE PLAYER CONTAINER (LUÔN HIỂN THỊ TRÊN TRANG NHƯ TEST.HTML ĐỂ WEBKIT IOS KHÔNG BAO GIỜ HẠ KÊNH ÂM THANH IFRAME) */
+.player-container,
+body.mode-touch .player-container,
+body.mode-rotary .player-container {
   position: relative;
-  left: auto;
-  bottom: auto;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -573,15 +565,21 @@ body.mode-touch .player-container.active {
   pointer-events: auto;
   overflow: visible;
   z-index: 10;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: none !important;
 }
-body.mode-touch:not(.cinema) .player-container.active #playerWrap {
+body:not(.cinema) .player-container #playerWrap {
   width: 100%;
-  aspect-ratio: 16/9;
+  aspect-ratio: 16 / 9;
   background: #000;
   border-radius: 20px 20px 0 0;
   overflow: hidden;
   box-shadow: 0 16px 45px rgba(0,0,0,0.7);
   display: block !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: none !important;
 }
 .inline-player-bar {
   display: flex;
@@ -828,24 +826,6 @@ body.cinema {
 }
 body.cinema .player-container {
   display: block !important;
-  position: static !important;
-  width: 0 !important;
-  height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  overflow: visible !important;
-  z-index: 2147483000 !important;
-}
-body.cinema .inline-player-bar {
-  display: none !important;
-}
-body.cinema #playerWrap {
-  display: block !important;
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
@@ -854,10 +834,28 @@ body.cinema #playerWrap {
   width: 100vw !important;
   height: 100vh !important;
   height: 100dvh !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #000 !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  overflow: hidden !important;
+  z-index: 2147483000 !important;
+}
+body.cinema .inline-player-bar {
+  display: none !important;
+}
+body.cinema #playerWrap {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
   aspect-ratio: auto !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-  z-index: 2147483000 !important;
   background: #000 !important;
 }
 
@@ -1569,6 +1567,6 @@ body.cinema .cinema-bar {
 <div class="toast" id="toast"></div>
 
 <!-- APPLICATION LOGIC JS -->
-<script src="app.js" defer></script>
+<script src="app.js?v=20261021_v5"></script>
 </body>
 </html>

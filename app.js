@@ -838,9 +838,16 @@ let ytPlayer = null;
 let ytApiReady = false;
 let pendingVideoRequest = null;
 
+const HD_IS_IOS_CARPLAY = /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+  /aptv/i.test(navigator.userAgent || '');
+
 // =========================================================================
 // QUẢN LÝ PLAYER YOUTUBE ĐƠN LUỒNG CHUẨN HDC_NATURAL_AUDIO_V13 (IOS / CARPLAY)
-// Không ghi audioSession.type, không tạo audio im lặng, không hủy/tạo lại iframe khi chuyển bài
+// 1. Không ghi audioSession.type
+// 2. Không tạo audio im lặng (silentBridge: false)
+// 3. Không chạm vào parent navigator.mediaSession trên iOS (parentSessionPolicy: 'untouched-on-ios')
+// 4. Không hủy/tạo lại iframe hoặc xóa DOM khi bấm chọn bài (playerRebuild: false)
 // =========================================================================
 
 function initCarPlayAudioAnchor() {}
@@ -848,16 +855,18 @@ function forceCarAudioOutput() {}
 
 function destroyPlayers(keepAnchor = false) {
   pauseMusicForVoiceSearch();
-  const playerContainer = document.getElementById('playerContainer');
-  if (playerContainer) playerContainer.classList.remove('active');
-  if ('mediaSession' in navigator) {
+  if (!HD_IS_IOS_CARPLAY && 'mediaSession' in navigator) {
     try { navigator.mediaSession.playbackState = 'paused'; } catch (e) {}
   }
   updatePlayPauseButton(false);
 }
 
-// CẬP NHẬT GIAO DIỆN MEDIA SESSION (HIỂN THỊ TRÊN MÀN HÌNH KHÓA & BẢNG ĐỒNG HỒ XE HƠI)
+// CẬP NHẬT GIAO DIỆN MEDIA SESSION
+// QUAN TRỌNG (từ test.html HDC_NATIVE_YOUTUBE_QUEUE_V1):
+// Trên iOS/CarPlay, TUYỆT ĐỐI KHÔNG ghi đè navigator.mediaSession ở trang cha!
+// Để nguyên cho iframe YouTube nắm quyền điều khiển MediaSession & định tuyến âm thanh A2DP.
 function updateMediaSession(item) {
+  if (HD_IS_IOS_CARPLAY) return;
   if (!('mediaSession' in navigator)) return;
   try {
     const title = item?.title || 'YouTube Video';
@@ -888,6 +897,12 @@ function updateMediaSession(item) {
   }
 }
 
+function updateActivePlayingItemUI(videoId) {
+  document.querySelectorAll('.item[data-play-id]').forEach((el) => {
+    el.classList.toggle('active-play', el.dataset.playId === videoId);
+  });
+}
+
 // ĐỒNG BỘ TRẠNG THÁI NÚT PHÁT / TẠM DỪNG
 function updatePlayPauseButton(isPlaying) {
   const cinemaBtn = document.getElementById('cinemaPlayPauseBtn');
@@ -908,12 +923,12 @@ function togglePlayPause() {
       if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(false);
       try { ytPlayer.pauseVideo(); } catch (e) {}
       updatePlayPauseButton(false);
-      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+      if (!HD_IS_IOS_CARPLAY && 'mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     } else {
       if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(true);
       try { ytPlayer.playVideo(); } catch (e) {}
       updatePlayPauseButton(true);
-      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+      if (!HD_IS_IOS_CARPLAY && 'mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     }
     return;
   }
@@ -925,7 +940,10 @@ function togglePlayPause() {
 }
 
 function onYoutubePlayerReady(event) {
+  if (event && event.target && ytPlayer && event.target !== ytPlayer) return;
+  if (event && event.target) ytPlayer = event.target;
   ytApiReady = true;
+
   if (typeof hdHandlePlayerReloadReady === 'function' && hdHandlePlayerReloadReady(event)) {
     return;
   }
@@ -936,13 +954,20 @@ function onYoutubePlayerReady(event) {
       event.target.loadVideoById({ videoId: req.id, startSeconds: req.time || 0 });
       if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(true);
       updatePlayPauseButton(true);
-      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     } catch (e) {}
   }
 }
 
 function onYoutubePlayerStateChange(event) {
-  if (!ytPlayer) return;
+  if (!ytPlayer || (event && event.target && event.target !== ytPlayer)) return;
+  if (window.hdVoiceBusy && window.hdVoiceBusy() && (event.data === 1 || event.data === 3)) {
+    try { ytPlayer.pauseVideo(); } catch (e) {}
+    updatePlayPauseButton(false);
+    return;
+  }
+  if (event.data === 1 && hdPlayerReloadRequest && hdPlayerReloadRequest.ready) {
+    hdDismissPlayerReload();
+  }
   if (event.data === 0) { // ENDED
     if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(false);
     updatePlayPauseButton(false);
@@ -951,18 +976,20 @@ function onYoutubePlayerStateChange(event) {
       setTimeout(() => playNext(), 600);
     }
   } else if (event.data === 1) { // PLAYING
+    window.hdVoiceMusicPaused = false;
     if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(true);
     updatePlayPauseButton(true);
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+    if (!HD_IS_IOS_CARPLAY && 'mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
   } else if (event.data === 2) { // PAUSED
     if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(false);
     updatePlayPauseButton(false);
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    if (!HD_IS_IOS_CARPLAY && 'mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
   }
 }
 
 function onYoutubePlayerError(event) {
-  const errCode = event ? event.data : 0;
+  if (event && event.target && ytPlayer && event.target !== ytPlayer) return;
+  const errCode = event ? Number(event.data) : 0;
   console.warn('YouTube Player Error code:', errCode);
   if (errCode === 101 || errCode === 150 || errCode === 153 || errCode === 100 || errCode === 2 || errCode === 5) {
     toast('⚠️ Video này bị hạn chế phát (' + errCode + '), đang chuyển bài kế tiếp...');
@@ -997,14 +1024,12 @@ function play(item, add = true, startSeconds = 0) {
   }
 
   if (!videoId) return toast('Không tìm thấy Video ID');
+  if (window.hdVoiceBusy && window.hdVoiceBusy()) return false;
 
   if (hdPlayerReloadRequest) {
     hdDismissPlayerReload();
   }
 
-  if (window.hdVoiceBusy && window.hdVoiceBusy()) {
-    stopVoiceSearch();
-  }
   if (window.hdVoiceAudio && typeof window.hdVoiceAudio.allowPlayback === 'function') {
     window.hdVoiceAudio.allowPlayback();
   }
@@ -1012,29 +1037,14 @@ function play(item, add = true, startSeconds = 0) {
     window.hdVoiceAudio.notePlayback(true);
   }
 
-  current = item;
-  currentIndex = state.playlist.findIndex(x => x.id === videoId);
-  if (add) addHistory(item);
-
   const pos = Math.max(0, Math.floor(Number(startSeconds) || 0));
 
-  // Hiển thị vùng player nhưng KHÔNG tháo/tạo lại thẻ iframe để giữ nguyên AudioSession của iOS/CarPlay
-  if (isTouchMode()) {
-    const playerContainer = document.getElementById('playerContainer');
-    if (playerContainer) {
-      playerContainer.classList.add('active');
-      playerContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  } else {
-    enterCinemaMode();
-  }
-
-  // Gọi loadVideoById đồng bộ ngay trong sự kiện chạm/click của người dùng trên 1 player duy nhất
+  // BƯỚC 1 (QUAN TRỌNG NHẤT): Gọi loadVideoById NGAY ĐẦU TIÊN đồng bộ trong User Gesture
+  // trước khi thay đổi bất kỳ class DOM hay cuộn trang nào để bảo toàn 100% User Activation cho iframe YouTube!
   if (ytApiReady && ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
     try {
       ytPlayer.loadVideoById({ videoId: videoId, startSeconds: pos });
       updatePlayPauseButton(true);
-      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     } catch (e) {
       console.warn('loadVideoById error:', e);
     }
@@ -1045,12 +1055,27 @@ function play(item, add = true, startSeconds = 0) {
     }
   }
 
-  toast('Đang phát: ' + (item.title || videoId));
-  renderAll();
+  // BƯỚC 2: Cập nhật trạng thái bài đang phát mà KHÔNG xóa/vẽ lại innerHTML của danh sách (#results)
+  current = item;
+  currentIndex = state.playlist.findIndex(x => x.id === videoId);
+  if (add) addHistory(item);
+
+  updateActivePlayingItemUI(videoId);
   updateMediaSession(item);
 
   const nowPlayingTitle = document.getElementById('nowPlayingTitle');
   if (nowPlayingTitle) nowPlayingTitle.textContent = item.title || videoId;
+
+  if (isTouchMode()) {
+    const playerContainer = document.getElementById('playerContainer');
+    if (playerContainer) {
+      playerContainer.classList.add('active');
+    }
+  } else {
+    enterCinemaMode();
+  }
+
+  toast('Đang phát: ' + (item.title || videoId));
 }
 
 // BẮT SỰ KIỆN POSTMESSAGE TỪ YOUTUBE IFRAME
@@ -1059,19 +1084,11 @@ window.addEventListener('message', (e) => {
     const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
     if (!data) return;
     if (data.event === 'onStateChange') {
-      if (data.info === 0 && state.autoNext) {
-        toast('🔄 Hết bài, tự động phát bài kế tiếp...');
-        setTimeout(() => playNext(), 600);
-      } else if (data.info === 1) {
+      if (data.info === 1) {
         updatePlayPauseButton(true);
-        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
       } else if (data.info === 2) {
         updatePlayPauseButton(false);
-        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
       }
-    } else if (data.event === 'onError') {
-      toast('⚠️ Video không phát được, tự chuyển bài kế tiếp...');
-      setTimeout(() => playNext(), 1200);
     }
   } catch(err){}
 });
@@ -1372,6 +1389,9 @@ let voiceHandled = false;
 let voiceCountdownInterval = null;
 
 function requestPageFullscreen() {
+  // Theo chuẩn test.html (HD_VIDEO_EXPAND_MODULE): Trên iOS / APTV dùng phóng to trong trang (CSS position: fixed),
+  // KHÔNG gọi webkitRequestFullscreen vì sẽ chiếm mất User Activation và làm WebKit khởi tạo lại layer iframe.
+  if (HD_IS_IOS_CARPLAY) return;
   const el = document.documentElement;
   try {
     if (el.requestFullscreen) el.requestFullscreen().catch(()=>{});
@@ -3061,8 +3081,14 @@ document.addEventListener('DOMContentLoaded', () => {
   initVoiceSearch();
   initRotarySmartSearch();
   initCinemaControls();
+
   if (window.YT && typeof window.YT.Player === 'function' && typeof window.onYouTubeIframeAPIReady === 'function') {
     window.onYouTubeIframeAPIReady();
+  } else if (!document.getElementById('hdYoutubeApiScript')) {
+    const script = document.createElement('script');
+    script.id = 'hdYoutubeApiScript';
+    script.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(script);
   }
 
   // Hỗ trợ tự tìm kiếm nếu URL có tham số ?q= hoặc ?search=
