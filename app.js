@@ -1206,48 +1206,128 @@ function renderAll() {
 }
 
 /* =========================================================================
-   5. BỘ MÁY TÌM KIẾM YOUTUBE TỐI ƯU 100% SIÊU TỐC
+   5. BỘ MÁY TÌM KIẾM YOUTUBE ĐA LUỒNG SIÊU TỐC (PIPED + INVIDIOUS + YOUTUBE HTML PARSER)
    ========================================================================= */
 
-async function fetchInvidiousInstances() {
+function parseYoutubeHtmlResults(html) {
+  if (!html || typeof html !== 'string') return [];
   try {
-    const cacheKey = 'aptv_discovered_instances';
-    const cacheTimeKey = 'aptv_discovered_time';
-    const cached = localStorage.getItem(cacheKey);
-    const cachedTime = localStorage.getItem(cacheTimeKey);
-
-    if (cached && cachedTime && (Date.now() - parseInt(cachedTime)) < 1800000) {
-      return JSON.parse(cached);
-    }
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3500);
-    const res = await fetch('https://api.invidious.io/instances.json?sort_by=type,users', { signal: controller.signal });
-    clearTimeout(timer);
-
-    if (!res.ok) return [];
-    const data = await res.json();
-    const urls = [];
-
-    if (Array.isArray(data)) {
-      for (const item of data) {
-        if (Array.isArray(item) && item[1] && item[1].type === 'https' && item[1].api === true && item[1].uri) {
-          urls.push(item[1].uri);
+    let rawJson = '';
+    const match1 = html.match(/ytInitialData\s*=\s*(\{[\s\S]+?\});\s*<\/script>/);
+    if (match1) {
+      rawJson = match1[1];
+    } else {
+      const match2 = html.match(/var\s+ytInitialData\s*=\s*(\{[\s\S]+?\});/);
+      if (match2) {
+        rawJson = match2[1];
+      } else {
+        const matchHex = html.match(/ytInitialData\s*=\s*'([^']+)'/);
+        if (matchHex && matchHex[1]) {
+          rawJson = matchHex[1].replace(/\\x([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
         }
       }
     }
 
-    if (urls.length > 0) {
-      localStorage.setItem(cacheKey, JSON.stringify(urls));
-      localStorage.setItem(cacheTimeKey, Date.now().toString());
+    if (rawJson) {
+      const json = JSON.parse(rawJson);
+      const contents =
+        json?.contents?.twoColumnSearchResultsRenderer?.tabs?.[0]?.tabRenderer?.content?.sectionListRenderer?.contents ||
+        json?.contents?.sectionListRenderer?.contents ||
+        [];
+
+      const items = [];
+      const seen = new Set();
+      for (const section of contents) {
+        const itemSection = section?.itemSectionRenderer?.contents || [];
+        for (const item of itemSection) {
+          const v = item?.videoRenderer || item?.compactVideoRenderer || item?.videoWithContextRenderer;
+          const vid = v?.videoId || '';
+          if (vid && /^[\w-]{11}$/.test(vid) && !seen.has(vid)) {
+            seen.add(vid);
+            const title =
+              v.title?.runs?.[0]?.text ||
+              v.title?.simpleText ||
+              v.headline?.runs?.[0]?.text ||
+              'YouTube Video';
+            const channel =
+              v.ownerText?.runs?.[0]?.text ||
+              v.longBylineText?.runs?.[0]?.text ||
+              v.shortBylineText?.runs?.[0]?.text ||
+              'YouTube';
+            items.push({ id: vid, title, channel, thumb: ytThumb(vid) });
+          }
+        }
+      }
+      if (items.length > 0) return items;
     }
-    return urls;
+
+    // Fallback quét trực tiếp videoRenderer trong HTML nếu cấu trúc JSON thay đổi
+    const fallbackItems = [];
+    const seenIds = new Set();
+    const regex = /"videoRenderer":\{"videoId":"([\w-]{11})"[\s\S]{1,1200}?"title":\{"(?:runs":\[\{"text":"([^"]+)"|simpleText":"([^"]+)")/g;
+    let m;
+    while ((m = regex.exec(html)) !== null) {
+      const id = m[1];
+      const title = (m[2] || m[3] || 'YouTube Video').replace(/\\u0026/g, '&').replace(/\\"/g, '"');
+      if (id && !seenIds.has(id)) {
+        seenIds.add(id);
+        fallbackItems.push({ id, title, channel: 'YouTube', thumb: ytThumb(id) });
+      }
+      if (fallbackItems.length >= 25) break;
+    }
+    return fallbackItems;
   } catch (e) {
     return [];
   }
 }
 
-async function searchSingleEndpoint(apiUrl, timeoutMs = 4500) {
+function extractVideoItemsFromApiData(data) {
+  if (!data) return [];
+  if (typeof data === 'string') {
+    return parseYoutubeHtmlResults(data);
+  }
+  if (data && typeof data.contents === 'string') {
+    const htmlItems = parseYoutubeHtmlResults(data.contents);
+    if (htmlItems.length > 0) return htmlItems;
+    try {
+      data = JSON.parse(data.contents);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Hỗ trợ cả định dạng mảng của Invidious ([...]) và định dạng Object của Piped ({ items: [...] })
+  const rawList = Array.isArray(data)
+    ? data
+    : (Array.isArray(data?.items) ? data.items : (Array.isArray(data?.results) ? data.results : []));
+
+  if (!rawList.length) return [];
+
+  const items = [];
+  const seen = new Set();
+  for (const item of rawList) {
+    if (!item) continue;
+    // Bỏ qua channel / playlist trên Piped hoặc Invidious
+    if (item.type && item.type !== 'video' && item.type !== 'stream') continue;
+
+    let id = item.videoId || (typeof item.id === 'string' ? item.id : item.id?.videoId) || '';
+    if (!id && typeof item.url === 'string') {
+      const match = item.url.match(/(?:v=|\/watch\?v=|\/embed\/|\/shorts\/|youtu\.be\/)([\w-]{11})/);
+      if (match) id = match[1];
+    }
+
+    if (id && /^[\w-]{11}$/.test(id) && !seen.has(id)) {
+      seen.add(id);
+      const title = item.title || item.snippet?.title || 'YouTube Video';
+      const channel = item.uploaderName || item.author || item.channel || item.snippet?.channelTitle || 'YouTube';
+      const thumb = ytThumb(id);
+      items.push({ id, title, channel, thumb });
+    }
+  }
+  return items;
+}
+
+async function searchSingleEndpoint(apiUrl, timeoutMs = 5500) {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -1256,29 +1336,20 @@ async function searchSingleEndpoint(apiUrl, timeoutMs = 4500) {
 
     if (!res.ok) return [];
 
-    const data = await res.json();
-    if (!Array.isArray(data)) return [];
+    const text = await res.text();
+    if (!text) return [];
 
-    const items = [];
-    for (const item of data) {
-      if (!item) continue;
-
-      let id = item.videoId || item.id || '';
-      if (!id && typeof item.url === 'string') {
-        const match = item.url.match(/(?:v=|\/watch\?v=|\/embed\/|\/shorts\/)([\w-]{11})/);
-        if (match) id = match[1];
-      }
-
-      if (id && /^[\w-]{11}$/.test(id)) {
-        const title = item.title || 'YouTube Video';
-        const channel = item.author || item.uploaderName || item.channel || 'YouTube';
-
-        const thumb = ytThumb(id);
-        items.push({ id, title, channel, thumb });
-      }
+    try {
+      const json = JSON.parse(text);
+      const parsed = extractVideoItemsFromApiData(json);
+      if (parsed.length > 0) return parsed;
+    } catch (e) {
+      // Nếu phản hồi là HTML trực tiếp từ proxy YouTube
+      const htmlItems = parseYoutubeHtmlResults(text);
+      if (htmlItems.length > 0) return htmlItems;
     }
 
-    return items;
+    return [];
   } catch (e) {
     return [];
   }
@@ -1327,36 +1398,33 @@ async function search(q) {
       const r = await fetch(u);
       const j = await r.json();
       if (r.ok && j.items) {
-        const arr = j.items.map(x => ({
-          id: x.id?.videoId || x.id,
-          title: x.snippet?.title || 'YouTube Video',
-          channel: x.snippet?.channelTitle || 'YouTube',
-          thumb: ytThumb(x.id?.videoId || x.id)
-        })).filter(x => x.id && /^[\w-]{11}$/.test(x.id));
-
+        const arr = extractVideoItemsFromApiData(j);
         if (arr.length > 0) {
           renderSearchResults(arr);
           return arr;
         }
       }
-    } catch(e){}
+    } catch (e) {}
   }
 
   const encoded = encodeURIComponent(q);
-  const discoveredBases = await fetchInvidiousInstances();
-  const discoveredEndpoints = discoveredBases.map(b => `${b}/api/v1/search?q=${encoded}&type=video`);
+  const ytSearchUrl = encodeURIComponent(`https://www.youtube.com/results?search_query=${encoded}`);
 
+  // Đua song song (Parallel Race) các cụm máy chủ Piped API & Proxy đang hoạt động nhanh nhất
   const primaryEndpoints = [
+    `https://api.piped.private.coffee/search?q=${encoded}&filter=videos`,
+    `https://pipedapi.ducks.party/search?q=${encoded}&filter=videos`,
+    `https://pipedapi.wireway.ch/search?q=${encoded}&filter=videos`,
+    `https://pipedapi.kavin.rocks/search?q=${encoded}&filter=videos`,
+    `https://inv.nadeko.net/api/v1/search?q=${encoded}&type=video`,
+    `https://invidious.perennialte.ch/api/v1/search?q=${encoded}&type=video`,
     `https://yewtu.be/api/v1/search?q=${encoded}&type=video`,
-    `https://invidious.f5.si/api/v1/search?q=${encoded}&type=video`,
-    `https://pipedapi.lunar.icu/search?q=${encoded}&filter=videos`,
-    `https://invidious.nerdvpn.de/api/v1/search?q=${encoded}&type=video`,
-    `https://vid.puffyan.us/api/v1/search?q=${encoded}&type=video`,
-    ...discoveredEndpoints
+    `https://api.allorigins.win/get?url=${ytSearchUrl}`,
+    `https://api.codetabs.com/v1/proxy?quest=${ytSearchUrl}`
   ];
 
   const uniqueEndpoints = Array.from(new Set(primaryEndpoints));
-  const promises = uniqueEndpoints.map(url => searchSingleEndpoint(url, 4500));
+  const promises = uniqueEndpoints.map(url => searchSingleEndpoint(url, 6000));
   const results = await firstSuccessfulResult(promises);
 
   if (Array.isArray(results) && results.length > 0) {
