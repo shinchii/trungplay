@@ -1327,10 +1327,6 @@ body.cinema .cinema-bar {
           <span class="now-playing-title" id="nowPlayingTitle">Đang phát nhạc</span>
         </div>
         <div class="inline-player-actions">
-          <button type="button" class="btn-inline-action" id="btnReloadYoutube" aria-busy="false" onclick="hdReloadYoutubePlayer(); return false;" title="Tải lại trình phát &amp; khôi phục âm thanh nếu bị nhỏ sau khi dùng mic" tabindex="0">
-            <span class="reload-icon">🔄</span>
-            <span>Khôi phục âm thanh</span>
-          </button>
           <button type="button" class="btn-inline-action" onclick="enterCinemaMode()" title="Xem toàn màn hình" tabindex="0">⛶ Toàn màn hình</button>
           <button type="button" class="btn-inline-action danger" onclick="closeInlinePlayer()" title="Đóng trình phát" tabindex="0">✕ Đóng</button>
         </div>
@@ -1347,13 +1343,8 @@ body.cinema .cinema-bar {
               <span>🔍</span>
               <span>Tìm kiếm</span>
             </button>
-            <button type="button" id="btnVoiceSearch" class="btn-voice-big" aria-pressed="false" onclick="toggleVoiceSearch(); return false;" title="Tìm kiếm bằng giọng nói" tabindex="0">
-              <span class="voice-mic-icon">🎤</span>
-              <span id="btnVoiceSearchLabel">Giọng nói</span>
-            </button>
           </div>
         </form>
-        <div id="searchVoiceNotice" class="search-voice-notice" role="status" aria-live="polite"></div>
       </div>
 
       <div class="results-container">
@@ -1384,35 +1375,7 @@ body.cinema .cinema-bar {
 
 <!-- THANH ĐIỀU KHIỂN KHI XEM TOÀN MÀN HÌNH (CINEMA BAR) -->
 <div class="cinema-bar" id="cinemaBar" style="gap:10px;">
-  <button id="cinemaMicBtn" type="button" onclick="hdStartCinemaVoiceSearch(); return false;" title="Tìm kiếm bằng giọng nói" tabindex="0">🎤 Giọng nói</button>
-  <button id="cinemaReloadBtn" type="button" aria-busy="false" onclick="hdReloadYoutubePlayer(); return false;" title="Khôi phục âm thanh nếu bị nhỏ sau khi dùng mic" tabindex="0"><span class="reload-icon">🔄</span> Khôi phục tiếng</button>
   <button id="cinemaExitBtn" class="danger" title="Thoát toàn màn hình và tắt nhạc" tabindex="0">✕ Thoát</button>
-</div>
-
-<!-- BONG BÓNG HƯỚNG DẪN KHÔI PHỤC ÂM THANH SAU KHI DÙNG MIC (HD_VOICE_RELOAD_HINT_V1) -->
-<div aria-live="polite" hidden="hidden" id="hdVoiceReloadHint" role="status" onclick="hdReloadYoutubePlayer(); return false;">
-  <span>💡 Nếu âm thanh bị nhỏ sau khi dùng Mic, hãy bấm nút này để khôi phục &amp; tải lại đúng giây đang nghe</span>
-</div>
-
-<!-- MODAL XÁC NHẬN PHÁT NHẠC / KHÔI PHỤC ÂM THANH LOA XE (HD_VOICE_CLEAN_DOCUMENT_RELOAD_V15) -->
-<div class="modal-back" id="hdPlayerReloadModal" aria-hidden="true" hidden="hidden" style="z-index:2147483600;">
-  <div class="modal" style="max-width:480px;text-align:center;padding:22px;">
-    <div class="modal-head" style="justify-content:center;margin-bottom:6px;">
-      <h2 id="hdReloadModalHeading" style="font-size:20px;color:#fff;">🔊 Sẵn sàng phát ra Loa Xe</h2>
-      <button class="iconbtn" onclick="hdClosePlayerReload(); return false;" style="position:absolute;right:16px;" tabindex="0">×</button>
-    </div>
-    <p id="hdReloadSongTitle" style="color:#38bdf8;font-weight:800;font-size:16px;margin:6px 0 10px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">Bài hát đã chọn</p>
-    <p id="hdReloadModalDesc" style="color:var(--muted);font-size:13.5px;line-height:1.5;margin:0 0 18px;">Kênh âm thanh CarPlay đã được làm mới hoàn toàn sau khi tắt Mic. Bấm nút xanh bên dưới (hoặc ấn Enter) để phát ra loa xe với âm lượng 100%:</p>
-    <div style="display:flex;flex-direction:column;gap:12px;">
-      <button type="button" class="btn-submit" id="hdReloadContinue" onclick="hdConfirmPlayerReload(false); return false;" style="margin-top:0;min-height:58px;font-size:17px;font-weight:800;border-radius:14px;background:linear-gradient(135deg,#00d26a,#059669);color:#000;box-shadow:0 8px 24px rgba(0,210,106,0.35);" tabindex="0">
-        ▶ <span id="hdReloadSavedTime">PHÁT NGAY RA LOA XE</span>
-      </button>
-      <div style="display:flex;gap:10px;">
-        <button type="button" class="pill" id="hdReloadRestartBtn" style="flex:1;justify-content:center;height:44px;" onclick="hdConfirmPlayerReload(true); return false;" tabindex="0">↺ Phát từ đầu</button>
-        <button type="button" class="pill" id="hdReloadCancelBtn" style="flex:1;justify-content:center;height:44px;color:#e2e8f0;" onclick="hdClosePlayerReload(); return false;" tabindex="0">📋 Chọn bài khác</button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <!-- MODAL THÔNG TIN TÀI KHOẢN (#accountModal) -->
@@ -1437,15 +1400,6 @@ body.cinema .cinema-bar {
     <div class="setting">
       <label>Mã thiết bị (Device ID)</label>
       <input class="field" id="accModalDevId" readonly style="font-size:11px;color:#8792a1">
-    </div>
-    <div class="setting">
-      <label>Nút Vô-lăng / Bluetooth gọi Tìm kiếm Giọng nói</label>
-      <div id="hdBluetoothCaptureStatus" style="font-size:12px;color:#a5d9fa;margin-bottom:8px;line-height:1.4;">Chưa gán nút cứng. Bạn có thể gán nút trên vô lăng hoặc tẩu Bluetooth để bật nhanh Voice Search.</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button type="button" class="pill" id="hdBluetoothCaptureBtn" style="flex:1;height:40px;font-size:13px;" onclick="hdStartCaptureBluetoothButton(); return false;" tabindex="0">🎧 Bắt nút vô lăng</button>
-        <button type="button" class="pill primary" id="hdBluetoothSaveButton" style="flex:1;height:40px;font-size:13px;" onclick="hdSaveCapturedBluetoothButton(); return false;" disabled tabindex="0">💾 Gán nút này</button>
-        <button type="button" class="pill" style="height:40px;padding:0 12px;font-size:13px;color:#ff6b7d;" onclick="hdClearBluetoothVoiceBinding(); return false;" title="Xóa nút đã gán" tabindex="0">✕</button>
-      </div>
     </div>
     <div class="setting">
       <label>Chế độ màn hình xe</label>
@@ -1567,6 +1521,6 @@ body.cinema .cinema-bar {
 <div class="toast" id="toast"></div>
 
 <!-- APPLICATION LOGIC JS -->
-<script src="app.js?v=20261023_v7"></script>
+<script src="app.js?v=20261026_v8"></script>
 </body>
 </html>

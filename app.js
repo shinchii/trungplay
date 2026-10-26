@@ -867,7 +867,16 @@ function forceWebKitPlaybackSession() {
 function forceCarAudioOutput() {}
 
 function destroyPlayers(keepAnchor = false) {
-  pauseMusicForVoiceSearch();
+  if (ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
+    try { ytPlayer.pauseVideo(); } catch (e) {}
+  } else {
+    const iframe = document.getElementById('ytPlayerFrame');
+    if (iframe && iframe.contentWindow) {
+      try {
+        iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+      } catch (e) {}
+    }
+  }
   if (!HD_IS_IOS_CARPLAY && 'mediaSession' in navigator) {
     try { navigator.mediaSession.playbackState = 'paused'; } catch (e) {}
   }
@@ -926,20 +935,14 @@ function updatePlayPauseButton(isPlaying) {
 }
 
 function togglePlayPause() {
-  if (window.hdVoiceBusy && window.hdVoiceBusy()) return;
   forceWebKitPlaybackSession();
-  if (window.hdVoiceAudio && typeof window.hdVoiceAudio.allowPlayback === 'function') {
-    window.hdVoiceAudio.allowPlayback();
-  }
   if (ytPlayer && ytApiReady && typeof ytPlayer.getPlayerState === 'function') {
     const s = ytPlayer.getPlayerState();
     if (s === 1) { // 1 = PLAYING
-      if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(false);
       try { ytPlayer.pauseVideo(); } catch (e) {}
       updatePlayPauseButton(false);
       if (!HD_IS_IOS_CARPLAY && 'mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     } else {
-      if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(true);
       try {
         if (typeof ytPlayer.unMute === 'function') ytPlayer.unMute();
         if (typeof ytPlayer.setVolume === 'function') ytPlayer.setVolume(100);
@@ -972,47 +975,29 @@ function onYoutubePlayerReady(event) {
   if (pendingVideoRequest && pendingVideoRequest.id) {
     const req = pendingVideoRequest;
     pendingVideoRequest = null;
-    hdDismissPlayerReload();
     try {
       if (typeof event.target.unMute === 'function') event.target.unMute();
       if (typeof event.target.setVolume === 'function') event.target.setVolume(100);
       event.target.loadVideoById({ videoId: req.id, startSeconds: req.time || 0 });
       if (typeof event.target.playVideo === 'function') event.target.playVideo();
-      if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(true);
       updatePlayPauseButton(true);
     } catch (e) {}
-    return;
-  }
-
-  if (typeof hdHandlePlayerReloadReady === 'function' && hdHandlePlayerReloadReady(event)) {
     return;
   }
 }
 
 function onYoutubePlayerStateChange(event) {
   if (!ytPlayer || (event && event.target && event.target !== ytPlayer)) return;
-  if (window.hdVoiceBusy && window.hdVoiceBusy() && (event.data === 1 || event.data === 3)) {
-    try { ytPlayer.pauseVideo(); } catch (e) {}
-    updatePlayPauseButton(false);
-    return;
-  }
-  if (event.data === 1 && hdPlayerReloadRequest) {
-    hdDismissPlayerReload();
-  }
   if (event.data === 0) { // ENDED
-    if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(false);
     updatePlayPauseButton(false);
     if (state.autoNext) {
       toast('🔄 Hết bài, tự động phát bài kế tiếp...');
       setTimeout(() => playNext(), 600);
     }
   } else if (event.data === 1) { // PLAYING
-    window.hdVoiceMusicPaused = false;
-    if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(true);
     updatePlayPauseButton(true);
     if (!HD_IS_IOS_CARPLAY && 'mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
   } else if (event.data === 2) { // PAUSED
-    if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(false);
     updatePlayPauseButton(false);
     if (!HD_IS_IOS_CARPLAY && 'mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
   }
@@ -1055,21 +1040,9 @@ function play(item, add = true, startSeconds = 0) {
   }
 
   if (!videoId) return toast('Không tìm thấy Video ID');
-  if (window.hdVoiceBusy && window.hdVoiceBusy()) return false;
-
-  if (hdPlayerReloadRequest) {
-    hdDismissPlayerReload();
-  }
 
   // Ép WebKit chuyển trạng thái AudioSession về Playback ngay trong User Gesture
   forceWebKitPlaybackSession();
-
-  if (window.hdVoiceAudio && typeof window.hdVoiceAudio.allowPlayback === 'function') {
-    window.hdVoiceAudio.allowPlayback();
-  }
-  if (window.hdVoiceAudio && typeof window.hdVoiceAudio.notePlayback === 'function') {
-    window.hdVoiceAudio.notePlayback(true);
-  }
 
   const pos = Math.max(0, Math.floor(Number(startSeconds) || 0));
 
@@ -1461,9 +1434,6 @@ function renderSearchResults(arr) {
       const item = arr.find(x => x.id === itemEl.dataset.playId);
       if (item) {
         play(item);
-        if (window.hdVoiceReloadHint && typeof window.hdVoiceReloadHint.selected === 'function') {
-          window.hdVoiceReloadHint.selected(itemEl, e);
-        }
       }
     };
     itemEl.onkeydown = (e) => {
@@ -1472,9 +1442,6 @@ function renderSearchResults(arr) {
         const item = arr.find(x => x.id === itemEl.dataset.playId);
         if (item) {
           play(item);
-          if (window.hdVoiceReloadHint && typeof window.hdVoiceReloadHint.selected === 'function') {
-            window.hdVoiceReloadHint.selected(itemEl, { type: 'click', target: itemEl });
-          }
         }
       }
     };
@@ -1490,16 +1457,8 @@ function showView(v) {
 }
 
 /* =========================================================================
-   6. TÌM KIẾM GIỌNG NÓI & KÍCH HOẠT FULLSCREEN TỰ ĐỘNG
+   6. ĐIỀU KHIỂN TOÀN MÀN HÌNH (CINEMA MODE)
    ========================================================================= */
-
-let voiceRecognition = null;
-let voiceSilenceTimer = null;
-let voiceMaxTimer = null;
-let currentVoiceText = '';
-let voiceSessionId = 0;
-let voiceHandled = false;
-let voiceCountdownInterval = null;
 
 function requestPageFullscreen() {
   // Theo chuẩn test.html (HD_VIDEO_EXPAND_MODULE): Trên iOS / APTV dùng phóng to trong trang (CSS position: fixed),
@@ -1550,12 +1509,7 @@ function enterCinemaMode() {
   requestPageFullscreen();
   forceCarAudioOutput();
   setTimeout(() => {
-    const mic = document.getElementById('cinemaMicBtn');
-    if (mic) {
-      try { mic.focus({ preventScroll: true }); } catch (e) {}
-    } else {
-      focusCinemaButton(0);
-    }
+    focusCinemaButton(0);
   }, 120);
 }
 
@@ -1840,936 +1794,6 @@ async function quickSearch(q, autoPlay = true) {
 }
 window.quickSearch = quickSearch;
 
-/* =========================================================================
-   6B. HỆ THỐNG TÌM KIẾM GIỌNG NÓI CHỐNG KẸT MIC & KHÔI PHỤC ÂM THANH IOS/CARPLAY
-       (HDC_NATURAL_AUDIO_V13 + HD_VOICE_RELOAD_HINT_V1 + HDC_MANUAL_PLAYER_RELOAD_V14)
-   ========================================================================= */
-
-const HD_AUDIO_IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
-  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const HD_BLUETOOTH_NATIVE_ONLY = HD_AUDIO_IS_IOS || /aptv/i.test(navigator.userAgent || '');
-const HD_VOICE_SILENCE_DELAY = 1400;
-
-let hdVoiceListening = false;
-let hdVoiceClosing = false;
-let hdVoiceSearchSubmitting = false;
-let hdVoiceFinalText = '';
-let hdVoiceLastText = '';
-let hdVoiceQueuedText = '';
-let hdVoiceSearchTimer = null;
-let hdMainVoiceSession = null;
-let hdVoiceRecognition = null;
-let hdVoiceAudioTrace = [];
-window.hdVoiceMusicPaused = false;
-
-function hdTraceVoiceAudio(event, detail) {
-  hdVoiceAudioTrace.push({ time: Date.now(), event: String(event), detail: detail || '' });
-  if (hdVoiceAudioTrace.length > 180) hdVoiceAudioTrace.shift();
-}
-
-function getVoiceSearchButton() {
-  return document.getElementById('btnVoiceSearch');
-}
-
-function setVoiceSearchListening(isListening) {
-  hdVoiceListening = !!isListening;
-  const button = getVoiceSearchButton();
-  const label = document.getElementById('btnVoiceSearchLabel');
-  const cinemaBtn = document.getElementById('cinemaMicBtn');
-  const notice = document.getElementById('searchVoiceNotice');
-
-  if (button) {
-    button.classList.toggle('is-listening', hdVoiceListening);
-    button.setAttribute('aria-pressed', hdVoiceListening ? 'true' : 'false');
-    button.title = hdVoiceListening ? 'Đang lắng nghe... Bấm để dừng' : 'Tìm kiếm bằng giọng nói';
-  }
-  if (label) {
-    label.textContent = hdVoiceListening ? 'Đang nghe...' : 'Giọng nói';
-  }
-  if (cinemaBtn) {
-    cinemaBtn.classList.toggle('is-listening', hdVoiceListening);
-    cinemaBtn.textContent = hdVoiceListening ? '🛑 Dừng nghe' : '🎤 Giọng nói';
-  }
-  if (notice) {
-    notice.classList.toggle('listening', hdVoiceListening);
-  }
-}
-
-let hdNoticeHideTimer = null;
-function setVoiceSearchNotice(message, autoHideMs = 0) {
-  const notice = document.getElementById('searchVoiceNotice');
-  if (hdNoticeHideTimer) {
-    clearTimeout(hdNoticeHideTimer);
-    hdNoticeHideTimer = null;
-  }
-  if (!notice) return;
-  if (!message) {
-    notice.textContent = '';
-    notice.classList.remove('show', 'listening');
-    return;
-  }
-  notice.textContent = message;
-  notice.classList.add('show');
-  if (autoHideMs > 0) {
-    hdNoticeHideTimer = setTimeout(() => {
-      if (!hdVoiceListening) {
-        notice.classList.remove('show', 'listening');
-      }
-    }, autoHideMs);
-  }
-}
-
-function pauseMusicForVoiceSearch() {
-  if (window.hdVoiceAudio) window.hdVoiceAudio.notePlayback(false);
-  try {
-    if (ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
-      ytPlayer.pauseVideo();
-    }
-  } catch (e) {}
-
-  const frame = document.getElementById('ytPlayerFrame');
-  if (frame && frame.contentWindow) {
-    try {
-      frame.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }), '*');
-    } catch (e) {}
-  }
-
-  document.querySelectorAll('audio, video').forEach((media) => {
-    try { media.pause(); } catch (e) {}
-  });
-  updatePlayPauseButton(false);
-}
-
-/* HDC_NATURAL_AUDIO_V13: Quản lý độc quyền vòng đời nhận giọng nói trên iOS/CarPlay */
-window.hdVoiceAudio = (function () {
-  let currentSession = null;
-  let serial = 0;
-  let lastRelease = null;
-
-  function busy() {
-    return !!currentSession;
-  }
-
-  function finish(session) {
-    if (!session || session.done || currentSession !== session) return;
-    session.done = true;
-    session.closing = true;
-    clearTimeout(session.watchdog);
-    clearTimeout(session.closeTimer);
-
-    const recognition = session.recognition;
-    if (recognition) {
-      recognition.onstart = recognition.onresult = recognition.onspeechstart =
-      recognition.onspeechend = recognition.onerror = recognition.onend = recognition.onaudioend = null;
-    }
-    currentSession = null;
-    lastRelease = {
-      serial: session.audio.serial,
-      endedAt: Date.now(),
-      audioEndObserved: !!session.audioEnded,
-      nativeEndObserved: !session.startException
-    };
-    hdTraceVoiceAudio(session.startException ? 'microphone_start_cleanup' : 'microphone_end', lastRelease);
-
-    try {
-      if (typeof session.onfinish === 'function') session.onfinish(true);
-    } catch (e) {
-      hdTraceVoiceAudio('voice_finish_callback_error', e.name || 'Error');
-    }
-  }
-
-  function close(session) {
-    if (!session || session.done || currentSession !== session) return;
-    if (session.closing) {
-      try { session.recognition.abort(); } catch (e) {}
-      return;
-    }
-    session.closing = true;
-    clearTimeout(session.watchdog);
-    hdTraceVoiceAudio('microphone_close_requested', session.timedOut ? 'timeout-abort' : 'abort');
-    try {
-      session.recognition.abort();
-    } catch (e) {
-      hdTraceVoiceAudio('microphone_abort_error', e.name || 'Error');
-      try { session.recognition.stop(); } catch (ignored) {}
-    }
-    if (session.done) return;
-    session.closeTimer = setTimeout(() => {
-      if (session.done) return;
-      hdTraceVoiceAudio('microphone_close_stalled');
-      if (typeof session.onstalled === 'function') session.onstalled();
-      else toast('⚠️ Microphone chưa đóng. Bấm lại nút Giọng nói hoặc tải lại trang.');
-    }, 3000);
-  }
-
-  function begin(recognition, onfinish, options) {
-    if (busy()) return null;
-    let isPlaying = false;
-    try {
-      const s = ytPlayer && typeof ytPlayer.getPlayerState === 'function' ? ytPlayer.getPlayerState() : null;
-      isPlaying = (s === 1 || s === 3);
-    } catch (e) {}
-
-    const info = {
-      serial: ++serial,
-      id: current ? current.id : '',
-      playing: isPlaying,
-      noResume: !!(options && options.resumePlayback === false),
-      pageHidden: false
-    };
-
-    const session = {
-      recognition: recognition,
-      audio: info,
-      onfinish: onfinish,
-      done: false,
-      closing: false,
-      onstalled: options && options.onstalled
-    };
-
-    currentSession = session;
-    pauseMusicForVoiceSearch();
-    hdTraceVoiceAudio('microphone_created', { serial: info.serial, resume: !info.noResume });
-
-    recognition.onend = () => { finish(session); };
-    recognition.onaudioend = () => {
-      session.audioEnded = true;
-      hdTraceVoiceAudio('microphone_audioend', { serial: info.serial });
-    };
-    session.watchdog = setTimeout(() => {
-      session.timedOut = true;
-      close(session);
-    }, 20000);
-
-    return session;
-  }
-
-  function startFailed(session) {
-    if (!session || session.done) return;
-    session.failed = true;
-    session.startException = true;
-    try { session.recognition.abort(); } catch (e) {}
-    if (!session.done) finish(session);
-  }
-
-  function notePlayback(playing) {
-    if (currentSession) currentSession.audio.playing = !!playing;
-  }
-
-  function allowPlayback() {
-    if (busy()) return false;
-    window.hdVoiceMusicPaused = false;
-    hdTraceVoiceAudio('play_requested');
-    return true;
-  }
-
-  window.addEventListener('pagehide', () => {
-    if (currentSession) {
-      currentSession.audio.pageHidden = true;
-      currentSession.cancelled = true;
-      close(currentSession);
-    }
-  });
-
-  return {
-    begin,
-    close,
-    startFailed,
-    busy,
-    notePlayback,
-    allowPlayback,
-    readState: () => ({
-      phase: currentSession ? (currentSession.closing ? 'closing' : 'recognition') : 'idle',
-      isIOS: HD_AUDIO_IS_IOS,
-      nativeBluetoothOnly: HD_BLUETOOTH_NATIVE_ONLY,
-      currentSerial: currentSession ? currentSession.audio.serial : null,
-      lastRelease
-    })
-  };
-})();
-
-window.hdVoiceBusy = function () {
-  return window.hdVoiceAudio.busy();
-};
-
-function clearVoiceTimers() {
-  if (hdVoiceSearchTimer) {
-    clearTimeout(hdVoiceSearchTimer);
-    hdVoiceSearchTimer = null;
-  }
-}
-
-const HD_VOICE_READY_STORAGE_KEY = 'aptv_voice_ready_v1';
-
-async function hdSubmitVoiceSearch(text) {
-  const input = document.getElementById('searchInput');
-  text = (text || '').trim();
-  if (!input || !text || hdVoiceSearchSubmitting) return;
-
-  const resolved = resolveQuery(text);
-  input.value = resolved;
-  hdVoiceSearchSubmitting = true;
-  setVoiceSearchNotice(`🎤 Đã nghe "${resolved}" · Đang tìm bài hát & làm mới kênh loa xe...`, 10000);
-  toast(`🎤 Đang tìm: ${resolved}`);
-
-  if (window.hdVoiceReloadHint && typeof window.hdVoiceReloadHint.searchStarted === 'function') {
-    window.hdVoiceReloadHint.searchStarted(true);
-  }
-
-  try {
-    if (isTouchMode()) {
-      switchTouchTab('discover');
-    }
-    if (document.body.classList.contains('cinema')) {
-      document.body.classList.remove('cinema');
-      exitPageFullscreen();
-    }
-    const results = await search(resolved);
-    if (results && results.length > 0) {
-      // CƠ CHẾ TRIỆT ĐỂ CHO IOS / CARPLAY (HD_VOICE_CLEAN_DOCUMENT_RELOAD_V15):
-      // Trên iOS WebKit, một khi Document đã gọi webkitSpeechRecognition.start(), tiến trình WebKit giữ chặt
-      // AVAudioSession ở chế độ PlayAndRecord (loa điện thoại / nhỏ tiếng) cho đến khi Document đó bị hủy.
-      // Vì vậy:
-      // 1. Lưu sẵn kết quả tìm kiếm vừa tải xong vào sessionStorage (để trang mới mở lên có ngay trong 0ms).
-      // 2. Dùng window.location.replace() tải lại Document mới tinh 100% chưa từng chạm vào Mic.
-      // 3. Trên Document mới tinh, hiển thị nút "▶ PHÁT NGAY RA LOA XE" (1 chạm / 1 nút Enter) để phát với User Gesture thật!
-      try {
-        state.playlist = results;
-        saveState();
-        localStorage.setItem('aptv_car_mode', getCarMode());
-        sessionStorage.setItem(HD_VOICE_READY_STORAGE_KEY, JSON.stringify({
-          mode: 'voice_search',
-          query: resolved,
-          results: results.slice(0, 25),
-          song: results[0],
-          time: 0,
-          ts: Date.now()
-        }));
-        setVoiceSearchNotice(`🔄 Đã tìm thấy "${results[0].title}" · Đang chuyển sang kênh loa xe...`, 5000);
-        setTimeout(() => {
-          window.location.replace(window.location.pathname + '?vr=' + Date.now());
-        }, 120);
-        return;
-      } catch (storageErr) {
-        console.warn('Fallback khi không dùng được sessionStorage:', storageErr);
-      }
-
-      setVoiceSearchNotice(`✅ Đã tìm thấy ${results.length} bài hát cho "${resolved}". Chạm vào bài (hoặc ấn Enter) để phát ra loa xe!`, 8000);
-      toast(`✅ Đã tìm thấy ${results.length} bài — Chạm hoặc ấn Enter để phát!`);
-      if (!isTouchMode() && typeof autoHighlightFirstSongInRotary === 'function') {
-        setTimeout(() => autoHighlightFirstSongInRotary(), 80);
-      }
-    } else {
-      setVoiceSearchNotice(`⚠️ Không tìm thấy bài hát cho "${resolved}". Bấm Giọng nói để thử lại.`, 6000);
-    }
-  } catch (e) {
-    console.warn('Lỗi tìm kiếm giọng nói:', e);
-  } finally {
-    hdVoiceSearchSubmitting = false;
-  }
-}
-
-function finishVoiceSearchWithDelay(text) {
-  text = String(text || '').trim();
-  if (!text || hdVoiceSearchSubmitting || hdVoiceClosing) return;
-  clearVoiceTimers();
-  const input = document.getElementById('searchInput');
-  if (input) input.value = text;
-  hdVoiceSearchTimer = setTimeout(() => {
-    hdVoiceSearchTimer = null;
-    if (!hdMainVoiceSession || hdMainVoiceSession.closing) return;
-    hdVoiceQueuedText = text;
-    closeVoiceSession();
-  }, HD_VOICE_SILENCE_DELAY);
-}
-
-function closeVoiceSession() {
-  if (!hdMainVoiceSession) return;
-  hdVoiceClosing = true;
-  clearVoiceTimers();
-  window.hdVoiceAudio.close(hdMainVoiceSession);
-}
-
-function stopVoiceSearch() {
-  if (hdMainVoiceSession) hdMainVoiceSession.cancelled = true;
-  hdVoiceQueuedText = hdVoiceLastText = hdVoiceFinalText = '';
-  closeVoiceSession();
-}
-window.stopVoiceSearch = stopVoiceSearch;
-
-function killRecognition() {
-  if (hdMainVoiceSession) {
-    stopVoiceSearch();
-  }
-}
-
-function createVoiceRecognition() {
-  const Constructor = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!Constructor) return null;
-  try { return new Constructor(); } catch (e) { return null; }
-}
-
-function toggleVoiceSearch() {
-  if (hdVoiceSearchSubmitting) return false;
-  if (hdMainVoiceSession) {
-    stopVoiceSearch();
-    return false;
-  }
-  if (window.hdVoiceAudio.busy()) {
-    setVoiceSearchNotice('⚠️ Hãy kết thúc microphone đang nghe trước.', 4000);
-    toast('⚠️ Hãy kết thúc microphone đang nghe trước.');
-    return false;
-  }
-
-  const recognition = createVoiceRecognition();
-  if (!recognition) {
-    setVoiceSearchNotice('⚠️ Trình duyệt này chưa hỗ trợ tìm kiếm bằng giọng nói.', 5000);
-    toast('⚠️ Trình duyệt này chưa hỗ trợ tìm kiếm bằng giọng nói.');
-    return false;
-  }
-
-  if (window.hdVoiceReloadHint && typeof window.hdVoiceReloadHint.dismiss === 'function') {
-    window.hdVoiceReloadHint.dismiss();
-  }
-
-  window.hdVoiceMusicPaused = true;
-  clearVoiceTimers();
-  hdVoiceQueuedText = hdVoiceFinalText = hdVoiceLastText = '';
-
-  const session = window.hdVoiceAudio.begin(recognition, () => {
-    if (hdMainVoiceSession !== session) return;
-    const text = hdVoiceClosing ? hdVoiceQueuedText : (hdVoiceLastText || hdVoiceQueuedText);
-    clearVoiceTimers();
-    hdMainVoiceSession = hdVoiceRecognition = null;
-    hdVoiceClosing = false;
-    hdVoiceQueuedText = '';
-    setVoiceSearchListening(false);
-
-    // APTV/CarPlay có thể báo document.hidden dù màn hình xe vẫn đang mở; chỉ bỏ khi pagehide thật sự
-    if (text && !session.cancelled && !session.failed && !session.audio.pageHidden) {
-      hdSubmitVoiceSearch(text);
-    } else if (session.timedOut) {
-      setVoiceSearchNotice('⏱ Đã hết thời gian lắng nghe. Bấm Giọng nói để thử lại.', 5000);
-    } else if (session.cancelled) {
-      setVoiceSearchNotice('Đã dừng tìm kiếm bằng giọng nói.', 3500);
-    } else if (!session.failed) {
-      setVoiceSearchNotice('Đã kết thúc lắng nghe. Chưa nghe rõ tên bài hát, mời bạn bấm thử lại.', 5000);
-    }
-  }, {
-    resumePlayback: false,
-    onstalled: () => {
-      hdTraceVoiceAudio('microphone_close_stalled');
-      setVoiceSearchNotice('⚠️ Trình duyệt chưa báo đóng microphone. Bấm lại Giọng nói để dừng; nếu vẫn kẹt hãy tải lại trang.', 8000);
-    }
-  });
-
-  if (!session) {
-    window.hdVoiceMusicPaused = false;
-    return false;
-  }
-
-  hdMainVoiceSession = session;
-  hdVoiceRecognition = recognition;
-  hdVoiceClosing = false;
-
-  // Trên iOS / APTV chỉ nhận 1 câu (continuous = false) để nhả kênh Bluetooth HFP ngay lập tức
-  recognition.lang = 'vi-VN';
-  recognition.continuous = !HD_BLUETOOTH_NATIVE_ONLY;
-  recognition.interimResults = true;
-  recognition.maxAlternatives = 1;
-
-  recognition.onstart = () => {
-    if (session.closing) return;
-    hdTraceVoiceAudio('microphone_start');
-    setVoiceSearchListening(true);
-    setVoiceSearchNotice('🎙 Đang lắng nghe... Xin mời bạn đọc tên bài hát hoặc ca sĩ (Bấm lại để dừng)');
-  };
-
-  recognition.onresult = (event) => {
-    if (hdMainVoiceSession !== session || session.closing || hdVoiceSearchSubmitting) return;
-    clearVoiceTimers();
-    let finalText = '';
-    let interimText = '';
-    for (let i = 0; i < event.results.length; i++) {
-      const res = event.results[i];
-      if (!res || !res[0]) continue;
-      if (res.isFinal) finalText += (res[0].transcript || '') + ' ';
-      else interimText += (res[0].transcript || '') + ' ';
-    }
-    const text = (finalText + interimText).trim().replace(/\s+/g, ' ');
-    if (!text) return;
-
-    hdVoiceLastText = text;
-    hdVoiceFinalText = finalText.trim();
-    hdTraceVoiceAudio('voice_result', interimText.trim() ? 'interim' : 'final');
-
-    const input = document.getElementById('searchInput');
-    if (input) input.value = text;
-    setVoiceSearchNotice(`🎙 Đang nghe: "${text}"`);
-
-    if (hdVoiceFinalText) {
-      hdVoiceQueuedText = hdVoiceFinalText;
-      if (!interimText.trim()) {
-        if (!recognition.continuous) closeVoiceSession();
-        else finishVoiceSearchWithDelay(hdVoiceFinalText);
-      }
-    } else if (recognition.continuous) {
-      finishVoiceSearchWithDelay(text);
-    }
-  };
-
-  recognition.onerror = (event) => {
-    if (session.closing) return;
-    session.failed = true;
-    const errCode = (event && event.error) || 'unknown';
-    hdTraceVoiceAudio('voice_error', errCode);
-    hdVoiceQueuedText = hdVoiceLastText = '';
-    if (errCode === 'no-speech') {
-      setVoiceSearchNotice('⚠️ Chưa nghe được nội dung. Bấm Giọng nói để nói lại.', 5000);
-    } else if (errCode === 'not-allowed' || errCode === 'service-not-allowed') {
-      setVoiceSearchNotice('⚠️ Chưa được cấp quyền Microphone. Hãy cho phép quyền Mic trên trình duyệt/iPhone.', 7000);
-      toast('⚠️ Vui lòng cấp quyền Microphone cho trình duyệt');
-    } else {
-      setVoiceSearchNotice('⚠️ Không thể nhận giọng nói. Kiểm tra kết nối hoặc quyền Microphone rồi thử lại.', 6000);
-    }
-    closeVoiceSession();
-  };
-
-  setVoiceSearchNotice('🎙 Đang chuẩn bị lắng nghe, xin mời bạn đọc tên bài hát...');
-  try {
-    recognition.start();
-  } catch (e) {
-    hdTraceVoiceAudio('microphone_start_failed');
-    session.failed = true;
-    hdVoiceClosing = true;
-    window.hdVoiceAudio.startFailed(session);
-    setVoiceSearchNotice('⚠️ Không thể bật microphone. Bấm Giọng nói để thử lại.', 5000);
-  }
-  return false;
-}
-window.toggleVoiceSearch = toggleVoiceSearch;
-
-function hdStartCinemaVoiceSearch() {
-  if (document.body.classList.contains('cinema')) {
-    document.body.classList.remove('cinema');
-    exitPageFullscreen();
-  }
-  toggleVoiceSearch();
-  return false;
-}
-window.hdStartCinemaVoiceSearch = hdStartCinemaVoiceSearch;
-
-/* =========================================================================
-   HD_VOICE_CLEAN_DOCUMENT_RELOAD_V15: TẢI LẠI DOCUMENT SẠCH & PHÁT 1 CHẠM RA LOA XE
-   (Xử lý triệt để 100% lỗi kẹt AVAudioSession PlayAndRecord sau khi mở Mic trên iOS/CarPlay)
-   ========================================================================= */
-
-let hdPlayerReloadRequest = null;
-
-function formatYoutubeTime(sec) {
-  sec = Math.max(0, Math.floor(Number(sec) || 0));
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  if (h > 0) {
-    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  }
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
-
-function hdReloadButtonBusy(busy) {
-  ['btnReloadYoutube', 'cinemaReloadBtn'].forEach((id) => {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    btn.disabled = !!busy;
-    btn.setAttribute('aria-busy', busy ? 'true' : 'false');
-  });
-}
-
-function hdDismissPlayerReload() {
-  const req = hdPlayerReloadRequest;
-  if (req && req.timer) clearTimeout(req.timer);
-  hdPlayerReloadRequest = null;
-  hdReloadButtonBusy(false);
-  const modal = document.getElementById('hdPlayerReloadModal');
-  if (modal) {
-    modal.hidden = true;
-    modal.classList.remove('open');
-    modal.style.display = 'none';
-    modal.setAttribute('aria-hidden', 'true');
-  }
-  return req;
-}
-
-window.hdClosePlayerReload = function () {
-  hdDismissPlayerReload();
-  if (!isTouchMode() && typeof autoHighlightFirstSongInRotary === 'function') {
-    setTimeout(() => autoHighlightFirstSongInRotary(), 80);
-  }
-  return false;
-};
-
-function hdShowPlayerReload(request) {
-  const modal = document.getElementById('hdPlayerReloadModal');
-  if (!modal || hdPlayerReloadRequest !== request) return;
-  const headingEl = document.getElementById('hdReloadModalHeading');
-  const titleEl = document.getElementById('hdReloadSongTitle');
-  const descEl = document.getElementById('hdReloadModalDesc');
-  const timeEl = document.getElementById('hdReloadSavedTime');
-  const restartBtn = document.getElementById('hdReloadRestartBtn');
-  const cancelBtn = document.getElementById('hdReloadCancelBtn');
-
-  const isVoiceSearch = (request.mode === 'voice_search');
-
-  if (headingEl) {
-    headingEl.textContent = isVoiceSearch
-      ? `🎤 Đã tìm: "${request.query || 'Giọng nói'}"`
-      : '🔊 Khôi phục Âm thanh Loa Xe';
-  }
-  if (titleEl) {
-    titleEl.textContent = request.title || 'Bài hát đã chọn';
-  }
-  if (descEl) {
-    descEl.textContent = isVoiceSearch
-      ? 'Kênh âm thanh CarPlay đã được làm mới 100% sau khi tắt Mic. Bấm nút xanh bên dưới (hoặc ấn Enter) để phát ngay ra loa xe:'
-      : 'Kênh âm thanh đã được làm mới hoàn toàn. Bấm tiếp tục để phát ra loa xe với âm lượng tối đa:';
-  }
-  if (timeEl) {
-    timeEl.textContent = (request.time > 0)
-      ? ('Tiếp tục phát từ ' + formatYoutubeTime(request.time))
-      : 'PHÁT NGAY RA LOA XE';
-  }
-  if (restartBtn) {
-    restartBtn.style.display = (request.time > 0) ? 'inline-flex' : 'none';
-  }
-  if (cancelBtn) {
-    cancelBtn.textContent = isVoiceSearch ? '📋 Chọn bài khác trong danh sách' : 'Đóng';
-  }
-
-  modal.hidden = false;
-  modal.style.display = 'grid';
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden', 'false');
-
-  const continueBtn = document.getElementById('hdReloadContinue');
-  if (continueBtn) {
-    setTimeout(() => {
-      try { continueBtn.focus({ preventScroll: true }); } catch (e) {}
-    }, 40);
-  }
-}
-
-window.hdConfirmPlayerReload = function (fromStart) {
-  const request = hdPlayerReloadRequest;
-  if (!request) {
-    hdDismissPlayerReload();
-    return false;
-  }
-  if (window.hdVoiceBusy && window.hdVoiceBusy()) return false;
-
-  const pos = fromStart ? 0 : Math.max(0, Math.floor(Number(request.time) || 0));
-  const targetItem = request.song || current || findItem(request.id);
-
-  // Ép chuyển đổi trạng thái AudioSession về Playback ngay trong User Gesture
-  forceWebKitPlaybackSession();
-  if (window.hdVoiceAudio && typeof window.hdVoiceAudio.allowPlayback === 'function') {
-    window.hdVoiceAudio.allowPlayback();
-  }
-  hdDismissPlayerReload();
-
-  if (targetItem && targetItem.id) {
-    play(targetItem, true, pos);
-    toast(pos > 0 ? `🔊 Đã phát tiếp ra loa xe (${formatYoutubeTime(pos)})` : `🔊 Đang phát: ${targetItem.title || targetItem.id}`);
-  }
-  return false;
-};
-
-function hdHandlePlayerReloadReady(event) {
-  const request = hdPlayerReloadRequest;
-  if (!request || !request.id) return false;
-  if (request.timer) clearTimeout(reqTimer(request));
-  request.ready = true;
-  hdReloadButtonBusy(false);
-
-  try {
-    if (typeof event.target.unMute === 'function') {
-      event.target.unMute();
-    }
-    if (typeof event.target.setVolume === 'function') {
-      event.target.setVolume(request.volume || 100);
-    }
-  } catch (e) {}
-
-  if (request.ask) {
-    try {
-      if (typeof event.target.cueVideoById === 'function') {
-        event.target.cueVideoById({ videoId: request.id, startSeconds: request.time || 0 });
-      }
-    } catch (e) {}
-    hdShowPlayerReload(request);
-  } else {
-    hdDismissPlayerReload();
-    try {
-      event.target.playVideo();
-      toast('🔊 Đã làm mới trình phát & khôi phục âm thanh!');
-    } catch (e) {}
-  }
-  return true;
-}
-
-function reqTimer(req) {
-  return req && req.timer ? req.timer : null;
-}
-
-window.hdReloadYoutubePlayer = function () {
-  if (window.hdVoiceReloadHint && typeof window.hdVoiceReloadHint.dismiss === 'function') {
-    window.hdVoiceReloadHint.dismiss();
-  }
-  if (window.hdVoiceBusy && window.hdVoiceBusy()) {
-    toast('⚠️ Hãy kết thúc tìm kiếm bằng giọng nói trước khi khôi phục âm thanh.');
-    return false;
-  }
-  if (!current || !current.id) {
-    toast('⚠️ Chưa có bài hát nào đang phát để tải lại.');
-    return false;
-  }
-
-  let position = 0;
-  let duration = 0;
-
-  try {
-    if (ytPlayer) {
-      if (typeof ytPlayer.getCurrentTime === 'function') position = Math.max(0, Math.floor(ytPlayer.getCurrentTime() || 0));
-      if (typeof ytPlayer.getDuration === 'function') duration = Math.max(0, Math.floor(ytPlayer.getDuration() || 0));
-    }
-  } catch (e) {}
-
-  if (duration > 0 && position >= duration - 2) position = 0;
-
-  // Lưu trạng thái bài đang nghe & giây hiện tại vào sessionStorage rồi tải lại Document mới tinh
-  // để iOS WebKit giải phóng 100% kênh PlayAndRecord (nếu trước đó đã mở Mic)
-  try {
-    localStorage.setItem('aptv_car_mode', getCarMode());
-    const searchInput = document.getElementById('searchInput');
-    sessionStorage.setItem(HD_VOICE_READY_STORAGE_KEY, JSON.stringify({
-      mode: 'manual_reload',
-      query: searchInput ? searchInput.value.trim() : '',
-      results: (state.playlist && state.playlist.length > 0) ? state.playlist.slice(0, 25) : [],
-      song: current,
-      time: position,
-      ts: Date.now()
-    }));
-    hdReloadButtonBusy(true);
-    toast('🔄 Đang làm mới kênh âm thanh loa xe...');
-    setTimeout(() => {
-      window.location.replace(window.location.pathname + '?vr=' + Date.now());
-    }, 80);
-    return false;
-  } catch (e) {
-    console.warn('Fallback reload iframe:', e);
-  }
-
-  play(current, false, position);
-  return false;
-};
-
-/* =========================================================================
-   HD_VOICE_RELOAD_HINT_V1: BONG BÓNG HƯỚNG DẪN KHÔI PHỤC ÂM THANH SAU VOICE SEARCH
-   ========================================================================= */
-
-(function initVoiceReloadHintModule() {
-  let pendingVoice = false;
-  let active = false;
-  let frame = 0;
-
-  function getTargetButton() {
-    if (document.body.classList.contains('cinema')) {
-      return document.getElementById('cinemaReloadBtn');
-    }
-    return document.getElementById('btnReloadYoutube');
-  }
-
-  function dismiss() {
-    pendingVoice = false;
-    active = false;
-    const hint = document.getElementById('hdVoiceReloadHint');
-    if (hint) hint.hidden = true;
-    ['btnReloadYoutube', 'cinemaReloadBtn'].forEach((id) => {
-      const b = document.getElementById(id);
-      if (b) b.classList.remove('hd-voice-reload-target');
-    });
-  }
-
-  function position() {
-    frame = 0;
-    const hint = document.getElementById('hdVoiceReloadHint');
-    const button = getTargetButton();
-    if (!active || !hint || !button) return;
-
-    const rect = button.getBoundingClientRect();
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    if (!rect.width || !rect.height || rect.bottom <= 0 || rect.top >= height) {
-      hint.hidden = true;
-      return;
-    }
-
-    const size = Math.max(220, Math.min(350, width - 24));
-    hint.style.width = size + 'px';
-    hint.hidden = false;
-
-    const center = rect.left + rect.width / 2;
-    const left = Math.max(12, Math.min(center - size / 2, width - size - 12));
-    hint.style.left = Math.round(left) + 'px';
-
-    const hintHeight = hint.getBoundingClientRect().height || 68;
-    if (rect.top > hintHeight + 20) {
-      hint.classList.remove('arrow-top');
-      hint.style.top = Math.round(rect.top - hintHeight - 12) + 'px';
-    } else {
-      hint.classList.add('arrow-top');
-      hint.style.top = Math.round(rect.bottom + 12) + 'px';
-    }
-    hint.style.setProperty('--hd-hint-arrow', Math.max(18, Math.min(size - 18, center - left)) + 'px');
-  }
-
-  function schedule() {
-    if (!active || frame) return;
-    frame = window.requestAnimationFrame ? window.requestAnimationFrame(position) : setTimeout(position, 16);
-  }
-
-  function activateNow() {
-    pendingVoice = false;
-    active = true;
-    ['btnReloadYoutube', 'cinemaReloadBtn'].forEach((id) => {
-      const b = document.getElementById(id);
-      if (b) b.classList.add('hd-voice-reload-target');
-    });
-    setTimeout(schedule, 220);
-  }
-
-  window.hdVoiceReloadHint = {
-    searchStarted: function (fromVoice) {
-      dismiss();
-      pendingVoice = (fromVoice === true);
-    },
-    selected: function (element, event) {
-      if (!pendingVoice) return;
-      activateNow();
-    },
-    activateNow: activateNow,
-    dismiss: dismiss
-  };
-
-  window.addEventListener('resize', schedule, { passive: true });
-  window.addEventListener('scroll', schedule, { passive: true });
-})();
-
-/* =========================================================================
-   GÁN NÚT VÔ-LĂNG / BLUETOOTH GỌI VOICE SEARCH RẢNH TAY
-   ========================================================================= */
-
-const HD_BT_VOICE_STORAGE_KEY = 'aptv_bt_voice_binding_v1';
-let hdBluetoothVoiceBinding = null;
-let hdBluetoothButtonCapture = { active: false, candidate: null, timer: null };
-
-try {
-  const savedBt = localStorage.getItem(HD_BT_VOICE_STORAGE_KEY);
-  if (savedBt) hdBluetoothVoiceBinding = JSON.parse(savedBt);
-} catch (e) {}
-
-function hdBluetoothButtonLabel(binding) {
-  if (!binding) return 'Chưa gán';
-  return `${binding.type === 'media' ? 'Nút Media' : 'Phím cứng'} [${binding.value}]`;
-}
-
-function hdUpdateBluetoothStatusUI() {
-  const status = document.getElementById('hdBluetoothCaptureStatus');
-  const saveBtn = document.getElementById('hdBluetoothSaveButton');
-  if (!status) return;
-  if (hdBluetoothButtonCapture.active) {
-    status.textContent = '⏳ Đang chờ... Hãy bấm 1 nút trên vô lăng hoặc tẩu Bluetooth trong 10 giây.';
-  } else if (hdBluetoothButtonCapture.candidate) {
-    status.textContent = `✅ Đã nhận: ${hdBluetoothButtonLabel(hdBluetoothButtonCapture.candidate)}. Bấm "Gán nút này" để lưu.`;
-    if (saveBtn) saveBtn.disabled = false;
-  } else if (hdBluetoothVoiceBinding) {
-    status.textContent = `🎧 Đang dùng: ${hdBluetoothButtonLabel(hdBluetoothVoiceBinding)} để bật Tìm kiếm Giọng nói.`;
-    if (saveBtn) saveBtn.disabled = true;
-  } else {
-    status.textContent = 'Chưa gán nút cứng. Bạn có thể gán nút trên vô lăng hoặc tẩu Bluetooth để bật nhanh Voice Search.';
-    if (saveBtn) saveBtn.disabled = true;
-  }
-}
-
-window.hdStartCaptureBluetoothButton = function () {
-  if (hdBluetoothButtonCapture.timer) clearTimeout(hdBluetoothButtonCapture.timer);
-  hdBluetoothButtonCapture.active = true;
-  hdBluetoothButtonCapture.candidate = null;
-  hdUpdateBluetoothStatusUI();
-  hdBluetoothButtonCapture.timer = setTimeout(() => {
-    hdBluetoothButtonCapture.active = false;
-    hdUpdateBluetoothStatusUI();
-  }, 10000);
-  return false;
-};
-
-window.hdSaveCapturedBluetoothButton = function () {
-  if (!hdBluetoothButtonCapture.candidate) return false;
-  hdBluetoothVoiceBinding = hdBluetoothButtonCapture.candidate;
-  hdBluetoothButtonCapture.candidate = null;
-  hdBluetoothButtonCapture.active = false;
-  try {
-    localStorage.setItem(HD_BT_VOICE_STORAGE_KEY, JSON.stringify(hdBluetoothVoiceBinding));
-  } catch (e) {}
-  hdUpdateBluetoothStatusUI();
-  toast('🎧 Đã lưu nút mở Tìm kiếm Giọng nói!');
-  return false;
-};
-
-window.hdClearBluetoothVoiceBinding = function () {
-  hdBluetoothVoiceBinding = null;
-  hdBluetoothButtonCapture.candidate = null;
-  hdBluetoothButtonCapture.active = false;
-  try {
-    localStorage.removeItem(HD_BT_VOICE_STORAGE_KEY);
-  } catch (e) {}
-  hdUpdateBluetoothStatusUI();
-  toast('Đã xóa nút tắt Giọng nói.');
-  return false;
-};
-
-function hdTryCaptureOrRouteKey(e) {
-  const ignoredKeys = ['Shift', 'Control', 'Alt', 'Meta', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' ', 'Escape'];
-  if (hdBluetoothButtonCapture.active) {
-    if (ignoredKeys.includes(e.key)) return false;
-    e.preventDefault();
-    e.stopPropagation();
-    if (hdBluetoothButtonCapture.timer) clearTimeout(hdBluetoothButtonCapture.timer);
-    hdBluetoothButtonCapture.active = false;
-    hdBluetoothButtonCapture.candidate = { type: 'key', value: e.code || e.key };
-    hdUpdateBluetoothStatusUI();
-    toast('🎧 Đã nhận phím: ' + (e.code || e.key));
-    return true;
-  }
-  if (hdBluetoothVoiceBinding && hdBluetoothVoiceBinding.type === 'key') {
-    const activeTag = document.activeElement ? document.activeElement.tagName : '';
-    if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return false;
-    if ((e.code || e.key) === hdBluetoothVoiceBinding.value) {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!window.hdVoiceBusy() && !hdVoiceSearchSubmitting) {
-        toggleVoiceSearch();
-      }
-      return true;
-    }
-  }
-  return false;
-}
-
-function initVoiceSearch() {
-  hdUpdateBluetoothStatusUI();
-  window.addEventListener('pagehide', stopVoiceSearch);
-}
 function initRotarySmartSearch() {}
 
 /* =========================================================================
@@ -2787,13 +1811,11 @@ function getRotaryPageTargets() {
   const userBadge = document.getElementById('userBadge');
   const searchInput = document.getElementById('searchInput');
   const searchBtn = document.getElementById('btnTextSearch');
-  const voiceBtn = document.getElementById('btnVoiceSearch');
 
   if (modePill && modePill.offsetParent !== null) targets.push(modePill);
   if (userBadge && userBadge.style.display !== 'none' && userBadge.offsetParent !== null) targets.push(userBadge);
   if (searchInput && searchInput.offsetParent !== null) targets.push(searchInput);
   if (searchBtn && searchBtn.offsetParent !== null) targets.push(searchBtn);
-  if (voiceBtn && voiceBtn.offsetParent !== null) targets.push(voiceBtn);
 
   const songItems = Array.from(document.querySelectorAll('#results .item[data-play-id]'));
   targets.push(...songItems);
@@ -2891,18 +1913,8 @@ function initCinemaControls() {
 
   // 1. LẮNG NGHE PHÍM CỨNG VÔ LĂNG & NÚM XOAY MAZDA / BMW / MERCEDES (KEYDOWN)
   document.addEventListener('keydown', (e) => {
-    if (hdTryCaptureOrRouteKey(e)) return;
-
     // Phím Back / Escape trên vô lăng hoặc xe: đóng modal / thoát toàn màn hình
     if (e.key === 'Escape' || e.key === 'BrowserBack' || e.key === 'GoBack') {
-      if (hdMainVoiceSession) {
-        stopVoiceSearch();
-        return;
-      }
-      if (hdPlayerReloadRequest) {
-        window.hdClosePlayerReload();
-        return;
-      }
       const openModal = document.querySelector('.modal-back.open');
       if (openModal) {
         if (openModal.id !== 'authModal') {
@@ -2913,41 +1925,6 @@ function initCinemaControls() {
         exitCinemaMode();
       }
       return;
-    }
-
-    // ƯU TIÊN SỐ 1: KHI MODAL PHÁT NHẠC / KHÔI PHỤC ÂM THANH ĐANG MỞ (#hdPlayerReloadModal)
-    if (hdPlayerReloadRequest) {
-      const modalEl = document.getElementById('hdPlayerReloadModal');
-      if (modalEl && modalEl.classList.contains('open')) {
-        const modalBtns = Array.from(modalEl.querySelectorAll('button')).filter(b => b.offsetParent !== null && !b.classList.contains('iconbtn'));
-        const curIdx = modalBtns.indexOf(document.activeElement);
-        if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
-          e.preventDefault();
-          e.stopPropagation();
-          const next = modalBtns[(curIdx < 0 ? 0 : curIdx + 1) % modalBtns.length];
-          if (next) try { next.focus({ preventScroll: true }); } catch (err) {}
-          return;
-        }
-        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey)) {
-          e.preventDefault();
-          e.stopPropagation();
-          const prev = modalBtns[curIdx <= 0 ? modalBtns.length - 1 : curIdx - 1];
-          if (prev) try { prev.focus({ preventScroll: true }); } catch (err) {}
-          return;
-        }
-        if (e.key === 'Enter' || e.key === ' ' || e.key === 'NumpadEnter') {
-          e.preventDefault();
-          e.stopPropagation();
-          if (document.activeElement && document.activeElement.id === 'hdReloadCancelBtn') {
-            window.hdClosePlayerReload();
-          } else if (document.activeElement && document.activeElement.id === 'hdReloadRestartBtn') {
-            window.hdConfirmPlayerReload(true);
-          } else {
-            window.hdConfirmPlayerReload(false);
-          }
-          return;
-        }
-      }
     }
 
     // A. KHI ĐANG XEM TOÀN MÀN HÌNH (CINEMA MODE)
@@ -3015,27 +1992,15 @@ function initCinemaControls() {
     if (e.key === 'ArrowRight') {
       const searchInput = document.getElementById('searchInput');
       const searchBtn = document.getElementById('btnTextSearch');
-      const voiceBtn = document.getElementById('btnVoiceSearch');
       if (document.activeElement === searchInput && searchBtn) {
         e.preventDefault();
         setRotaryFocus(searchBtn);
-        return;
-      }
-      if (document.activeElement === searchBtn && voiceBtn) {
-        e.preventDefault();
-        setRotaryFocus(voiceBtn);
         return;
       }
     }
     if (e.key === 'ArrowLeft') {
       const searchInput = document.getElementById('searchInput');
       const searchBtn = document.getElementById('btnTextSearch');
-      const voiceBtn = document.getElementById('btnVoiceSearch');
-      if (document.activeElement === voiceBtn && searchBtn) {
-        e.preventDefault();
-        setRotaryFocus(searchBtn);
-        return;
-      }
       if (document.activeElement === searchBtn && searchInput) {
         e.preventDefault();
         setRotaryFocus(searchInput);
@@ -3055,24 +2020,6 @@ function initCinemaControls() {
 
   // 2. LẮNG NGHE SỰ KIỆN XOAY CON LĂN (WHEEL) - CHỐNG TRƯỢT & BỎ QUA BÀI HÁT
   window.addEventListener('wheel', (e) => {
-    if (hdPlayerReloadRequest) {
-      const modalEl = document.getElementById('hdPlayerReloadModal');
-      if (modalEl && modalEl.classList.contains('open')) {
-        e.preventDefault();
-        const modalBtns = Array.from(modalEl.querySelectorAll('button')).filter(b => b.offsetParent !== null && !b.classList.contains('iconbtn'));
-        if (!modalBtns.length) return;
-        const curIdx = modalBtns.indexOf(document.activeElement);
-        if (e.deltaY > 15 || e.deltaX > 15) {
-          const next = modalBtns[(curIdx < 0 ? 0 : curIdx + 1) % modalBtns.length];
-          if (next) try { next.focus({ preventScroll: true }); } catch (err) {}
-        } else if (e.deltaY < -15 || e.deltaX < -15) {
-          const prev = modalBtns[curIdx <= 0 ? modalBtns.length - 1 : curIdx - 1];
-          if (prev) try { prev.focus({ preventScroll: true }); } catch (err) {}
-        }
-        return;
-      }
-    }
-
     // Nếu đang xem toàn màn hình
     if (document.body.classList.contains('cinema')) {
       const btns = getCinemaBarButtons();
@@ -3276,80 +2223,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // KHÔI PHỤC TỨC THÌ (0MS) TỪ VOICE SEARCH HOẶC MANUAL RELOAD TRÊN DOCUMENT MỚI TINH
-  let restoredVoicePayload = null;
-  try {
-    const rawVoicePayload = sessionStorage.getItem(HD_VOICE_READY_STORAGE_KEY);
-    if (rawVoicePayload) {
-      sessionStorage.removeItem(HD_VOICE_READY_STORAGE_KEY);
-      const parsed = JSON.parse(rawVoicePayload);
-      if (parsed && (!parsed.ts || (Date.now() - parsed.ts < 60000))) {
-        restoredVoicePayload = parsed;
-      }
-    }
-    if (window.location.search && window.location.search.indexOf('vr=') !== -1 && window.history && window.history.replaceState) {
-      const cleanParams = new URLSearchParams(window.location.search);
-      cleanParams.delete('vr');
-      const qs = cleanParams.toString();
-      window.history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : ''));
-    }
-  } catch (e) {}
-
-  if (restoredVoicePayload) {
-    if (Array.isArray(restoredVoicePayload.results) && restoredVoicePayload.results.length > 0) {
-      state.playlist = restoredVoicePayload.results;
-      saveState();
-    }
-    if (restoredVoicePayload.query) {
-      const searchInput = document.getElementById('searchInput');
-      if (searchInput) searchInput.value = restoredVoicePayload.query;
-    }
-    const targetSong = restoredVoicePayload.song || (state.playlist && state.playlist[0]) || null;
-    if (targetSong && targetSong.id) {
-      current = targetSong;
-      currentIndex = state.playlist ? state.playlist.findIndex(x => x.id === targetSong.id) : 0;
-      const nowPlayingTitle = document.getElementById('nowPlayingTitle');
-      if (nowPlayingTitle) nowPlayingTitle.textContent = targetSong.title || targetSong.id;
-
-      // Đặt sẵn src của iframe YouTube vào bài hát vừa tìm được trước khi khởi tạo YT.Player
-      const frame = document.getElementById('ytPlayerFrame');
-      if (frame) {
-        const originParam = (location.origin && location.origin !== 'null')
-          ? `&origin=${encodeURIComponent(location.origin)}`
-          : '';
-        const startSec = Math.max(0, Math.floor(Number(restoredVoicePayload.time) || 0));
-        const startParam = startSec > 0 ? `&start=${startSec}` : '';
-        frame.src = `https://www.youtube.com/embed/${encodeURIComponent(targetSong.id)}?enablejsapi=1&playsinline=1&rel=0&autoplay=0${startParam}${originParam}`;
-      }
-
-      hdPlayerReloadRequest = {
-        id: targetSong.id,
-        title: targetSong.title || 'Bài hát đã chọn',
-        song: targetSong,
-        query: restoredVoicePayload.query || '',
-        mode: restoredVoicePayload.mode || 'voice_search',
-        time: Math.max(0, Math.floor(Number(restoredVoicePayload.time) || 0)),
-        volume: 100,
-        muted: false,
-        ask: true,
-        ready: false
-      };
-    }
-  }
-
   const initialCarMode = getCarMode();
   applyCarMode(initialCarMode);
   renderAll();
-  initVoiceSearch();
   initRotarySmartSearch();
   initCinemaControls();
-
-  if (hdPlayerReloadRequest) {
-    hdShowPlayerReload(hdPlayerReloadRequest);
-    if (hdPlayerReloadRequest.mode === 'voice_search' && hdPlayerReloadRequest.query) {
-      setVoiceSearchNotice(`✅ Đã tìm thấy ${state.playlist.length} bài cho "${hdPlayerReloadRequest.query}". Bấm PHÁT NGAY hoặc chọn bài bất kỳ để phát ra loa xe!`, 12000);
-    }
-  }
 
   if (window.YT && typeof window.YT.Player === 'function' && typeof window.onYouTubeIframeAPIReady === 'function') {
     window.onYouTubeIframeAPIReady();
