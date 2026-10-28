@@ -142,21 +142,142 @@ function getDeviceId() {
   return id;
 }
 
+/* =========================================================================
+   HỆ THỐNG GỢI Ý BÀI HÁT CÙNG THỂ LOẠI THEO TÀI KHOẢN (CACHE TRÌNH DUYỆT)
+   ========================================================================= */
+
+const TASTE_CACHE_PREFIX = 'trungplay_account_taste_v2_';
+
+function getCurrentAccountPhone() {
+  try {
+    const raw = localStorage.getItem('aptv_user');
+    if (!raw) return 'guest';
+    const user = JSON.parse(raw);
+    const p = normalizePhone(user.username || user.phone || '');
+    return p || 'guest';
+  } catch (e) {
+    return 'guest';
+  }
+}
+
+function getTasteCacheKey() {
+  return TASTE_CACHE_PREFIX + getCurrentAccountPhone();
+}
+
+function loadAccountTaste() {
+  try {
+    const key = getTasteCacheKey();
+    const raw = localStorage.getItem(key);
+    if (!raw) return { genres: {}, topGenre: '', homeSuggestions: [], lastUpdated: 0 };
+    const data = JSON.parse(raw);
+    if (!data || typeof data !== 'object') return { genres: {}, topGenre: '', homeSuggestions: [], lastUpdated: 0 };
+    if (!data.genres) data.genres = {};
+    if (!Array.isArray(data.homeSuggestions)) data.homeSuggestions = [];
+    return data;
+  } catch (e) {
+    return { genres: {}, topGenre: '', homeSuggestions: [], lastUpdated: 0 };
+  }
+}
+
+function saveAccountTaste(taste) {
+  try {
+    const key = getTasteCacheKey();
+    localStorage.setItem(key, JSON.stringify(taste));
+  } catch (e) {}
+}
+
+const GENRE_RULES = [
+  {
+    genre: 'Bolero Trữ Tình',
+    query: 'Liên khúc Bolero Trữ Tình Chọn Lọc Hay Nhất',
+    regex: /(bolero|tru tinh|trữ tình|nhac vang|nhạc vàng|le quyen|lệ quyên|quang le|quang lê|tuan vu|tuấn vũ|che linh|chế linh|truong vu|trường vũ|dan nguyen|đan nguyên|nhu quynh|như quỳnh|phi nhung|manh quynh|mạnh quỳnh|giao linh|huong lan|hương lan|ngoc son|ngọc sơn|duong ngoc thai|dương ngọc thái)/i
+  },
+  {
+    genre: 'Vinahouse Bass Căng',
+    query: 'Nonstop Vinahouse Bass Cực Căng Lái Xe Mới Nhất',
+    regex: /(vinahouse|vina house|nonstop|nhac san|nhạc sàn|bass cuc manh|bass cực mạnh|bass cuc cang|bass cực căng|bay phong|bay phòng|dj hyena|viet mix|việt mix|dap tung loa|đập tung loa)/i
+  },
+  {
+    genre: 'Nhạc Trẻ Remix TikTok',
+    query: 'Liên Khúc Nhạc Trẻ Remix Hot Trend TikTok Hay Nhất',
+    regex: /(remix|tiktok|tik tok|hot trend|nhac tre remix|nhạc trẻ remix|trieu view|triệu view|cuc dinh|cực đỉnh)/i
+  },
+  {
+    genre: 'Lofi Chill Lái Xe',
+    query: 'Playlist Lofi Chill Lái Xe Buổi Tối Tuyệt Đẹp',
+    regex: /(lofi|lo-fi|chill|acoustic|thu gian|thư giãn|dem khuya|đêm khuya|nghe tren xe cuc chill|nghe trên xe cực chill|khong buon ngu|không buồn ngủ)/i
+  },
+  {
+    genre: 'Nhạc Trẻ Ballad',
+    query: 'Tuyển Chọn Nhạc Trẻ Ballad Tâm Trạng Hay Nhất',
+    regex: /(ballad|nhac tre|nhạc trẻ|tam trang|tâm trạng|son tung|sơn tùng|den vau|đen vâu|ha anh tuan|hà anh tuấn|vu\.|vũ\.|chillies|erik|duc phuc|đức phúc|mr siro|trinh dinh quang|trịnh đình quang)/i
+  },
+  {
+    genre: 'Nhạc Quê Hương Dân Ca',
+    query: 'Tuyển Chọn Nhạc Quê Hương Dân Ca Miền Tây Hay Nhất',
+    regex: /(que huong|quê hương|dan ca|dân ca|mien tay|miền tây|song nuoc|sông nước|cam ly|cẩm ly|quoc dai|quốc đại|to my|tố my)/i
+  },
+  {
+    genre: 'Nhạc Đỏ Cách Mạng',
+    query: 'Liên Khúc Nhạc Đỏ Tiền Chiến Cách Mạng Bất Hủ',
+    regex: /(nhac do|nhạc đỏ|tien chien|tiền chiến|cach mang|cách mạng|trong tan|trọng tấn|dang duong|đăng dương|viet hoan|việt hoàn|lan anh|anh tho|ánh thơ)/i
+  },
+  {
+    genre: 'Nhạc Phật Thiền Tịnh Tâm',
+    query: 'Nhạc Phật Giáo Thiền Định Tịnh Tâm An Nhiên',
+    regex: /(nhac phat|nhạc phật|phat giao|phật giáo|tinh tam|tịnh tâm|an nhien|an nhiên|thien|thiền|nam mo a di da phat|chua|quan the am)/i
+  },
+  {
+    genre: 'Deep House Night Drive',
+    query: 'Deep House MIX 2026 - Best Luxury Car Night Drive Music',
+    regex: /(deep house|night drive|luxury car|dravyn|edm|electronic|car music)/i
+  },
+  {
+    genre: 'Nhạc Không Lời Hòa Tấu',
+    query: 'Nhạc Không Lời Hòa Tấu Saxophone Guitar Lái Xe Tuyệt Hay',
+    regex: /(khong loi|không lời|hoa tau|hòa tấu|saxophone|guitar|piano|nhac lai xe khong loi)/i
+  },
+  {
+    genre: 'Nhạc Hoa Lời Việt',
+    query: 'Tuyển Chọn Nhạc Hoa Lời Việt Remix Hay Nhất',
+    regex: /(nhac hoa|nhạc hoa|hoa loi viet|hoa lời việt|trung quoc|tieng hoa)/i
+  },
+  {
+    genre: 'Rap Việt',
+    query: 'Tuyển Chọn Rap Việt Hay Nhất',
+    regex: /(rap viet|rap việt|hiphop|hip hop|den vau|đen vâu|b ray|suboi|karik|justatee|mck|tlinh)/i
+  }
+];
+
+function detectGenreFromText(text, channel) {
+  const combined = ((text || '') + ' ' + (channel || '')).toLowerCase();
+  for (const rule of GENRE_RULES) {
+    if (rule.regex.test(combined)) {
+      return rule;
+    }
+  }
+  return null;
+}
+
+function getHomeSuggestedPlaylist() {
+  const taste = loadAccountTaste();
+  if (Array.isArray(taste.homeSuggestions) && taste.homeSuggestions.length >= 4) {
+    return taste.homeSuggestions;
+  }
+  return defaults.playlist;
+}
+
 // KHỞI TẠO STATE
 function loadState() {
   try {
     const loaded = { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') };
     if (!Array.isArray(loaded.favorites)) loaded.favorites = [];
 
-    // Tự động nâng cấp danh sách mặc định lên tuyển tập liên khúc nhạc dài xe hơi (TikTok Remix, Deep House, Vinahouse)
-    const PLAYLIST_CACHE_VERSION = 'aptv_carmix_long_v3';
-    const isOldPlaylist = !loaded.playlist || !loaded.playlist.length || loaded.playlist.some(x => x.id === 'abPmZCZZrFA' || x.id === 'GpmOn4RyzZI' || x.id === 'L_LUpnjgPso' || x.id === 'a9l_3ZzC2yY');
-    if (localStorage.getItem('aptv_playlist_ver') !== PLAYLIST_CACHE_VERSION || isOldPlaylist) {
+    const homeSuggestions = getHomeSuggestedPlaylist();
+    if (homeSuggestions && homeSuggestions.length >= 4) {
+      loaded.playlist = [...homeSuggestions];
+    } else {
       loaded.playlist = [...defaults.playlist];
-      localStorage.setItem('aptv_playlist_ver', PLAYLIST_CACHE_VERSION);
-      try {
-        localStorage.setItem(KEY, JSON.stringify(loaded));
-      } catch(e){}
     }
 
     return loaded;
@@ -243,10 +364,6 @@ function hideAuthModal() {
     accountModal.classList.remove('open');
     accountModal.style.display = 'none';
   }
-  if (voiceModal) {
-    voiceModal.classList.remove('open');
-    voiceModal.style.display = 'none';
-  }
 
   document.querySelectorAll('.modal-back').forEach(m => {
     m.classList.remove('open');
@@ -286,7 +403,6 @@ function handleKickedOut(msg) {
   // Dừng phát nhạc / video ngay lập tức
   destroyPlayers(false);
   exitCinemaMode();
-  stopVoiceSearch();
 
   current = null;
   currentIndex = -1;
@@ -1094,6 +1210,7 @@ function play(item, add = true, startSeconds = 0) {
   }
 
   toast('Đang phát: ' + (item.title || videoId));
+  recordSongPlayForTaste(item);
 }
 
 // BẮT SỰ KIỆN POSTMESSAGE TỪ YOUTUBE IFRAME
@@ -1170,7 +1287,8 @@ function itemHtml(item, isFavList = false) {
 }
 
 function renderAll() {
-  const listToRender = (state.playlist && state.playlist.length > 0) ? state.playlist : defaults.playlist;
+  const homeList = getHomeSuggestedPlaylist();
+  const listToRender = (state.playlist && state.playlist.length > 0) ? state.playlist : homeList;
   if (listToRender && listToRender.length > 0) {
     renderSearchResults(listToRender);
   }
@@ -1351,6 +1469,128 @@ function firstSuccessfulResult(promises) {
   });
 }
 
+// Tìm kiếm ngầm bài hát cùng thể loại không đụng chạm màn hình hay audio session
+async function silentFetchGenreSongs(searchQuery) {
+  if (!searchQuery) return [];
+  try {
+    const encoded = encodeURIComponent(searchQuery);
+    const ytSearchUrl = encodeURIComponent(`https://www.youtube.com/results?search_query=${encoded}`);
+    const endpoints = [
+      `https://api.piped.private.coffee/search?q=${encoded}&filter=videos`,
+      `https://pipedapi.ducks.party/search?q=${encoded}&filter=videos`,
+      `https://pipedapi.wireway.ch/search?q=${encoded}&filter=videos`,
+      `https://pipedapi.kavin.rocks/search?q=${encoded}&filter=videos`,
+      `https://inv.nadeko.net/api/v1/search?q=${encoded}&type=video`,
+      `https://api.allorigins.win/get?url=${ytSearchUrl}`
+    ];
+    const promises = endpoints.map(u => searchSingleEndpoint(u, 5000));
+    const results = await firstSuccessfulResult(promises);
+    return Array.isArray(results) ? results : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// Ghi nhận gu nhạc sau khi bài hát đã bắt đầu phát (chạy nền, không giật âm thanh)
+let tasteUpdateDebounceTimer = null;
+function recordSongPlayForTaste(item) {
+  if (!item || !item.id) return;
+  if (tasteUpdateDebounceTimer) clearTimeout(tasteUpdateDebounceTimer);
+  tasteUpdateDebounceTimer = setTimeout(async () => {
+    try {
+      const detected = detectGenreFromText(item.title, item.channel);
+      const taste = loadAccountTaste();
+
+      if (detected) {
+        taste.genres[detected.genre] = (taste.genres[detected.genre] || 0) + 1;
+        let maxCount = 0;
+        let topGenreName = detected.genre;
+        for (const [g, count] of Object.entries(taste.genres)) {
+          if (count > maxCount) {
+            maxCount = count;
+            topGenreName = g;
+          }
+        }
+        taste.topGenre = topGenreName;
+        const topRule = GENRE_RULES.find(r => r.genre === topGenreName) || detected;
+
+        // Đưa bài vừa nghe lên đầu danh sách gợi ý
+        const existingIdx = taste.homeSuggestions.findIndex(x => x.id === item.id);
+        if (existingIdx >= 0) taste.homeSuggestions.splice(existingIdx, 1);
+        taste.homeSuggestions.unshift(item);
+
+        // Nếu danh sách chưa đủ hoặc đã hơn 2 ngày chưa làm mới, tìm ngầm thêm bài cùng thể loại
+        const now = Date.now();
+        const needRefresh = taste.homeSuggestions.length < 12 || (now - (taste.lastUpdated || 0) > 48 * 3600000);
+        if (needRefresh && topRule && topRule.query) {
+          taste.lastUpdated = now;
+          saveAccountTaste(taste);
+          const freshSongs = await silentFetchGenreSongs(topRule.query);
+          if (freshSongs && freshSongs.length > 0) {
+            const seenIds = new Set(taste.homeSuggestions.map(x => x.id));
+            for (const s of freshSongs) {
+              if (s && s.id && !seenIds.has(s.id)) {
+                seenIds.add(s.id);
+                taste.homeSuggestions.push(s);
+              }
+            }
+            taste.homeSuggestions = taste.homeSuggestions.slice(0, 30);
+            saveAccountTaste(taste);
+          }
+          return;
+        }
+      } else {
+        const existingIdx = taste.homeSuggestions.findIndex(x => x.id === item.id);
+        if (existingIdx >= 0) taste.homeSuggestions.splice(existingIdx, 1);
+        taste.homeSuggestions.unshift(item);
+        taste.homeSuggestions = taste.homeSuggestions.slice(0, 30);
+      }
+      saveAccountTaste(taste);
+    } catch (err) {
+      console.warn('Taste update warning:', err);
+    }
+  }, 1200);
+}
+
+// Ghi nhận gu nhạc từ từ khóa tìm kiếm và lưu các bài cùng thể loại vào cache trang chủ
+function recordSearchForTaste(query, searchResults) {
+  if (!query || !Array.isArray(searchResults) || !searchResults.length) return;
+  setTimeout(() => {
+    try {
+      const detected = detectGenreFromText(query, '');
+      if (!detected) return;
+
+      const taste = loadAccountTaste();
+      taste.genres[detected.genre] = (taste.genres[detected.genre] || 0) + 2;
+
+      let maxCount = 0;
+      let topGenreName = detected.genre;
+      for (const [g, count] of Object.entries(taste.genres)) {
+        if (count > maxCount) {
+          maxCount = count;
+          topGenreName = g;
+        }
+      }
+      taste.topGenre = topGenreName;
+
+      const existing = taste.homeSuggestions || [];
+      const seenIds = new Set(existing.map(x => x.id));
+      const newItems = [];
+      for (const item of searchResults) {
+        if (item && item.id && !seenIds.has(item.id)) {
+          seenIds.add(item.id);
+          newItems.push(item);
+        }
+        if (newItems.length >= 10) break;
+      }
+
+      taste.homeSuggestions = [...existing, ...newItems].slice(0, 30);
+      taste.lastUpdated = Date.now();
+      saveAccountTaste(taste);
+    } catch (e) {}
+  }, 400);
+}
+
 async function search(q) {
   q = (q || '').trim();
   if (!q) return [];
@@ -1373,6 +1613,7 @@ async function search(q) {
       if (r.ok && j.items) {
         const arr = extractVideoItemsFromApiData(j);
         if (arr.length > 0) {
+          recordSearchForTaste(q, arr);
           renderSearchResults(arr);
           return arr;
         }
@@ -1401,6 +1642,7 @@ async function search(q) {
   const results = await firstSuccessfulResult(promises);
 
   if (Array.isArray(results) && results.length > 0) {
+    recordSearchForTaste(q, results);
     renderSearchResults(results);
     return results;
   }
@@ -2198,6 +2440,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     };
+
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        if (!searchInput.value.trim()) {
+          const homeList = getHomeSuggestedPlaylist();
+          if (homeList && homeList.length > 0) {
+            state.playlist = [...homeList];
+            renderSearchResults(homeList);
+          }
+        }
+      });
+    }
   }
 
   const carModeModal = document.getElementById('carModeModal');
