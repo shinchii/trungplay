@@ -146,17 +146,17 @@ function getDeviceId() {
    HỆ THỐNG GỢI Ý BÀI HÁT CÙNG THỂ LOẠI THEO TÀI KHOẢN (CACHE TRÌNH DUYỆT)
    ========================================================================= */
 
-const TASTE_CACHE_PREFIX = 'trungplay_account_taste_v2_';
+const TASTE_CACHE_PREFIX = 'trungplay_account_taste_v3_';
 
 function getCurrentAccountPhone() {
   try {
     const raw = localStorage.getItem('aptv_user');
-    if (!raw) return 'guest';
+    if (!raw) return 'local';
     const user = JSON.parse(raw);
     const p = normalizePhone(user.username || user.phone || '');
-    return p || 'guest';
+    return p || 'local';
   } catch (e) {
-    return 'guest';
+    return 'local';
   }
 }
 
@@ -166,8 +166,13 @@ function getTasteCacheKey() {
 
 function loadAccountTaste() {
   try {
-    const key = getTasteCacheKey();
-    const raw = localStorage.getItem(key);
+    const phone = getCurrentAccountPhone();
+    const key = TASTE_CACHE_PREFIX + phone;
+    let raw = localStorage.getItem(key);
+    // Nếu chưa có theo SĐT, thử lấy từ local hoặc guest trước đó
+    if (!raw && phone !== 'local') {
+      raw = localStorage.getItem(TASTE_CACHE_PREFIX + 'local') || localStorage.getItem(TASTE_CACHE_PREFIX + 'guest');
+    }
     if (!raw) return { genres: {}, topGenre: '', homeSuggestions: [], lastUpdated: 0 };
     const data = JSON.parse(raw);
     if (!data || typeof data !== 'object') return { genres: {}, topGenre: '', homeSuggestions: [], lastUpdated: 0 };
@@ -181,8 +186,13 @@ function loadAccountTaste() {
 
 function saveAccountTaste(taste) {
   try {
-    const key = getTasteCacheKey();
+    const phone = getCurrentAccountPhone();
+    const key = TASTE_CACHE_PREFIX + phone;
     localStorage.setItem(key, JSON.stringify(taste));
+    // Đồng thời đồng bộ vào local để không bao giờ bị mất khi chuyển đổi phiên
+    if (phone !== 'local') {
+      localStorage.setItem(TASTE_CACHE_PREFIX + 'local', JSON.stringify(taste));
+    }
   } catch (e) {}
 }
 
@@ -190,27 +200,27 @@ const GENRE_RULES = [
   {
     genre: 'Bolero Trữ Tình',
     query: 'Liên khúc Bolero Trữ Tình Chọn Lọc Hay Nhất',
-    regex: /(bolero|tru tinh|trữ tình|nhac vang|nhạc vàng|le quyen|lệ quyên|quang le|quang lê|tuan vu|tuấn vũ|che linh|chế linh|truong vu|trường vũ|dan nguyen|đan nguyên|nhu quynh|như quỳnh|phi nhung|manh quynh|mạnh quỳnh|giao linh|huong lan|hương lan|ngoc son|ngọc sơn|duong ngoc thai|dương ngọc thái)/i
+    regex: /(bolero|tru tinh|trữ tình|nhac vang|nhạc vàng|le quyen|lệ quyên|quang le|quang lê|tuan vu|tuấn vũ|che linh|chế linh|truong vu|trường vũ|dan nguyen|đan nguyên|nhu quynh|như quỳnh|phi nhung|manh quynh|mạnh quỳnh|giao linh|huong lan|hương lan|ngoc son|ngọc sơn|duong ngoc thai|dương ngọc thái|dap mo cuoc tinh|đắp mộ cuộc tình|sau le bong|sầu lẻ bóng|hoa no ve dem|hoa nở về đêm)/i
   },
   {
     genre: 'Vinahouse Bass Căng',
     query: 'Nonstop Vinahouse Bass Cực Căng Lái Xe Mới Nhất',
-    regex: /(vinahouse|vina house|nonstop|nhac san|nhạc sàn|bass cuc manh|bass cực mạnh|bass cuc cang|bass cực căng|bay phong|bay phòng|dj hyena|viet mix|việt mix|dap tung loa|đập tung loa)/i
+    regex: /(vinahouse|vina house|nonstop|nhac san|nhạc sàn|bass cuc manh|bass cực mạnh|bass cuc cang|bass cực căng|bay phong|bay phòng|dj hyena|viet mix|việt mix|dap tung loa|đập tung loa|dance|dj)/i
   },
   {
     genre: 'Nhạc Trẻ Remix TikTok',
     query: 'Liên Khúc Nhạc Trẻ Remix Hot Trend TikTok Hay Nhất',
-    regex: /(remix|tiktok|tik tok|hot trend|nhac tre remix|nhạc trẻ remix|trieu view|triệu view|cuc dinh|cực đỉnh)/i
+    regex: /(remix|tiktok|tik tok|hot trend|nhac tre remix|nhạc trẻ remix|trieu view|triệu view|cuc dinh|cực đỉnh|tang phuc|tăng phúc|thieu bao tram|thiều bảo trâm|hoang thuy linh|hoàng thùy linh)/i
   },
   {
     genre: 'Lofi Chill Lái Xe',
     query: 'Playlist Lofi Chill Lái Xe Buổi Tối Tuyệt Đẹp',
-    regex: /(lofi|lo-fi|chill|acoustic|thu gian|thư giãn|dem khuya|đêm khuya|nghe tren xe cuc chill|nghe trên xe cực chill|khong buon ngu|không buồn ngủ)/i
+    regex: /(lofi|lo-fi|chill|acoustic|thu gian|thư giãn|dem khuya|đêm khuya|nghe tren xe cuc chill|nghe trên xe cực chill|khong buon ngu|không buồn ngủ|chay qua nhung ngay dep troi|chạy qua những ngày đẹp trời)/i
   },
   {
     genre: 'Nhạc Trẻ Ballad',
     query: 'Tuyển Chọn Nhạc Trẻ Ballad Tâm Trạng Hay Nhất',
-    regex: /(ballad|nhac tre|nhạc trẻ|tam trang|tâm trạng|son tung|sơn tùng|den vau|đen vâu|ha anh tuan|hà anh tuấn|vu\.|vũ\.|chillies|erik|duc phuc|đức phúc|mr siro|trinh dinh quang|trịnh đình quang)/i
+    regex: /(ballad|nhac tre|nhạc trẻ|tam trang|tâm trạng|son tung|sơn tùng|den vau|đen vâu|ha anh tuan|hà anh tuấn|vu\.|vũ\.|chillies|erik|duc phuc|đức phúc|mr siro|trinh dinh quang|trịnh đình quang|phan manh quynh|phan mạnh quỳnh|hoai lam|hoài lâm|trinh thang binh|trịnh thăng bình)/i
   },
   {
     genre: 'Nhạc Quê Hương Dân Ca',
@@ -249,21 +259,78 @@ const GENRE_RULES = [
   }
 ];
 
+// Nhận diện vạn năng bất kỳ thể loại hay ca sĩ nào từ tiêu đề & tên kênh
 function detectGenreFromText(text, channel) {
-  const combined = ((text || '') + ' ' + (channel || '')).toLowerCase();
+  const combined = ((text || '') + ' ' + (channel || '')).trim();
+  const lower = combined.toLowerCase();
+
   for (const rule of GENRE_RULES) {
-    if (rule.regex.test(combined)) {
+    if (rule.regex.test(lower)) {
       return rule;
     }
   }
+
+  // Tự động nhận diện Tên Ca Sĩ từ tiêu đề ("Ca Sĩ - Tên Bài") hoặc tên Kênh
+  let cleanArtist = '';
+  if (text && text.includes('-')) {
+    const parts = text.split('-');
+    const candidate = parts[0].trim();
+    if (candidate.length >= 2 && candidate.length <= 32 && !/^(tập|phim|official|mv|video|video clip|full|live|tuyển tập|tổng hợp)/i.test(candidate)) {
+      cleanArtist = candidate;
+    }
+  }
+  if (!cleanArtist && channel && channel.length >= 2 && channel.length <= 30 && !/^(vevo|youtube|topic|music|official)/i.test(channel)) {
+    cleanArtist = channel.replace(/\s*(official|channel|vevo|music|tv|entertainment|records)\s*$/i, '').trim();
+  }
+
+  if (cleanArtist) {
+    return {
+      genre: cleanArtist,
+      query: 'Những bài hát hay nhất của ' + cleanArtist
+    };
+  }
+
+  const words = (text || '').trim();
+  if (words.length >= 2 && words.length <= 40) {
+    return {
+      genre: words,
+      query: 'Tuyển tập ' + words + ' hay nhất'
+    };
+  }
+
   return null;
 }
 
 function getHomeSuggestedPlaylist() {
   const taste = loadAccountTaste();
-  if (Array.isArray(taste.homeSuggestions) && taste.homeSuggestions.length >= 4) {
-    return taste.homeSuggestions;
+
+  // 1. Nếu đã có bài hát gợi ý trong cache
+  if (Array.isArray(taste.homeSuggestions) && taste.homeSuggestions.length > 0) {
+    if (taste.homeSuggestions.length >= 10) {
+      return taste.homeSuggestions.slice(0, 30);
+    }
+    // Nếu có ít hơn 10 bài, đệm thêm các bài mặc định khác để danh sách luôn đủ dài
+    const seenIds = new Set(taste.homeSuggestions.map(x => x.id));
+    const padded = [...taste.homeSuggestions];
+    for (const d of defaults.playlist) {
+      if (!seenIds.has(d.id)) {
+        seenIds.add(d.id);
+        padded.push(d);
+      }
+      if (padded.length >= 15) break;
+    }
+    return padded;
   }
+
+  // 2. Nếu chưa có gợi ý nhưng người dùng đã từng nghe bài trong history (kể cả 1 bài):
+  if (state && Array.isArray(state.history) && state.history.length > 0) {
+    const historySongs = state.history.slice(0, 20);
+    setTimeout(() => {
+      recordSongPlayForTaste(historySongs[0]);
+    }, 150);
+    return historySongs;
+  }
+
   return defaults.playlist;
 }
 
@@ -272,17 +339,15 @@ function loadState() {
   try {
     const loaded = { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') };
     if (!Array.isArray(loaded.favorites)) loaded.favorites = [];
+    if (!Array.isArray(loaded.history)) loaded.history = [];
 
+    // Luôn ưu tiên nạp danh sách gợi ý cùng thể loại theo tài khoản
     const homeSuggestions = getHomeSuggestedPlaylist();
-    if (homeSuggestions && homeSuggestions.length >= 4) {
-      loaded.playlist = [...homeSuggestions];
-    } else {
-      loaded.playlist = [...defaults.playlist];
-    }
+    loaded.playlist = [...homeSuggestions];
 
     return loaded;
   } catch (e) {
-    return { ...defaults, favorites: [] };
+    return { ...defaults, favorites: [], history: [] };
   }
 }
 function saveState() {
@@ -1287,11 +1352,15 @@ function itemHtml(item, isFavList = false) {
 }
 
 function renderAll() {
+  const searchInput = document.getElementById('searchInput');
+  const isSearching = searchInput && searchInput.value.trim().length > 0;
   const homeList = getHomeSuggestedPlaylist();
-  const listToRender = (state.playlist && state.playlist.length > 0) ? state.playlist : homeList;
-  if (listToRender && listToRender.length > 0) {
-    renderSearchResults(listToRender);
-  }
+  const listToRender = isSearching && (state.playlist && state.playlist.length > 0)
+    ? state.playlist
+    : homeList;
+
+  state.playlist = [...listToRender];
+  renderSearchResults(listToRender);
   renderFavoritesList();
   updateFavoritesUI();
 }
@@ -1519,12 +1588,12 @@ function recordSongPlayForTaste(item) {
         if (existingIdx >= 0) taste.homeSuggestions.splice(existingIdx, 1);
         taste.homeSuggestions.unshift(item);
 
-        // Nếu danh sách chưa đủ hoặc đã hơn 2 ngày chưa làm mới, tìm ngầm thêm bài cùng thể loại
-        const now = Date.now();
-        const needRefresh = taste.homeSuggestions.length < 12 || (now - (taste.lastUpdated || 0) > 48 * 3600000);
-        if (needRefresh && topRule && topRule.query) {
-          taste.lastUpdated = now;
-          saveAccountTaste(taste);
+        // Lưu trước bài vừa nghe vào cache
+        saveAccountTaste(taste);
+
+        // Nếu danh sách gợi ý chưa đủ 15 bài, tìm ngầm thêm bài cùng thể loại
+        if (taste.homeSuggestions.length < 15 && topRule && topRule.query) {
+          taste.lastUpdated = Date.now();
           const freshSongs = await silentFetchGenreSongs(topRule.query);
           if (freshSongs && freshSongs.length > 0) {
             const seenIds = new Set(taste.homeSuggestions.map(x => x.id));
@@ -1536,6 +1605,13 @@ function recordSongPlayForTaste(item) {
             }
             taste.homeSuggestions = taste.homeSuggestions.slice(0, 30);
             saveAccountTaste(taste);
+
+            // Nếu người dùng đang ở trang chủ, cập nhật danh sách gợi ý mượt mà
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput && !searchInput.value.trim() && !document.body.classList.contains('cinema')) {
+              state.playlist = [...taste.homeSuggestions];
+              renderSearchResults(taste.homeSuggestions);
+            }
           }
           return;
         }
@@ -1544,12 +1620,12 @@ function recordSongPlayForTaste(item) {
         if (existingIdx >= 0) taste.homeSuggestions.splice(existingIdx, 1);
         taste.homeSuggestions.unshift(item);
         taste.homeSuggestions = taste.homeSuggestions.slice(0, 30);
+        saveAccountTaste(taste);
       }
-      saveAccountTaste(taste);
     } catch (err) {
       console.warn('Taste update warning:', err);
     }
-  }, 1200);
+  }, 400);
 }
 
 // Ghi nhận gu nhạc từ từ khóa tìm kiếm và lưu các bài cùng thể loại vào cache trang chủ
@@ -1558,13 +1634,13 @@ function recordSearchForTaste(query, searchResults) {
   setTimeout(() => {
     try {
       const detected = detectGenreFromText(query, '');
-      if (!detected) return;
-
       const taste = loadAccountTaste();
-      taste.genres[detected.genre] = (taste.genres[detected.genre] || 0) + 2;
+      const genreName = detected ? detected.genre : query.trim();
+
+      taste.genres[genreName] = (taste.genres[genreName] || 0) + 3;
 
       let maxCount = 0;
-      let topGenreName = detected.genre;
+      let topGenreName = genreName;
       for (const [g, count] of Object.entries(taste.genres)) {
         if (count > maxCount) {
           maxCount = count;
@@ -1573,22 +1649,30 @@ function recordSearchForTaste(query, searchResults) {
       }
       taste.topGenre = topGenreName;
 
+      // Đưa các bài cùng thể loại tìm được vào đầu danh sách gợi ý
       const existing = taste.homeSuggestions || [];
-      const seenIds = new Set(existing.map(x => x.id));
-      const newItems = [];
+      const seenIds = new Set();
+      const combined = [];
       for (const item of searchResults) {
         if (item && item.id && !seenIds.has(item.id)) {
           seenIds.add(item.id);
-          newItems.push(item);
+          combined.push(item);
         }
-        if (newItems.length >= 10) break;
+        if (combined.length >= 15) break;
+      }
+      for (const item of existing) {
+        if (item && item.id && !seenIds.has(item.id)) {
+          seenIds.add(item.id);
+          combined.push(item);
+        }
+        if (combined.length >= 30) break;
       }
 
-      taste.homeSuggestions = [...existing, ...newItems].slice(0, 30);
+      taste.homeSuggestions = combined;
       taste.lastUpdated = Date.now();
       saveAccountTaste(taste);
     } catch (e) {}
-  }, 400);
+  }, 200);
 }
 
 async function search(q) {
@@ -1657,11 +1741,29 @@ async function search(q) {
   return [];
 }
 
-function renderSearchResults(arr) {
+function renderSearchResults(arr, customTitle = '') {
   const out = document.getElementById('results');
   if (!out) return;
   const countEl = document.getElementById('resultCount');
   if (countEl) countEl.textContent = arr.length ? `(${arr.length} bài hát)` : '';
+
+  const titleEl = document.getElementById('resultsTitle') || document.querySelector('#resultsHeader h2');
+  if (titleEl) {
+    const searchInput = document.getElementById('searchInput');
+    const isSearching = searchInput && searchInput.value.trim().length > 0;
+    if (customTitle) {
+      titleEl.textContent = customTitle;
+    } else if (isSearching) {
+      titleEl.textContent = '🔍 Kết quả tìm kiếm';
+    } else {
+      const taste = loadAccountTaste();
+      if (taste && taste.topGenre) {
+        titleEl.textContent = '🎧 Gợi ý: ' + taste.topGenre;
+      } else {
+        titleEl.textContent = 'Danh sách bài hát';
+      }
+    }
+  }
 
   state.playlist = [...arr];
 
