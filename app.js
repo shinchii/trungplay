@@ -401,6 +401,31 @@ function isAccountActive(user) {
   return false;
 }
 
+function isAccountValid(user) {
+  if (!isAccountActive(user)) return false;
+  const expire = getAccountExpireDate(user);
+  return (expire.getTime() === 0 || expire > new Date());
+}
+
+function openRenewModalFromAccount() {
+  closeAccountModal();
+  let phone = '';
+  const sessionStr = localStorage.getItem('aptv_user');
+  if (sessionStr) {
+    try {
+      const u = JSON.parse(sessionStr);
+      phone = normalizePhone(u.phone || u.username);
+    } catch (e) {}
+  }
+  if (!phone) {
+    const accPhoneEl = document.getElementById('accModalPhone');
+    if (accPhoneEl && accPhoneEl.value) phone = normalizePhone(accPhoneEl.value);
+  }
+  showAuthModal();
+  switchTab('renew', phone, '⚡ Gia hạn hoặc nâng cấp gói cước cho tài khoản: ' + (phone || ''));
+}
+window.openRenewModalFromAccount = openRenewModalFromAccount;
+
 function showAuthModal() {
   const modal = document.getElementById('authModal');
   if (modal) {
@@ -459,7 +484,7 @@ function clearAuthError() {
 let userSessionUnsubscribe = null;
 
 // HÀM XỬ LÝ KHI BỊ ĐĂNG XUẤT DO THIẾT BỊ KHÁC ĐĂNG NHẬP HOẶC HẾT HẠN
-function handleKickedOut(msg) {
+function handleKickedOut(msg, kickedPhone) {
   if (userSessionUnsubscribe) {
     try { userSessionUnsubscribe(); } catch (e) {}
     userSessionUnsubscribe = null;
@@ -471,6 +496,14 @@ function handleKickedOut(msg) {
 
   current = null;
   currentIndex = -1;
+
+  let sessionPhone = kickedPhone;
+  if (!sessionPhone) {
+    try {
+      const u = JSON.parse(localStorage.getItem('aptv_user') || '{}');
+      sessionPhone = u.phone || u.username;
+    } catch (e) {}
+  }
 
   // Xóa session lưu trữ trên thiết bị này
   localStorage.removeItem('aptv_user');
@@ -484,12 +517,19 @@ function handleKickedOut(msg) {
     if (m.id !== 'authModal') m.classList.remove('open');
   });
 
-  // Hiển thị modal đăng nhập với thông báo rõ ràng
+  const isExpired = msg && (msg.toLowerCase().includes('hết hạn') || msg.toLowerCase().includes('expire'));
   showAuthModal();
-  switchTab('login');
-  const errorMsg = msg || '⚠️ Tài khoản của bạn vừa được đăng nhập trên một thiết bị khác. Bạn đã bị đăng xuất!';
-  showAuthError(errorMsg);
-  toast('⚠️ Tài khoản đã được đăng nhập ở thiết bị khác!');
+
+  if (isExpired) {
+    const noticeText = msg || 'Tài khoản của bạn đã hết hạn sử dụng. Vui lòng chọn gói cước để gia hạn!';
+    switchTab('renew', sessionPhone, noticeText);
+    toast('⚠️ ' + noticeText);
+  } else {
+    switchTab('login', sessionPhone);
+    const errorMsg = msg || '⚠️ Tài khoản của bạn vừa được đăng nhập trên một thiết bị khác. Bạn đã bị đăng xuất!';
+    showAuthError(errorMsg);
+    toast('⚠️ Tài khoản đã được đăng nhập ở thiết bị khác!');
+  }
 }
 
 // LẮNG NGHE THỜI GIAN THỰC (REALTIME FIRESTORE LISTENER) ĐỂ PHÁT HIỆN THIẾT BỊ KHÁC ĐĂNG NHẬP
@@ -508,7 +548,7 @@ function listenUserSession(phone) {
 
   userSessionUnsubscribe = db.collection('users').doc(phone).onSnapshot((docSnap) => {
     if (!docSnap.exists) {
-      handleKickedOut('⚠️ Tài khoản không tồn tại hoặc đã bị xóa!');
+      handleKickedOut('⚠️ Tài khoản không tồn tại hoặc đã bị xóa!', phone);
       return;
     }
 
@@ -517,7 +557,7 @@ function listenUserSession(phone) {
 
     // NẾU CÓ THIẾT BỊ KHÁC ĐĂNG NHẬP -> LOGOUT NGAY LẬP TỨC
     if (liveData.device_id && liveData.device_id !== "" && liveData.device_id !== currentDevId) {
-      handleKickedOut('⚠️ Tài khoản của bạn vừa được đăng nhập trên một thiết bị khác. Bạn đã bị đăng xuất!');
+      handleKickedOut('⚠️ Tài khoản của bạn vừa được đăng nhập trên một thiết bị khác. Bạn đã bị đăng xuất!', phone);
       return;
     }
 
@@ -530,7 +570,7 @@ function listenUserSession(phone) {
       localStorage.setItem('aptv_user', JSON.stringify(liveData));
       updateUserUI(liveData);
     } else if (!isAccountActive(liveData) || liveExpire <= now) {
-      handleKickedOut(!isAccountActive(liveData) ? 'Tài khoản đang chờ thanh toán (PENDING).' : 'Tài khoản đã hết hạn sử dụng.');
+      handleKickedOut(!isAccountActive(liveData) ? 'Tài khoản đang chờ thanh toán (PENDING).' : 'Tài khoản đã hết hạn sử dụng. Vui lòng gia hạn để tiếp tục sử dụng.', phone);
     }
   }, (err) => {
     console.warn("Realtime user session listener warning:", err);
@@ -550,10 +590,11 @@ function checkPersistentSession() {
     const now = new Date();
     let expireDate = getAccountExpireDate(user);
     const currentDevId = getDeviceId();
+    const phone = normalizePhone(user.username || user.phone);
 
     // Kiểm tra nhanh trong cache cục bộ
     if (user.device_id && user.device_id !== "" && user.device_id !== currentDevId) {
-      handleKickedOut('⚠️ Tài khoản này đã được đăng nhập trên thiết bị khác!');
+      handleKickedOut('⚠️ Tài khoản này đã được đăng nhập trên thiết bị khác!', phone);
       return false;
     }
 
@@ -566,7 +607,7 @@ function checkPersistentSession() {
       hideAuthModal();
       updateUserUI(user);
       // Bắt đầu lắng nghe thay đổi phiên đăng nhập theo thời gian thực
-      listenUserSession(normalizePhone(user.username || user.phone));
+      listenUserSession(phone);
 
       const savedMode = localStorage.getItem('aptv_car_mode');
       if (!savedMode) {
@@ -577,7 +618,11 @@ function checkPersistentSession() {
       return true;
     } else {
       showAuthModal();
-      showAuthError(!isAccountActive(user) ? 'Tài khoản đang chờ thanh toán (PENDING).' : 'Tài khoản đã hết hạn sử dụng. Vui lòng gia hạn.');
+      if (expireDate <= now) {
+        switchTab('renew', phone, `⚠️ Tài khoản ${phone} đã hết hạn vào ngày ${expireDate.toLocaleDateString('vi-VN')}. Vui lòng gia hạn!`);
+      } else {
+        showAuthError(!isAccountActive(user) ? 'Tài khoản đang chờ thanh toán (PENDING).' : 'Tài khoản đã hết hạn sử dụng. Vui lòng gia hạn.');
+      }
       return false;
     }
   } catch (e) {
@@ -695,10 +740,9 @@ async function handleLogin() {
     }
 
     if (expireDate <= now) {
-      showAuthError(`Tài khoản đã hết hạn vào ngày ${expireDate.toLocaleDateString('vi-VN')}. Vui lòng chọn gói cước để gia hạn.`);
-      switchTab('reg');
-      if (document.getElementById('regPhone')) document.getElementById('regPhone').value = phone;
-      if (document.getElementById('regPass')) document.getElementById('regPass').value = pass;
+      switchTab('renew', phone, `⚠️ Tài khoản đã hết hạn vào ngày ${expireDate.toLocaleDateString('vi-VN')}. Vui lòng chọn gói cước để gia hạn!`);
+      const renewPassEl = document.getElementById('renewPass');
+      if (renewPassEl) renewPassEl.value = pass;
       return;
     }
 
@@ -791,7 +835,7 @@ async function handleRegister() {
   displayQrCode(qrUrl, price, transferContent);
   toast(`⚡ Đã tạo mã VietQR ${price.toLocaleString('vi-VN')} VNĐ cho số ${phone}!`);
 
-  // 5. ĐỒNG BỘ FIRESTORE (CHÚ Ý: KHÔNG ĐƯỢC GHI ĐÈ PENDING NẾU TÀI KHOẢN ĐÃ ACTIVE!)
+  // 5. ĐỒNG BỘ FIRESTORE (CHÚ Ý: KHÔNG ĐƯỢC GHI ĐÈ PENDING NẾU TÀI KHOẢN ĐÃ ACTIVE VÀ CÒN HẠN!)
   if (!db) initFirebase();
   if (db) {
     const currentDevId = getDeviceId();
@@ -820,9 +864,10 @@ async function handleRegister() {
           created_at: now.toISOString()
         });
       } else {
-        // Nếu đã được webhook kích hoạt ACTIVE rồi -> vào ứng dụng ngay!
-        if (isAccountActive(existingData)) {
-          let d = parseExpireDate(existingData.expire_date);
+        const currentExpire = parseExpireDate(existingData.expire_date);
+        // Nếu đã ACTIVE và VẪN CÒN HẠN -> vào ứng dụng ngay!
+        if (isAccountActive(existingData) && (currentExpire.getTime() === 0 || currentExpire > now)) {
+          let d = currentExpire;
           if (d.getTime() === 0) d = new Date(Date.now() + (existingData.plan_days || 365) * 86400000);
           existingData.status = 'ACTIVE';
           existingData.expire_date = d.toISOString();
@@ -836,7 +881,7 @@ async function handleRegister() {
           return;
         }
 
-        // Nếu đang PENDING -> cập nhật mật khẩu, thiết bị, gói mới
+        // Nếu đã HẾT HẠN hoặc PENDING -> cập nhật thông tin và chuyển sang chờ thanh toán gói mới
         const updatePayload = {
           password_hash: hashed,
           device_id: currentDevId,
@@ -854,6 +899,118 @@ async function handleRegister() {
     }
   }
 }
+
+// XỬ LÝ GIA HẠN GÓI CƯỚC (DÀNH CHO TÀI KHOẢN ĐÃ CÓ / HẾT HẠN)
+async function handleRenew() {
+  clearAuthError();
+  const phoneInput = document.getElementById('renewPhone');
+  const passInput = document.getElementById('renewPass');
+  const planSelect = document.getElementById('renewPlan');
+
+  let phone = normalizePhone(phoneInput ? phoneInput.value : '');
+  const pass = (passInput ? passInput.value : '').trim();
+
+  if (!phone) {
+    return showAuthError('Vui lòng nhập Số điện thoại cần gia hạn.');
+  }
+  if (!/^0\d{8,10}$/.test(phone)) {
+    return showAuthError('Số điện thoại không hợp lệ.');
+  }
+  if (!pass) {
+    return showAuthError('Vui lòng nhập Mật khẩu tài khoản để xác nhận.');
+  }
+
+  // Xác định gói cước
+  let planVal = planSelect ? planSelect.value : '1y';
+  let price = 100000;
+  let planDays = 365;
+  let planName = 'Gói 1 Năm';
+
+  if (planVal === 'trial_7d' || planVal === '7') {
+    price = 20000;
+    planDays = 7;
+    planName = 'Gói Dùng Thử 7 Ngày';
+  } else if (planVal === 'lifetime' || planVal === '36500' || planVal === '3650' || planVal === '200k_vinhvien' || planVal === '300k_vinhvien') {
+    price = 300000;
+    planDays = 36500;
+    planName = 'Gói Vĩnh Viễn';
+  } else {
+    price = 100000;
+    planDays = 365;
+    planName = 'Gói 1 Năm';
+  }
+
+  if (planSelect && planSelect.selectedIndex >= 0) {
+    const opt = planSelect.options[planSelect.selectedIndex];
+    if (opt.dataset && opt.dataset.price) price = parseInt(opt.dataset.price, 10);
+    if (opt.dataset && opt.dataset.days) planDays = parseInt(opt.dataset.days, 10);
+  }
+
+  if (!db) initFirebase();
+  if (!db) return showAuthError('Không thể kết nối cơ sở dữ liệu. Vui lòng kiểm tra mạng.');
+
+  try {
+    toast('Đang xác thực thông tin tài khoản...');
+    const docRef = db.collection('users').doc(phone);
+    const docSnap = await docRef.get();
+
+    if (!docSnap.exists) {
+      return showAuthError('Tài khoản này chưa tồn tại. Vui lòng chọn Tab ĐĂNG KÝ MỚI.');
+    }
+
+    const userData = docSnap.data();
+    const storedPass = (userData.password_hash || userData.passwordHash || userData.password || '').toString().trim().toLowerCase();
+    const inputShaWithSalt = hashPassword(pass).toLowerCase().trim();
+    const inputShaPlain = (window.CryptoJS && CryptoJS.SHA256) ? CryptoJS.SHA256(pass).toString().toLowerCase().trim() : '';
+    const inputMd5 = hashMD5(pass).toLowerCase().trim();
+    const inputPlain = pass.trim().toLowerCase();
+
+    const isMatch = (storedPass === inputShaWithSalt) || (storedPass === inputShaPlain) || (storedPass === inputMd5) || (storedPass === inputPlain);
+    if (!isMatch) {
+      return showAuthError('Mật khẩu không chính xác. Vui lòng kiểm tra lại mật khẩu của số điện thoại này.');
+    }
+
+    const now = new Date();
+    const currentExpire = getAccountExpireDate(userData);
+    // Nếu tài khoản vẫn còn hạn: cộng dồn thêm planDays vào ngày hết hạn cũ.
+    // Nếu tài khoản đã hết hạn: tính từ bây giờ + planDays.
+    let baseTime = (currentExpire.getTime() > now.getTime()) ? currentExpire.getTime() : now.getTime();
+    const newExpireDate = new Date(baseTime + planDays * 86400000).toISOString();
+    const currentDevId = getDeviceId();
+
+    // Cập nhật Firestore sang PENDING gói gia hạn
+    await docRef.set({
+      device_id: currentDevId,
+      status: 'PENDING',
+      expire_date: newExpireDate,
+      price: price,
+      plan_days: planDays,
+      plan_name: planName,
+      renew_at: now.toISOString()
+    }, { merge: true });
+
+    // Lưu thông tin chờ thanh toán
+    window.__pendingPhone = phone;
+    window.__pendingPass = pass;
+    window.__pendingPlanDays = planDays;
+    window.__pendingPlanName = planName;
+    window.__pendingPrice = price;
+    try { localStorage.setItem('aptv_pending_phone', phone); } catch(e){}
+
+    // Hiển thị VietQR
+    const transferContent = `TP ${phone}`;
+    const qrUrl = `https://img.vietqr.io/image/TPB-15940510182-compact2.png?amount=${price}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent("DOAN QUANG TRUNG")}`;
+    displayQrCode(qrUrl, price, transferContent);
+    toast(`⚡ Đã tạo mã VietQR gia hạn ${price.toLocaleString('vi-VN')} VNĐ cho số ${phone}!`);
+
+    // Bắt đầu lắng nghe realtime
+    listenRealtimeStatus(phone);
+
+  } catch (err) {
+    showAuthError('Lỗi khi gia hạn: ' + err.message);
+  }
+}
+window.handleRenew = handleRenew;
 
 function triggerQrGenerationForPhone(phone, price) {
   phone = normalizePhone(phone);
@@ -909,8 +1066,9 @@ function listenRealtimeStatus(phone) {
         realtimeUnsubscribe = null;
       }
       let d = parseExpireDate(data.expire_date);
-      if (d.getTime() === 0) {
-        d = new Date(Date.now() + (data.plan_days || 365) * 86400000);
+      const now = new Date();
+      if (d.getTime() === 0 || d <= now) {
+        d = new Date(now.getTime() + (data.plan_days || 365) * 86400000);
       }
       const currentDevId = getDeviceId();
       data.status = 'ACTIVE';
@@ -920,7 +1078,8 @@ function listenRealtimeStatus(phone) {
       try {
         db.collection('users').doc(phone).update({
           device_id: currentDevId,
-          status: 'ACTIVE'
+          status: 'ACTIVE',
+          expire_date: d.toISOString()
         });
       } catch(e){}
 
@@ -941,8 +1100,10 @@ function listenRealtimeStatus(phone) {
 // KIỂM TRA THỦ CÔNG KHI BẤM "TÔI ĐÃ CHUYỂN KHOẢN - VÀO ỨNG DỤNG NGAY"
 async function checkPaymentNow(phone) {
   if (!phone) {
-    phone = (document.getElementById('regPhone') ? document.getElementById('regPhone').value : '').trim() ||
-            (document.getElementById('loginPhone') ? document.getElementById('loginPhone').value : '').trim();
+    phone = (document.getElementById('renewPhone') ? document.getElementById('renewPhone').value : '').trim() ||
+            (document.getElementById('regPhone') ? document.getElementById('regPhone').value : '').trim() ||
+            (document.getElementById('loginPhone') ? document.getElementById('loginPhone').value : '').trim() ||
+            window.__pendingPhone || '';
   }
   phone = normalizePhone(phone);
   if (!phone) return toast('Vui lòng nhập số điện thoại');
@@ -960,8 +1121,9 @@ async function checkPaymentNow(phone) {
     const data = docSnap.data();
     if (isAccountActive(data)) {
       let d = parseExpireDate(data.expire_date);
-      if (d.getTime() === 0) {
-        d = new Date(Date.now() + (data.plan_days || 365) * 86400000);
+      const now = new Date();
+      if (d.getTime() === 0 || d <= now) {
+        d = new Date(now.getTime() + (data.plan_days || 365) * 86400000);
       }
       const currentDevId = getDeviceId();
       data.status = 'ACTIVE';
@@ -971,7 +1133,8 @@ async function checkPaymentNow(phone) {
       try {
         await docRef.update({
           device_id: currentDevId,
-          status: 'ACTIVE'
+          status: 'ACTIVE',
+          expire_date: d.toISOString()
         });
       } catch(e){}
 
@@ -991,25 +1154,57 @@ async function checkPaymentNow(phone) {
   }
 }
 
-function switchTab(tab) {
+function switchTab(tab, phone, customNotice) {
   clearAuthError();
   const loginBtn = document.getElementById('tabLoginBtn');
   const regBtn = document.getElementById('tabRegBtn');
+  const renewBtn = document.getElementById('tabRenewBtn');
   const formLogin = document.getElementById('formLogin');
   const formReg = document.getElementById('formReg');
+  const formRenew = document.getElementById('formRenew');
+  const renewNotice = document.getElementById('renewNotice');
+
+  if (loginBtn) loginBtn.classList.remove('active');
+  if (regBtn) regBtn.classList.remove('active');
+  if (renewBtn) renewBtn.classList.remove('active');
+
+  if (formLogin) formLogin.style.display = 'none';
+  if (formReg) formReg.style.display = 'none';
+  if (formRenew) formRenew.style.display = 'none';
 
   if (tab === 'login') {
     if (loginBtn) loginBtn.classList.add('active');
-    if (regBtn) regBtn.classList.remove('active');
     if (formLogin) formLogin.style.display = 'grid';
-    if (formReg) formReg.style.display = 'none';
+    if (phone) {
+      const loginPhone = document.getElementById('loginPhone');
+      if (loginPhone) loginPhone.value = phone;
+    }
+  } else if (tab === 'renew') {
+    if (renewBtn) renewBtn.classList.add('active');
+    if (formRenew) formRenew.style.display = 'grid';
+    if (phone) {
+      const renewPhone = document.getElementById('renewPhone');
+      if (renewPhone) renewPhone.value = phone;
+    }
+    if (renewNotice) {
+      if (customNotice) {
+        renewNotice.textContent = customNotice;
+        renewNotice.style.display = 'block';
+      } else {
+        renewNotice.style.display = 'none';
+        renewNotice.textContent = '';
+      }
+    }
   } else {
     if (regBtn) regBtn.classList.add('active');
-    if (loginBtn) loginBtn.classList.remove('active');
     if (formReg) formReg.style.display = 'grid';
-    if (formLogin) formLogin.style.display = 'none';
+    if (phone) {
+      const regPhone = document.getElementById('regPhone');
+      if (regPhone) regPhone.value = phone;
+    }
   }
 }
+window.switchTab = switchTab;
 
 /* =========================================================================
    4. TRÌNH PHÁT MEDIA CHÍNH (YOUTUBE EMBED & TV M3U8 STREAM)
@@ -2430,8 +2625,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const loginTabBtn = document.getElementById('tabLoginBtn');
   const regTabBtn = document.getElementById('tabRegBtn');
+  const renewTabBtn = document.getElementById('tabRenewBtn');
   if (loginTabBtn) loginTabBtn.onclick = () => switchTab('login');
   if (regTabBtn) regTabBtn.onclick = () => switchTab('reg');
+  if (renewTabBtn) renewTabBtn.onclick = () => switchTab('renew');
 
   const btnDoLogin = document.getElementById('btnDoLogin');
   const loginPassInput = document.getElementById('loginPass');
@@ -2444,6 +2641,16 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnCreateQr) btnCreateQr.onclick = handleRegister;
   if (regPassInput) regPassInput.onkeydown = (e) => { if (e.key === 'Enter') handleRegister(); };
   if (regPhoneInput) regPhoneInput.onkeydown = (e) => { if (e.key === 'Enter') handleRegister(); };
+
+  const btnDoRenew = document.getElementById('btnDoRenew');
+  const renewPassInput = document.getElementById('renewPass');
+  const renewPhoneInput = document.getElementById('renewPhone');
+  if (btnDoRenew) btnDoRenew.onclick = handleRenew;
+  if (renewPassInput) renewPassInput.onkeydown = (e) => { if (e.key === 'Enter') handleRenew(); };
+  if (renewPhoneInput) renewPhoneInput.onkeydown = (e) => { if (e.key === 'Enter') handleRenew(); };
+
+  const btnAccModalRenew = document.getElementById('btnAccModalRenew');
+  if (btnAccModalRenew) btnAccModalRenew.onclick = openRenewModalFromAccount;
 
   const closeQrBtn = document.getElementById('closeQrBtn');
   const qrModalEl = document.getElementById('qrModal');
