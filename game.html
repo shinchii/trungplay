@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>TrungPlay · Tilt Arcade (Game Vô Lăng Trên Xe)</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <style>
+    :root {
+      --bg: #090b10;
+      --card-bg: #131722;
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent: #ff2a70;
+      --accent-glow: rgba(255, 42, 112, 0.4);
+      --cyan: #00e5ff;
+      --cyan-glow: rgba(0, 229, 255, 0.4);
+      --gold: #ffd600;
+      --text: #f0f4fc;
+      --muted: #8a99b5;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
+
+    /* TOPBAR */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px;
+      background: rgba(14, 18, 27, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--card-border);
+    }
+    .brand-wrap { display: flex; align-items: center; gap: 12px; }
+    .btn-back-home {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-radius: 999px;
+      background: #1e2535; color: #fff; text-decoration: none;
+      font-size: 13px; font-weight: 700;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      transition: all 0.2s;
+    }
+    .btn-back-home:hover { background: #2a344a; }
+    .title-group h1 { font-size: 16px; font-weight: 800; letter-spacing: 0.5px; }
+    .title-group p { font-size: 11px; color: var(--muted); }
+
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .pill-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 700;
+      cursor: pointer; border: none; outline: none; transition: all 0.2s;
+    }
+    .pill-sensor {
+      background: linear-gradient(135deg, #00d26a, #059669);
+      color: #000; box-shadow: 0 0 16px rgba(0, 210, 106, 0.3);
+    }
+    .pill-sensor.waiting {
+      background: linear-gradient(135deg, #ff9800, #f57c00);
+      color: #000; animation: pulse 1.5s infinite;
+    }
+    .pill-sound { background: #1e2535; color: #fff; border: 1px solid var(--card-border); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(1.03); }
+    }
+
+    /* BANNER CẢNH BÁO AN TOÀN */
+    .safety-banner {
+      background: rgba(255, 152, 0, 0.12);
+      border-bottom: 1px solid rgba(255, 152, 0, 0.3);
+      color: #ffb74d; padding: 8px 16px; font-size: 12px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center;
+    }
+
+    /* MAIN HUB */
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px 20px 60px; }
+    .hero-box {
+      text-align: center; margin-bottom: 28px; padding: 20px;
+      background: radial-gradient(circle at 50% 30%, rgba(255, 42, 112, 0.15), transparent 70%);
+      border-radius: 20px;
+    }
+    .hero-badge {
+      display: inline-block; padding: 4px 12px; border-radius: 20px;
+      background: rgba(0, 229, 255, 0.15); border: 1px solid var(--cyan);
+      color: var(--cyan); font-size: 11px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 1px; margin-bottom: 10px;
+    }
+    .hero-box h2 { font-size: 26px; font-weight: 900; margin-bottom: 8px; }
+    .hero-box p { font-size: 14px; color: var(--muted); max-width: 600px; margin: 0 auto; }
+
+    /* HOW TO PLAY CARDS */
+    .instructions-bar {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px; margin-bottom: 30px;
+    }
+    .inst-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+    }
+    .inst-card .inst-icon { font-size: 24px; }
+    .inst-card .inst-text strong { display: block; font-size: 13px; color: #fff; }
+    .inst-card .inst-text span { font-size: 11px; color: var(--muted); }
+
+    /* GAMES GRID */
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .game-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 18px; overflow: hidden; cursor: pointer;
+      display: flex; flex-direction: column; transition: all 0.25s ease;
+      position: relative;
+    }
+    .game-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(255, 42, 112, 0.5);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.5), 0 0 20px var(--accent-glow);
+    }
+    .game-card:active { transform: scale(0.98); }
+    .game-thumb {
+      width: 100%; height: 170px; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .game-thumb.racer-bg {
+      background: linear-gradient(180deg, #18032b 0%, #3e0b5f 60%, #0d1a3a 100%);
+    }
+    .game-thumb.flight-bg {
+      background: linear-gradient(180deg, #031e3d 0%, #0d4b75 60%, #e0f2fe 100%);
+    }
+    .game-thumb.tunnel-bg {
+      background: radial-gradient(circle, #ff2a70 0%, #200438 70%, #080112 100%);
+    }
+    .game-thumb-art {
+      font-size: 64px; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.6));
+      animation: floatArt 3s ease-in-out infinite;
+    }
+    @keyframes floatArt {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    .game-badge-tag {
+      position: absolute; top: 12px; right: 12px;
+      padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 800;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.15); color: var(--gold);
+    }
+
+    .game-info { padding: 18px; flex: 1; display: flex; flex-direction: column; }
+    .game-title { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+    .game-desc { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 14px; flex: 1; }
+    .game-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+    .tag {
+      padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;
+      background: #1c2230; color: #a0aec0; border: 1px solid rgba(255,255,255,0.06);
+    }
+    .btn-play-card {
+      width: 100%; padding: 12px; border-radius: 12px; border: none;
+      background: linear-gradient(135deg, var(--accent), #ff6b3d);
+      color: #fff; font-size: 14px; font-weight: 800; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      box-shadow: 0 4px 14px var(--accent-glow);
+    }
+
+    /* FULLSCREEN GAME CONTAINER OVERLAY */
+    .game-viewport {
+      position: fixed; inset: 0; z-index: 1000;
+      background: #000; display: none; flex-direction: column;
+    }
+    .game-viewport.active { display: flex; }
+    canvas#gameCanvas {
+      width: 100%; height: 100%; display: block; flex: 1;
+      background: #000; cursor: crosshair;
+    }
+
+    /* IN-GAME HUD OVERLAY */
+    .game-hud {
+      position: absolute; top: 0; left: 0; right: 0;
+      padding: 12px 18px; pointer-events: none;
+      display: flex; align-items: flex-start; justify-content: space-between;
+      z-index: 10;
+    }
+    .hud-btn {
+      pointer-events: auto; padding: 8px 16px; border-radius: 999px;
+      background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px);
+      color: #fff; border: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+    .hud-btn:hover { background: rgba(255, 42, 112, 0.7); }
+    .hud-stats {
+      display: flex; gap: 16px; align-items: center;
+      background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(10px);
+      padding: 8px 18px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .stat-item { text-align: center; }
+    .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-val { font-size: 18px; font-weight: 900; color: #fff; }
+    .stat-val.gold { color: var(--gold); }
+    .stat-val.cyan { color: var(--cyan); }
+
+    /* VIRTUAL STEERING WHEEL INDICATOR */
+    .wheel-indicator-box {
+      position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+      pointer-events: none; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      opacity: 0.75; transition: opacity 0.3s;
+    }
+    .virtual-wheel {
+      width: 54px; height: 54px; border-radius: 50%;
+      border: 4px solid var(--accent); position: relative;
+      background: radial-gradient(circle, rgba(0,0,0,0.8), rgba(0,0,0,0.4));
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 14px var(--accent-glow);
+      transition: transform 0.05s ease-out;
+    }
+    .virtual-wheel::before {
+      content: ''; position: absolute; width: 80%; height: 4px; background: var(--accent);
+    }
+    .wheel-tip { font-size: 10px; color: #fff; text-shadow: 0 2px 4px #000; font-weight: 700; }
+
+    /* TOUCH ON-SCREEN CONTROLS (DÀNH CHO XE ĐỖ GẮN GIÁ ĐỠ HOẶC MÀN HÌNH CẢM ỨNG) */
+    .touch-controls {
+      position: absolute; bottom: 14px; left: 14px; right: 14px;
+      pointer-events: none; display: flex; justify-content: space-between; z-index: 10;
+    }
+    .touch-btn-group { display: flex; gap: 10px; pointer-events: auto; }
+    .touch-ctrl-btn {
+      width: 64px; height: 64px; border-radius: 18px;
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
+      border: 1.5px solid rgba(255,255,255,0.25); color: #fff;
+      font-size: 22px; font-weight: 900; display: flex;
+      align-items: center; justify-content: center; touch-action: manipulation;
+    }
+    .touch-ctrl-btn:active { background: rgba(255,42,112,0.6); transform: scale(0.95); }
+
+    /* GAME OVER DIALOG */
+    .game-over-modal {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
+      display: none; align-items: center; justify-content: center; z-index: 20;
+    }
+    .game-over-modal.open { display: flex; }
+    .modal-card {
+      background: var(--card-bg); border: 1px solid var(--accent);
+      border-radius: 20px; padding: 28px; width: 90%; max-width: 380px; text-align: center;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 30px var(--accent-glow);
+    }
+    .modal-card h3 { font-size: 24px; font-weight: 900; margin-bottom: 12px; color: var(--accent); }
+    .modal-scores { margin-bottom: 20px; font-size: 15px; }
+    .modal-scores p { margin-bottom: 6px; }
+    .modal-actions { display: flex; gap: 10px; }
+    .modal-actions button {
+      flex: 1; padding: 12px; border-radius: 12px; font-weight: 800; font-size: 14px; cursor: pointer; border: none;
+    }
+    .btn-replay { background: var(--accent); color: #fff; }
+    .btn-exit-modal { background: #232b3d; color: #fff; }
+
+    @media (max-width: 640px) {
+      .topbar { padding: 10px 14px; }
+      .container { padding: 16px 14px 40px; }
+      .hero-box h2 { font-size: 20px; }
+      .games-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="brand-wrap">
+      <a href="index.html" class="btn-back-home" title="Trở về Trang Nghe Nhạc">
+        <span>⬅</span>
+        <span>Nghe nhạc</span>
+      </a>
+      <div class="title-group">
+        <h1>TRUNGPLAY · TILT ARCADE</h1>
+        <p>Game Vô Lăng Lắc Điện Thoại Trên Xe</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button type="button" class="pill-btn pill-sensor waiting" id="btnRequestSensor" onclick="enableSensorPermission()">
+        <span>📱</span>
+        <span id="sensorStatusText">Bật Cảm Biến Nghiêng</span>
+      </button>
+      <button type="button" class="pill-btn pill-sound" id="btnSoundToggle" onclick="toggleMute()" title="Bật/Tắt Âm Thanh">
+        <span id="soundIcon">🔊</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- BANNER CẢNH BÁO AN TOÀN -->
+  <div class="safety-banner">
+    <span>⚠️</span>
+    <span>LƯU Ý AN TOÀN: Chỉ chơi khi xe đang dừng / đỗ an toàn. Tuyệt đối không chơi game khi đang lái xe trên đường!</span>
+  </div>
+
+  <!-- SẢNH CHỌN GAME (GAME HUB) -->
+  <main class="container" id="hubView">
+    <div class="hero-box">
+      <span class="hero-badge">Gyroscope &amp; Motion Controls</span>
+      <h2>Cầm Điện Thoại Lái Xe Siêu Mượt</h2>
+      <p>Biến chiếc điện thoại thành chiếc vô lăng không dây để bẻ lái trên màn hình lớn CarPlay với độ trễ bằng 0!</p>
+    </div>
+
+    <!-- HƯỚNG DẪN CÁCH CHƠI -->
+    <div class="instructions-bar">
+      <div class="inst-card">
+        <div class="inst-icon">📱</div>
+        <div class="inst-text">
+          <strong>Cầm ngang máy</strong>
+          <span>Giữ 2 tay như vô lăng</span>
+        </div>
+      </div>
+      <div class="inst-card">
+        <div class="inst-icon">🔄</div>
+        <div class="inst-text">
+          <strong>Nghiêng Trái / Phải</strong>
+          <span>Bẻ lái xe &amp; liệng máy bay</span>
+        </div>
+      </div>
+      <div class="inst-card">
+        <div class="inst-icon">⚡</div>
+        <div class="inst-text">
+          <strong>Độ trễ bằng 0</strong>
+          <span>Phản hồi cảm biến tức thì</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- DANH SÁCH GAME -->
+    <div class="games-grid">
+
+      <!-- GAME 1: MIDNIGHT HIGHWAY RACER -->
+      <div class="game-card" onclick="startGame('racer')">
+        <div class="game-thumb racer-bg">
+          <span class="game-badge-tag">⚡ HOT NHẤT</span>
+          <div class="game-thumb-art">🏎️💨</div>
+        </div>
+        <div class="game-info">
+          <h3 class="game-title">Midnight Highway 3D</h3>
+          <p class="game-desc">Cầm điện thoại như vô lăng để lạng lách qua các làn xe tải, xe con và gom xu vàng trên đường cao tốc đêm neon rực rỡ.</p>
+          <div class="game-tags">
+            <span class="tag">🏎️ Đua xe</span>
+            <span class="tag">📱 Nghiêng Lái (Tilt)</span>
+            <span class="tag">⚡ Cao tốc Neon</span>
+          </div>
+          <button type="button" class="btn-play-card">▶ CHƠI NGAY</button>
+        </div>
+      </div>
+
+      <!-- GAME 2: ALPINE JET FLIGHT -->
+      <div class="game-card" onclick="startGame('flight')">
+        <div class="game-thumb flight-bg">
+          <span class="game-badge-tag">✈️ 3D SKY</span>
+          <div class="game-thumb-art">🛩️🏔️</div>
+        </div>
+        <div class="game-info">
+          <h3 class="game-title">Alpine Flight 3D</h3>
+          <p class="game-desc">Lái phi cơ phản lực lượn qua các khe núi tuyết Alpine. Nghiêng điện thoại sang trái/phải để lượn cánh, chúc đầu lên/xuống để bay xuyên qua các vòng tròn vàng.</p>
+          <div class="game-tags">
+            <span class="tag">✈️ Lái máy bay</span>
+            <span class="tag">🏔️ Núi tuyết 3D</span>
+            <span class="tag">⭕ Xuyên vòng</span>
+          </div>
+          <button type="button" class="btn-play-card">▶ CHƠI NGAY</button>
+        </div>
+      </div>
+
+      <!-- GAME 3: CYBER TUNNEL 3D -->
+      <div class="game-card" onclick="startGame('tunnel')">
+        <div class="game-thumb tunnel-bg">
+          <span class="game-badge-tag">🚀 360° ARCADE</span>
+          <div class="game-thumb-art">🚀🌀</div>
+        </div>
+        <div class="game-info">
+          <h3 class="game-title">Cyber Tunnel 3D</h3>
+          <p class="game-desc">Phi thuyền lao vút trong đường hầm không gian 3D vô tận. Xoay tròn điện thoại 360 độ để né các cánh cổng chướng ngại vật xoay liên tục.</p>
+          <div class="game-tags">
+            <span class="tag">🚀 Tàu vũ trụ</span>
+            <span class="tag">🌀 Đường hầm 360</span>
+            <span class="tag">⚡ Phản xạ cực nhanh</span>
+          </div>
+          <button type="button" class="btn-play-card">▶ CHƠI NGAY</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- MÀN HÌNH CHƠI GAME TOÀN MÀN HÌNH -->
+  <div class="game-viewport" id="gameViewport">
+    <!-- HUD -->
+    <div class="game-hud">
+      <button type="button" class="hud-btn" onclick="exitGame()">✕ Thoát Game</button>
+      <div class="hud-stats">
+        <div class="stat-item">
+          <div class="stat-label">Điểm số</div>
+          <div class="stat-val gold" id="hudScore">0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Tốc độ</div>
+          <div class="stat-val cyan" id="hudSpeed">0 km/h</div>
+        </div>
+      </div>
+      <button type="button" class="hud-btn" onclick="togglePauseGame()" id="btnPauseGame">⏸ Tạm dừng</button>
+    </div>
+
+    <!-- VIRTUAL WHEEL VISUALIZER -->
+    <div class="wheel-indicator-box">
+      <div class="virtual-wheel" id="virtualWheel"></div>
+      <div class="wheel-tip">Góc vô lăng</div>
+    </div>
+
+    <!-- NÚT ĐIỀU KHIỂN CẢM ỨNG DỰ PHÒNG (NẾU ĐIỆN THOẠI CẮM GIÁ ĐỠ) -->
+    <div class="touch-controls">
+      <div class="touch-btn-group">
+        <div class="touch-ctrl-btn" id="btnTouchLeft">◀</div>
+        <div class="touch-ctrl-btn" id="btnTouchRight">▶</div>
+      </div>
+      <div class="touch-btn-group">
+        <div class="touch-ctrl-btn" id="btnTouchBrake" style="color:#ff5252">▼</div>
+        <div class="touch-ctrl-btn" id="btnTouchGas" style="color:#00e676">▲</div>
+      </div>
+    </div>
+
+    <!-- CANVAS ENGINE -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- GAME OVER DIALOG -->
+    <div class="game-over-modal" id="gameOverModal">
+      <div class="modal-card">
+        <h3>💥 GAME OVER!</h3>
+        <div class="modal-scores">
+          <p>Điểm của bạn: <strong id="finalScore" style="color:var(--gold);font-size:22px">0</strong></p>
+          <p>Kỷ lục cao nhất: <strong id="bestScore" style="color:var(--cyan)">0</strong></p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-replay" onclick="restartCurrentGame()">🔄 Chơi lại</button>
+          <button type="button" class="btn-exit-modal" onclick="exitGame()">⬅ Sảnh Game</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT LOGIC GAME -->
+  <script>
+    /* =========================================================================
+       1. CẢM BIẾN CON QUAY HỒI CHUYỂN & ÂM THANH WEB AUDIO SYNTHESIZER
+       ========================================================================= */
+    let tiltX = 0; // -1 (trái) đến +1 (phải)
+    let tiltY = 0; // -1 (chúc xuống) đến +1 (ngửa lên)
+    let sensorActive = false;
+    let isMuted = false;
+
+    // Web Audio Synthesizer
+    let audioCtx = null;
+    function getAudioCtx() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioCtx = new AudioContext();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playTone(freq, type, duration, gainVal = 0.15) {
+      if (isMuted) return;
+      try {
+        const ctx = getAudioCtx();
+        if (!ctx) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(gainVal, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch(e) {}
+    }
+
+    function playCoinSound() {
+      playTone(987.77, 'sine', 0.08, 0.2); // B5
+      setTimeout(() => playTone(1318.51, 'sine', 0.15, 0.2), 60); // E6
+    }
+
+    function playCrashSound() {
+      if (isMuted) return;
+      try {
+        const ctx = getAudioCtx();
+        if (!ctx) return;
+        const bufferSize = ctx.sampleRate * 0.4;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(800, ctx.currentTime);
+        filter.frequency.linearRampToValueAtTime(50, ctx.currentTime + 0.4);
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.35, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        noise.start();
+      } catch(e) {}
+    }
+
+    function toggleMute() {
+      isMuted = !isMuted;
+      document.getElementById('soundIcon').textContent = isMuted ? '🔇' : '🔊';
+    }
+
+    // Xử lý góc nghiêng điện thoại (DeviceOrientationEvent)
+    function handleOrientation(e) {
+      if (e.gamma === null) return;
+      sensorActive = true;
+      updateSensorStatus(true);
+
+      // Cầm ngang (Landscape) hay Cầm đứng (Portrait)
+      const isLandscape = Math.abs(window.orientation || 0) === 90;
+      let rawGamma = e.gamma || 0; // -90 đến 90
+      let rawBeta = e.beta || 0;   // -180 đến 180
+
+      if (isLandscape) {
+        // Khi quay ngang màn hình, beta điều khiển trái/phải
+        const sign = (window.orientation === 90) ? 1 : -1;
+        tiltX = Math.max(-1, Math.min(1, (rawBeta * sign) / 25));
+        tiltY = Math.max(-1, Math.min(1, (rawGamma * -sign) / 25));
+      } else {
+        // Cầm đứng: gamma điều khiển trái/phải (-30 deg đến +30 deg là hết lái)
+        tiltX = Math.max(-1, Math.min(1, rawGamma / 25));
+        tiltY = Math.max(-1, Math.min(1, (rawBeta - 40) / 30));
+      }
+
+      // Cập nhật góc quay của Vô lăng ảo
+      const wheel = document.getElementById('virtualWheel');
+      if (wheel) {
+        wheel.style.transform = `rotate(${tiltX * 55}deg)`;
+      }
+    }
+
+    async function enableSensorPermission() {
+      getAudioCtx();
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+          const res = await DeviceOrientationEvent.requestPermission();
+          if (res === 'granted') {
+            window.addEventListener('deviceorientation', handleOrientation, true);
+            updateSensorStatus(true);
+            return;
+          }
+        } catch(e) { console.warn(e); }
+      }
+      window.addEventListener('deviceorientation', handleOrientation, true);
+      updateSensorStatus(true);
+    }
+
+    function updateSensorStatus(active) {
+      const btn = document.getElementById('btnRequestSensor');
+      const text = document.getElementById('sensorStatusText');
+      if (active) {
+        btn.classList.remove('waiting');
+        btn.classList.add('pill-sensor');
+        text.textContent = '🟢 Vô Lăng Sẵn Sàng';
+      }
+    }
+
+    // Tự động lắng nghe nếu trình duyệt hỗ trợ không cần xin phép
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', handleOrientation, true);
+    }
+
+    // Bắt sự kiện phím mũi tên bàn phím / Touch on-screen
+    let keyLeft = false, keyRight = false, keyGas = false, keyBrake = false;
+    window.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft' || e.key === 'a') keyLeft = true;
+      if (e.key === 'ArrowRight' || e.key === 'd') keyRight = true;
+      if (e.key === 'ArrowUp' || e.key === 'w') keyGas = true;
+      if (e.key === 'ArrowDown' || e.key === 's') keyBrake = true;
+    });
+    window.addEventListener('keyup', e => {
+      if (e.key === 'ArrowLeft' || e.key === 'a') keyLeft = false;
+      if (e.key === 'ArrowRight' || e.key === 'd') keyRight = false;
+      if (e.key === 'ArrowUp' || e.key === 'w') keyGas = false;
+      if (e.key === 'ArrowDown' || e.key === 's') keyBrake = false;
+    });
+
+    function bindTouchBtn(id, setVar) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const start = (e) => { e.preventDefault(); setVar(true); };
+      const end = (e) => { e.preventDefault(); setVar(false); };
+      el.addEventListener('touchstart', start, { passive: false });
+      el.addEventListener('touchend', end, { passive: false });
+      el.addEventListener('mousedown', start);
+      el.addEventListener('mouseup', end);
+    }
+    bindTouchBtn('btnTouchLeft', v => keyLeft = v);
+    bindTouchBtn('btnTouchRight', v => keyRight = v);
+    bindTouchBtn('btnTouchGas', v => keyGas = v);
+    bindTouchBtn('btnTouchBrake', v => keyBrake = v);
+
+
+    /* =========================================================================
+       2. GAME ENGINE FRAMEWORK & CANVAS SETUP
+       ========================================================================= */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    let currentGame = null;
+    let animFrameId = null;
+    let isPaused = false;
+    let isGameOver = false;
+    let score = 0;
+    let currentSpeed = 0;
+
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      ctx.scale(dpr, dpr);
+    }
+    window.addEventListener('resize', () => { if (currentGame) resizeCanvas(); });
+
+    function startGame(gameType) {
+      enableSensorPermission();
+      getAudioCtx();
+      document.getElementById('hubView').style.display = 'none';
+      document.getElementById('gameViewport').classList.add('active');
+      document.getElementById('gameOverModal').classList.remove('open');
+
+      resizeCanvas();
+      isPaused = false;
+      isGameOver = false;
+      score = 0;
+      currentGame = gameType;
+
+      if (gameType === 'racer') initRacerGame();
+      else if (gameType === 'flight') initFlightGame();
+      else if (gameType === 'tunnel') initTunnelGame();
+
+      lastTime = performance.now();
+      loop();
+    }
+
+    function exitGame() {
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      currentGame = null;
+      document.getElementById('gameViewport').classList.remove('active');
+      document.getElementById('gameOverModal').classList.remove('open');
+      document.getElementById('hubView').style.display = 'block';
+    }
+
+    function togglePauseGame() {
+      isPaused = !isPaused;
+      document.getElementById('btnPauseGame').textContent = isPaused ? '▶ Tiếp tục' : '⏸ Tạm dừng';
+    }
+
+    function triggerGameOver() {
+      isGameOver = true;
+      playCrashSound();
+      document.getElementById('finalScore').textContent = Math.floor(score);
+      const best = Math.max(Math.floor(score), parseInt(localStorage.getItem('tp_best_' + currentGame) || '0', 10));
+      localStorage.setItem('tp_best_' + currentGame, best);
+      document.getElementById('bestScore').textContent = best;
+      document.getElementById('gameOverModal').classList.add('open');
+    }
+
+    function restartCurrentGame() {
+      startGame(currentGame);
+    }
+
+    let lastTime = 0;
+    function loop(now = performance.now()) {
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+
+      if (!isPaused && !isGameOver && currentGame) {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        ctx.clearRect(0, 0, w, h);
+
+        if (currentGame === 'racer') updateRacer(dt, w, h);
+        else if (currentGame === 'flight') updateFlight(dt, w, h);
+        else if (currentGame === 'tunnel') updateTunnel(dt, w, h);
+
+        document.getElementById('hudScore').textContent = Math.floor(score);
+        document.getElementById('hudSpeed').textContent = Math.floor(currentSpeed) + ' km/h';
+      }
+
+      if (currentGame && !isGameOver) {
+        animFrameId = requestAnimationFrame(loop);
+      }
+    }
+
+
+    /* =========================================================================
+       3. TRÒ CHƠI 1: MIDNIGHT HIGHWAY RACER 3D (ĐUA XE CAO TỐC NÉ LÀN)
+       ========================================================================= */
+    let playerX = 0; // -1 (làn trái) đến +1 (làn phải)
+    let roadSpeed = 220;
+    let roadOffset = 0;
+    let traffic = [];
+    let roadCoins = [];
+
+    function initRacerGame() {
+      playerX = 0;
+      roadSpeed = 160;
+      roadOffset = 0;
+      traffic = [];
+      roadCoins = [];
+      spawnTimer = 0;
+    }
+
+    let spawnTimer = 0;
+    function updateRacer(dt, w, h) {
+      // 1. Điều khiển lái (kết hợp con quay hồi chuyển + phím/touch)
+      let steer = tiltX;
+      if (keyLeft) steer = -0.9;
+      if (keyRight) steer = 0.9;
+      playerX += steer * dt * 2.2;
+      playerX = Math.max(-0.85, Math.min(0.85, playerX));
+
+      // Tăng tốc / Phanh
+      if (keyGas) roadSpeed = Math.min(320, roadSpeed + 120 * dt);
+      else if (keyBrake) roadSpeed = Math.max(90, roadSpeed - 180 * dt);
+      else roadSpeed = Math.min(240, roadSpeed + 20 * dt);
+
+      currentSpeed = roadSpeed;
+      score += (roadSpeed / 60) * dt * 10;
+      roadOffset += roadSpeed * dt * 4;
+
+      // 2. Vẽ Bầu trời đêm Neon & Mặt trời Synthwave
+      const horizonY = h * 0.42;
+      const gradSky = ctx.createLinearGradient(0, 0, 0, horizonY);
+      gradSky.addColorStop(0, '#0a0118');
+      gradSky.addColorStop(0.7, '#240645');
+      gradSky.addColorStop(1, '#ff2a70');
+      ctx.fillStyle = gradSky;
+      ctx.fillRect(0, 0, w, horizonY);
+
+      // Mặt trời Neon
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(w * 0.5, horizonY, 80, Math.PI, 0);
+      const sunGrad = ctx.createLinearGradient(0, horizonY - 80, 0, horizonY);
+      sunGrad.addColorStop(0, '#ffe600');
+      sunGrad.addColorStop(1, '#ff2a70');
+      ctx.fillStyle = sunGrad;
+      ctx.shadowColor = '#ff2a70';
+      ctx.shadowBlur = 40;
+      ctx.fill();
+      ctx.restore();
+
+      // Dãy núi neon chân trời
+      ctx.fillStyle = '#14032a';
+      ctx.beginPath();
+      ctx.moveTo(0, horizonY);
+      for (let x = 0; x <= w; x += 60) {
+        const my = horizonY - Math.sin(x * 0.015) * 25 - Math.cos(x * 0.03) * 15;
+        ctx.lineTo(x, my);
+      }
+      ctx.lineTo(w, horizonY);
+      ctx.fill();
+
+      // 3. Vẽ Mặt đường 3D có chiều sâu
+      const roadW_top = w * 0.18;
+      const roadW_bot = w * 0.88;
+      const roadL_top = (w - roadW_top) / 2;
+      const roadR_top = roadL_top + roadW_top;
+      const roadL_bot = (w - roadW_bot) / 2;
+      const roadR_bot = roadL_bot + roadW_bot;
+
+      // Nền cỏ hai bên
+      ctx.fillStyle = '#060a14';
+      ctx.fillRect(0, horizonY, w, h - horizonY);
+
+      // Thảm đường chính
+      ctx.beginPath();
+      ctx.moveTo(roadL_top, horizonY);
+      ctx.lineTo(roadR_top, horizonY);
+      ctx.lineTo(roadR_bot, h);
+      ctx.lineTo(roadL_bot, h);
+      ctx.fillStyle = '#121622';
+      ctx.fill();
+
+      // Vạch kẻ đường di chuyển (Hiệu ứng tốc độ cao)
+      const numSegments = 16;
+      for (let i = 0; i < numSegments; i++) {
+        const segProgress = ((i * (h - horizonY) / numSegments + (roadOffset % (h - horizonY) / numSegments))) / (h - horizonY);
+        const y = horizonY + segProgress * (h - horizonY);
+        if (y < horizonY || y > h) continue;
+
+        const rw = roadW_top + (roadW_bot - roadW_top) * segProgress;
+        const rx = w * 0.5;
+
+        // Vạch phân làn (3 vạch giữa 4 làn đường)
+        for (let l = -1; l <= 1; l++) {
+          const laneX = rx + (l * rw * 0.25);
+          ctx.fillStyle = (Math.floor((roadOffset * 0.05 + i)) % 2 === 0) ? '#00e5ff' : 'rgba(0,229,255,0.1)';
+          ctx.fillRect(laneX - 2, y, 4, (h - horizonY) / numSegments * 0.5);
+        }
+
+        // Lề đường phát sáng (Neon curbs)
+        ctx.fillStyle = (Math.floor((roadOffset * 0.05 + i)) % 2 === 0) ? '#ff2a70' : '#ffd600';
+        const curbW = 10 * segProgress + 3;
+        ctx.fillRect(rx - rw * 0.5 - curbW, y, curbW, 6);
+        ctx.fillRect(rx + rw * 0.5, y, curbW, 6);
+      }
+
+      // 4. Sinh xe chướng ngại vật & Tiền xu
+      spawnTimer += dt;
+      if (spawnTimer > 0.85) {
+        spawnTimer = 0;
+        const laneIdx = Math.floor(Math.random() * 4) - 1.5; // -1.5, -0.5, 0.5, 1.5
+        const isCoin = Math.random() > 0.65;
+        if (isCoin) {
+          roadCoins.push({ x: laneIdx * 0.5, z: 0 });
+        } else {
+          const types = ['truck', 'car', 'taxi'];
+          const type = types[Math.floor(Math.random() * types.length)];
+          traffic.push({
+            x: laneIdx * 0.5,
+            z: 0,
+            type: type,
+            speed: type === 'truck' ? 80 : 120,
+            color: type === 'truck' ? '#3b82f6' : (type === 'taxi' ? '#eab308' : '#ef4444')
+          });
+        }
+      }
+
+      // 5. Cập nhật & Vẽ Xe Chướng Ngại Vật
+      for (let i = traffic.length - 1; i >= 0; i--) {
+        const car = traffic[i];
+        car.z += ((roadSpeed - car.speed) / 100) * dt;
+
+        if (car.z >= 1.05) {
+          traffic.splice(i, 1);
+          continue;
+        }
+
+        const screenY = horizonY + car.z * (h - horizonY);
+        const rw = roadW_top + (roadW_bot - roadW_top) * car.z;
+        const screenX = w * 0.5 + car.x * rw;
+        const scale = 0.2 + car.z * 0.9;
+        const carW = 60 * scale;
+        const carH = 34 * scale;
+
+        // Vẽ xe đối thủ
+        ctx.save();
+        ctx.translate(screenX, screenY);
+        // Thân xe
+        ctx.fillStyle = car.color;
+        ctx.shadowColor = car.color;
+        ctx.shadowBlur = 10;
+        ctx.fillRect(-carW * 0.5, -carH, carW, carH);
+        // Kính sau
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(-carW * 0.38, -carH * 0.9, carW * 0.76, carH * 0.4);
+        // Đèn hậu đỏ rực
+        ctx.fillStyle = '#ff0033';
+        ctx.shadowColor = '#ff0000';
+        ctx.shadowBlur = 12;
+        ctx.fillRect(-carW * 0.45, -carH * 0.3, carW * 0.25, carH * 0.25);
+        ctx.fillRect(carW * 0.2, -carH * 0.3, carW * 0.25, carH * 0.25);
+        ctx.restore();
+
+        // Kiểm tra va chạm với xe người chơi (ở đáy màn hình z >= 0.85)
+        if (car.z > 0.82 && car.z < 0.98) {
+          const pScreenX = w * 0.5 + playerX * (roadW_bot * 0.45);
+          if (Math.abs(screenX - pScreenX) < (carW * 0.7)) {
+            triggerGameOver();
+            return;
+          }
+        }
+      }
+
+      // 6. Cập nhật & Vẽ Xu Vàng
+      for (let i = roadCoins.length - 1; i >= 0; i--) {
+        const coin = roadCoins[i];
+        coin.z += (roadSpeed / 100) * dt;
+        if (coin.z >= 1.05) {
+          roadCoins.splice(i, 1);
+          continue;
+        }
+        const screenY = horizonY + coin.z * (h - horizonY);
+        const rw = roadW_top + (roadW_bot - roadW_top) * coin.z;
+        const screenX = w * 0.5 + coin.x * rw;
+        const coinR = (14 * (0.2 + coin.z * 0.8));
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, coinR, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffd600';
+        ctx.shadowColor = '#ffd600';
+        ctx.shadowBlur = 16;
+        ctx.fill();
+        ctx.restore();
+
+        // Ăn xu
+        if (coin.z > 0.85 && coin.z < 0.98) {
+          const pScreenX = w * 0.5 + playerX * (roadW_bot * 0.45);
+          if (Math.abs(screenX - pScreenX) < 40) {
+            playCoinSound();
+            score += 250;
+            roadCoins.splice(i, 1);
+          }
+        }
+      }
+
+      // 7. Vẽ Xe của Người Chơi (Super Sports Car)
+      const playerY = h * 0.88;
+      const playerScreenX = w * 0.5 + playerX * (roadW_bot * 0.45);
+      const playerW = 82;
+      const playerH = 46;
+
+      ctx.save();
+      ctx.translate(playerScreenX, playerY);
+      // Góc nghiêng xe theo góc vô lăng
+      ctx.rotate(steer * 0.18);
+
+      // Đèn pha chiếu sáng xuống đường
+      const beamGrad = ctx.createLinearGradient(0, 0, 0, -180);
+      beamGrad.addColorStop(0, 'rgba(0, 229, 255, 0.4)');
+      beamGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = beamGrad;
+      ctx.beginPath();
+      ctx.moveTo(-playerW * 0.4, -playerH);
+      ctx.lineTo(-playerW * 0.9, -180);
+      ctx.lineTo(playerW * 0.9, -180);
+      ctx.lineTo(playerW * 0.4, -playerH);
+      ctx.fill();
+
+      // Thân xe thể thao Cyberpunk
+      ctx.fillStyle = '#ff2a70';
+      ctx.shadowColor = '#ff2a70';
+      ctx.shadowBlur = 24;
+      ctx.beginPath();
+      ctx.roundRect(-playerW * 0.5, -playerH, playerW, playerH, 10);
+      ctx.fill();
+
+      // Nóc xe & Kính chắn gió
+      ctx.fillStyle = '#0b0f19';
+      ctx.beginPath();
+      ctx.roundRect(-playerW * 0.35, -playerH * 0.9, playerW * 0.7, playerH * 0.45, 6);
+      ctx.fill();
+
+      // Cánh gió đuôi thể thao (Spoiler)
+      ctx.fillStyle = '#000';
+      ctx.fillRect(-playerW * 0.55, -playerH * 0.15, playerW * 1.1, 8);
+
+      // Đèn hậu LED neon neon cyan & lửa pô
+      ctx.fillStyle = '#00e5ff';
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 14;
+      ctx.fillRect(-playerW * 0.45, -playerH * 0.25, playerW * 0.3, 6);
+      ctx.fillRect(playerW * 0.15, -playerH * 0.25, playerW * 0.3, 6);
+
+      // Lửa ống xả Nitro khi đạp ga
+      if (keyGas || Math.random() > 0.4) {
+        ctx.fillStyle = '#ffd600';
+        ctx.beginPath();
+        ctx.arc(-playerW * 0.3, 4, 6 + Math.random() * 5, 0, Math.PI * 2);
+        ctx.arc(playerW * 0.3, 4, 6 + Math.random() * 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+
+    /* =========================================================================
+       4. TRÒ CHƠI 2: ALPINE JET FLIGHT 3D (LÁI MÁY BAY QUA NÚI TUYẾT)
+       ========================================================================= */
+    let jetX = 0, jetY = 0;
+    let flightRings = [];
+    let flightSpeed = 380;
+    let flightDistance = 0;
+
+    function initFlightGame() {
+      jetX = 0; jetY = 0;
+      flightSpeed = 380;
+      flightDistance = 0;
+      flightRings = [];
+      for (let i = 0; i < 6; i++) {
+        flightRings.push({
+          x: (Math.random() * 2 - 1) * 0.6,
+          y: (Math.random() * 2 - 1) * 0.5,
+          z: 0.2 + i * 0.16
+        });
+      }
+    }
+
+    function updateFlight(dt, w, h) {
+      let steerX = tiltX;
+      let steerY = tiltY;
+      if (keyLeft) steerX = -0.8;
+      if (keyRight) steerX = 0.8;
+      if (keyGas) steerY = -0.8; // ngửa mũi bay lên
+      if (keyBrake) steerY = 0.8; // chúc mũi bay xuống
+
+      jetX += steerX * dt * 1.8;
+      jetY += steerY * dt * 1.5;
+      jetX = Math.max(-0.85, Math.min(0.85, jetX));
+      jetY = Math.max(-0.75, Math.min(0.75, jetY));
+
+      currentSpeed = flightSpeed;
+      score += dt * 80;
+      flightDistance += dt * flightSpeed;
+
+      // 1. Vẽ Bầu trời & Núi tuyết Alpine
+      const horizonY = h * (0.5 + jetY * 0.2);
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
+      skyGrad.addColorStop(0, '#02182b');
+      skyGrad.addColorStop(1, '#64b5f6');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, horizonY);
+
+      // Mặt đất tuyết
+      const groundGrad = ctx.createLinearGradient(0, horizonY, 0, h);
+      groundGrad.addColorStop(0, '#e2e8f0');
+      groundGrad.addColorStop(1, '#94a3b8');
+      ctx.fillStyle = groundGrad;
+      ctx.fillRect(0, horizonY, w, h - horizonY);
+
+      // Đỉnh núi tuyết 2 bên thung lũng
+      ctx.save();
+      ctx.translate(w * 0.5 - jetX * 80, 0);
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.8, horizonY);
+      ctx.lineTo(-w * 0.4, horizonY - 140);
+      ctx.lineTo(-w * 0.1, horizonY);
+      ctx.lineTo(w * 0.2, horizonY - 180);
+      ctx.lineTo(w * 0.6, horizonY - 80);
+      ctx.lineTo(w * 1.2, horizonY);
+      ctx.fill();
+      ctx.restore();
+
+      // 2. Vòng tròn Vàng (Golden Rings)
+      for (let i = flightRings.length - 1; i >= 0; i--) {
+        const ring = flightRings[i];
+        ring.z -= dt * 0.45;
+
+        if (ring.z <= 0) {
+          // Kiểm tra xem máy bay có xuyên qua tâm vòng không
+          const dist = Math.hypot(jetX - ring.x, jetY - ring.y);
+          if (dist < 0.26) {
+            playCoinSound();
+            score += 500;
+          }
+          // Tái sinh vòng mới ở phía xa
+          ring.z = 1.0;
+          ring.x = (Math.random() * 2 - 1) * 0.65;
+          ring.y = (Math.random() * 2 - 1) * 0.55;
+        }
+
+        const scale = 1 / (ring.z + 0.1);
+        const ringScreenX = w * 0.5 + (ring.x - jetX) * w * 0.55;
+        const ringScreenY = horizonY + (ring.y - jetY) * h * 0.55;
+        const ringR = Math.min(120, 18 * scale);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(ringScreenX, ringScreenY, ringR, 0, Math.PI * 2);
+        ctx.lineWidth = Math.max(3, 8 * (1 - ring.z));
+        ctx.strokeStyle = '#ffd600';
+        ctx.shadowColor = '#ffd600';
+        ctx.shadowBlur = 18;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 3. Vẽ Máy Bay Phản Lực (Jet Fighter) từ đuôi
+      const jetScreenX = w * 0.5;
+      const jetScreenY = h * 0.68;
+
+      ctx.save();
+      ctx.translate(jetScreenX, jetScreenY);
+      ctx.rotate(steerX * 0.5); // liệng cánh nghiêng theo vô lăng
+
+      // Thân máy bay phản lực
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.moveTo(0, -45);
+      ctx.lineTo(14, 25);
+      ctx.lineTo(-14, 25);
+      ctx.closePath();
+      ctx.fill();
+
+      // Cánh máy bay swept-back
+      ctx.fillStyle = '#334155';
+      ctx.beginPath();
+      ctx.moveTo(0, -10);
+      ctx.lineTo(65, 20);
+      ctx.lineTo(25, 25);
+      ctx.lineTo(-25, 25);
+      ctx.lineTo(-65, 20);
+      ctx.closePath();
+      ctx.fill();
+
+      // Đuôi cánh đứng
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(-3, -30, 6, 25);
+
+      // Động cơ phản lực rực lửa Afterburner
+      ctx.fillStyle = '#00e5ff';
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 20;
+      ctx.beginPath();
+      ctx.arc(-8, 26, 6 + Math.random() * 4, 0, Math.PI * 2);
+      ctx.arc(8, 26, 6 + Math.random() * 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+
+    /* =========================================================================
+       5. TRÒ CHƠI 3: CYBER TUNNEL 3D (ĐƯỜNG HẦM KHÔNG GIAN 360 ĐỘ)
+       ========================================================================= */
+    let shipAngle = 0; // góc xoay quanh chu vi đường hầm
+    let tunnelGates = [];
+    let tunnelSpeed = 5;
+
+    function initTunnelGame() {
+      shipAngle = 0;
+      tunnelGates = [];
+      tunnelSpeed = 5;
+      for (let i = 0; i < 5; i++) {
+        tunnelGates.push({
+          z: 0.3 + i * 0.22,
+          gapAngle: Math.random() * Math.PI * 2,
+          gapWidth: 1.1
+        });
+      }
+    }
+
+    function updateTunnel(dt, w, h) {
+      let steer = tiltX;
+      if (keyLeft) steer = -0.9;
+      if (keyRight) steer = 0.9;
+      shipAngle += steer * dt * 4.2;
+
+      currentSpeed = tunnelSpeed * 60;
+      score += dt * 60;
+
+      const cx = w * 0.5;
+      const cy = h * 0.5;
+      const maxR = Math.min(w, h) * 0.44;
+
+      // 1. Vẽ các vòng đường hầm đồng tâm
+      ctx.fillStyle = '#05010d';
+      ctx.fillRect(0, 0, w, h);
+
+      for (let r = 1; r <= 8; r++) {
+        const ringR = (maxR / 8) * r;
+        ctx.beginPath();
+        ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(0, 229, 255, ${0.1 + r * 0.08})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // Các tia lưới chiều sâu
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(a) * maxR, cy + Math.sin(a) * maxR);
+        ctx.strokeStyle = 'rgba(255, 42, 112, 0.2)';
+        ctx.stroke();
+      }
+
+      // 2. Cổng chướng ngại vật trong đường hầm
+      for (let i = tunnelGates.length - 1; i >= 0; i--) {
+        const gate = tunnelGates[i];
+        gate.z -= dt * 0.45;
+
+        if (gate.z <= 0.08) {
+          // Kiểm tra va chạm: xem phi thuyền có nằm trong khe hở không
+          let normShip = ((shipAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+          let normGap = ((gate.gapAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+          let diff = Math.abs(normShip - normGap);
+          if (diff > Math.PI) diff = Math.PI * 2 - diff;
+
+          if (diff > gate.gapWidth * 0.5) {
+            triggerGameOver();
+            return;
+          }
+
+          playCoinSound();
+          score += 200;
+          gate.z = 1.1;
+          gate.gapAngle = Math.random() * Math.PI * 2;
+        }
+
+        const scale = 1 - gate.z;
+        const gateR = maxR * scale;
+        if (gateR > 10) {
+          ctx.save();
+          ctx.beginPath();
+          // Cung chướng ngại vật đỏ
+          ctx.arc(cx, cy, gateR, gate.gapAngle + gate.gapWidth * 0.5, gate.gapAngle - gate.gapWidth * 0.5 + Math.PI * 2);
+          ctx.lineWidth = Math.max(6, 24 * scale);
+          ctx.strokeStyle = '#ff2a70';
+          ctx.shadowColor = '#ff2a70';
+          ctx.shadowBlur = 18;
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      // 3. Vẽ Phi Thuyền Không Gian bám chu vi
+      const shipR = maxR * 0.88;
+      const shipX = cx + Math.cos(shipAngle) * shipR;
+      const shipY = cy + Math.sin(shipAngle) * shipR;
+
+      ctx.save();
+      ctx.translate(shipX, shipY);
+      ctx.rotate(shipAngle + Math.PI / 2);
+
+      // Thân tàu neon cyan
+      ctx.fillStyle = '#00e5ff';
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.moveTo(0, -22);
+      ctx.lineTo(16, 14);
+      ctx.lineTo(-16, 14);
+      ctx.closePath();
+      ctx.fill();
+
+      // Động cơ
+      ctx.fillStyle = '#ffd600';
+      ctx.fillRect(-6, 14, 12, 6);
+      ctx.restore();
+    }
+  </script>
+</body>
+</html>
