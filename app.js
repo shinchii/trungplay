@@ -2188,23 +2188,243 @@ window.closeCarModeModal = closeCarModeModal;
 function switchTouchTab(tab) {
   const discoverSection = document.getElementById('discoverSection');
   const favoritesSection = document.getElementById('favoritesSection');
+  const chatSection = document.getElementById('chatSection');
   const tabDiscoverBtn = document.getElementById('tabDiscoverBtn');
   const tabFavoritesBtn = document.getElementById('tabFavoritesBtn');
+  const tabChatBtn = document.getElementById('tabChatBtn');
+
+  if (tabDiscoverBtn) tabDiscoverBtn.classList.remove('active');
+  if (tabFavoritesBtn) tabFavoritesBtn.classList.remove('active');
+  if (tabChatBtn) tabChatBtn.classList.remove('active');
+
+  if (discoverSection) discoverSection.style.display = 'none';
+  if (favoritesSection) favoritesSection.style.display = 'none';
+  if (chatSection) chatSection.style.display = 'none';
 
   if (tab === 'favorites') {
-    if (tabDiscoverBtn) tabDiscoverBtn.classList.remove('active');
     if (tabFavoritesBtn) tabFavoritesBtn.classList.add('active');
-    if (discoverSection) discoverSection.style.display = 'none';
     if (favoritesSection) favoritesSection.style.display = 'block';
     renderFavoritesList();
+  } else if (tab === 'chat') {
+    if (tabChatBtn) tabChatBtn.classList.add('active');
+    if (chatSection) chatSection.style.display = 'block';
+    initChatRoom();
+    const box = document.getElementById('chatMessagesBox');
+    if (box) setTimeout(() => { box.scrollTop = box.scrollHeight; }, 100);
   } else {
     if (tabDiscoverBtn) tabDiscoverBtn.classList.add('active');
-    if (tabFavoritesBtn) tabFavoritesBtn.classList.remove('active');
     if (discoverSection) discoverSection.style.display = 'block';
-    if (favoritesSection) favoritesSection.style.display = 'none';
   }
 }
 window.switchTouchTab = switchTouchTab;
+
+function openChatTab() {
+  switchTouchTab('chat');
+  const section = document.getElementById('chatSection');
+  if (section) {
+    section.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+window.openChatTab = openChatTab;
+
+/* =========================================================================
+   PHÒNG CHAT CỘNG ĐỒNG BÁC TÀI (FIREBASE FIRESTORE - REALTIME)
+   ========================================================================= */
+
+let chatUnsubscribe = null;
+let lastChatSendTime = 0;
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function maskPhoneForChat(phone) {
+  const p = normalizePhone(phone);
+  if (!p || p.length < 7) return 'Bác tài ẩn danh';
+  return p.slice(0, 4) + '***' + p.slice(-3);
+}
+
+function getCurrentUserPhone() {
+  const sessionStr = localStorage.getItem('aptv_user');
+  if (sessionStr) {
+    try {
+      const u = JSON.parse(sessionStr);
+      return normalizePhone(u.phone || u.username || '');
+    } catch (e) {}
+  }
+  return '';
+}
+
+function formatChatTime(val) {
+  if (!val) return '';
+  try {
+    let d = null;
+    if (typeof val.toDate === 'function') {
+      d = val.toDate();
+    } else {
+      d = new Date(val);
+    }
+    if (isNaN(d.getTime())) return '';
+    const hours = String(d.getHours()).padStart(2, '0');
+    const mins = String(d.getMinutes()).padStart(2, '0');
+    return `${hours}:${mins}`;
+  } catch (e) {
+    return '';
+  }
+}
+
+function initChatRoom() {
+  if (chatUnsubscribe) return;
+  if (!db) {
+    const box = document.getElementById('chatMessagesBox');
+    if (box) {
+      box.innerHTML = '<div class="chat-empty-hint"><div style="font-size:32px;margin-bottom:8px;">⚠️</div>Đang kết nối cơ sở dữ liệu... Vui lòng thử lại sau vài giây!</div>';
+    }
+    return;
+  }
+
+  try {
+    chatUnsubscribe = db.collection('public_chats')
+      .orderBy('created_at', 'desc')
+      .limit(50)
+      .onSnapshot((snapshot) => {
+        const msgs = [];
+        snapshot.forEach(doc => {
+          msgs.push({ id: doc.id, ...doc.data() });
+        });
+        msgs.reverse();
+        renderChatMessages(msgs);
+      }, (err) => {
+        console.error('Lỗi lắng nghe phòng chat:', err);
+        const box = document.getElementById('chatMessagesBox');
+        if (box) {
+          box.innerHTML = `<div class="chat-empty-hint">
+            <div style="font-size:32px;margin-bottom:8px;">⚠️</div>
+            Chưa thể tải tin nhắn. Hãy đảm bảo Firebase Security Rules đã cho phép đọc bộ sưu tập <code>public_chats</code>.
+          </div>`;
+        }
+      });
+  } catch (err) {
+    console.error('initChatRoom error:', err);
+  }
+}
+window.initChatRoom = initChatRoom;
+
+function renderChatMessages(messages) {
+  const box = document.getElementById('chatMessagesBox');
+  if (!box) return;
+
+  if (!messages || messages.length === 0) {
+    box.innerHTML = `
+      <div class="chat-empty-hint">
+        <div style="font-size:36px;margin-bottom:8px;">💬</div>
+        <strong>Chưa có tin nhắn nào trong phòng chat!</strong><br>
+        <span style="font-size:12px;opacity:0.8;">Hãy là người đầu tiên gửi lời chào tới cộng đồng các bác tài nhé!</span>
+      </div>
+    `;
+    return;
+  }
+
+  const myPhone = getCurrentUserPhone();
+  const currentDevId = getDeviceId();
+  const isNearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+
+  const html = messages.map(m => {
+    const isMine = (myPhone && m.phone && normalizePhone(m.phone) === myPhone) || (m.device_id && m.device_id === currentDevId);
+    const rowClass = isMine ? 'mine' : 'other';
+    const senderName = isMine ? 'Bạn (Bác tài)' : (m.sender || maskPhoneForChat(m.phone));
+    const timeStr = formatChatTime(m.created_at);
+    const safeMsg = escapeHtml(m.message || '');
+
+    return `
+      <div class="chat-msg-row ${rowClass}">
+        <div class="chat-msg-meta">
+          <span class="chat-msg-sender">${escapeHtml(senderName)}</span>
+          ${timeStr ? `<span>• ${timeStr}</span>` : ''}
+        </div>
+        <div class="chat-msg-bubble">${safeMsg}</div>
+      </div>
+    `;
+  }).join('');
+
+  box.innerHTML = html;
+
+  if (isNearBottom || messages.length <= 5) {
+    setTimeout(() => {
+      box.scrollTop = box.scrollHeight;
+    }, 50);
+  }
+}
+
+async function sendChatMessage(presetText) {
+  const input = document.getElementById('chatInputText');
+  const text = (presetText !== undefined ? presetText : (input ? input.value : '')).trim();
+
+  if (!text) return;
+
+  const myPhone = getCurrentUserPhone();
+  if (!myPhone) {
+    toast('⚠️ Bạn cần đăng nhập tài khoản TrungPlay để gửi tin nhắn chat!');
+    showAuthModal();
+    return;
+  }
+
+  const now = Date.now();
+  if (now - lastChatSendTime < 2500) {
+    toast('⏳ Bạn gửi tin nhắn hơi nhanh, vui lòng chờ 2 giây nhé!');
+    return;
+  }
+
+  if (text.length > 200) {
+    toast('⚠️ Tin nhắn không được vượt quá 200 ký tự!');
+    return;
+  }
+
+  if (!db) {
+    toast('⚠️ Chưa kết nối được Firebase Firestore!');
+    return;
+  }
+
+  const sendBtn = document.getElementById('btnSendChat');
+  if (sendBtn) sendBtn.disabled = true;
+
+  try {
+    const newChat = {
+      phone: myPhone,
+      sender: maskPhoneForChat(myPhone),
+      message: text,
+      device_id: getDeviceId(),
+      created_at: new Date().toISOString()
+    };
+
+    await db.collection('public_chats').add(newChat);
+    lastChatSendTime = Date.now();
+
+    if (input && presetText === undefined) {
+      input.value = '';
+    }
+
+    const box = document.getElementById('chatMessagesBox');
+    if (box) setTimeout(() => { box.scrollTop = box.scrollHeight; }, 100);
+  } catch (err) {
+    console.error('Lỗi gửi tin nhắn chat:', err);
+    toast('❌ Gửi tin nhắn thất bại: ' + (err.message || 'Lỗi Firebase'));
+  } finally {
+    if (sendBtn) sendBtn.disabled = false;
+  }
+}
+window.sendChatMessage = sendChatMessage;
+
+function sendQuickChat(text) {
+  sendChatMessage(text);
+}
+window.sendQuickChat = sendQuickChat;
 
 function toggleFavorite(id) {
   const item = findItem(id);
