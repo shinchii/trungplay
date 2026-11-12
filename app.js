@@ -43,16 +43,16 @@ const defaults = {
   apiKey: '',
   proxyUrl: '',
   playlist: [
-    { id: '3cWWUr6w7z8', title: 'Nonstop Nhạc Trend TikTok Remix 2026 - Bass Cực Căng Lái Xe Đường Dài', channel: 'Việt Mix Official', thumb: 'https://i.ytimg.com/vi/3cWWUr6w7z8/mqdefault.jpg' },
-    { id: 'ri9GuMiNIy0', title: 'Deep House MIX 2026 - Best Music for Night Drive | Luxury Car Music', channel: 'Deep House Nation', thumb: 'https://i.ytimg.com/vi/ri9GuMiNIy0/mqdefault.jpg' },
-    { id: 'WzKS0KJIMl4', title: 'NONSTOP 2026 VINAHOUSE BASS CỰC MẠNH | Tuyển Chọn Lái Xe Đường Dài', channel: 'Vinahouse DJ', thumb: 'https://i.ytimg.com/vi/WzKS0KJIMl4/mqdefault.jpg' },
-    { id: 'kcuXE8euHNg', title: 'DRAVYN - Bass Boosted Night Drive Mix Deep House (Nhạc Nghe Trên Xe)', channel: 'DRAVYN Music', thumb: 'https://i.ytimg.com/vi/kcuXE8euHNg/mqdefault.jpg' },
-    { id: 'GP59_ecBABk', title: 'Lái Xe Là Phải Nghe - DJ HYENA REMIX Liên Khúc Nhạc Trẻ Hot Trend', channel: 'DJ Hyena Remix', thumb: 'https://i.ytimg.com/vi/GP59_ecBABk/mqdefault.jpg' },
-    { id: 'k7zgGmpypf0', title: 'Midnight Executive — Luxury Deep House Night Drive Mix 2026', channel: 'Night Drive Mix', thumb: 'https://i.ytimg.com/vi/k7zgGmpypf0/mqdefault.jpg' },
-    { id: 'dN66qkXDeyc', title: 'Nonstop Vinahouse 2026 - Nhạc Sàn Siêu Xe Bass Cực Căng Đập Tung Loa', channel: 'Car Audio Club', thumb: 'https://i.ytimg.com/vi/dN66qkXDeyc/mqdefault.jpg' },
-    { id: 'cucMdYrlOVE', title: 'Nhạc Nghe Trên Xe Cực Chill 2026 - Mixtape Deep Chill Roadtrip', channel: 'Chill Music VN', thumb: 'https://i.ytimg.com/vi/cucMdYrlOVE/mqdefault.jpg' },
-    { id: 'sjQgYzkXjW8', title: 'Nhạc Trẻ Remix Triệu View 2026 - Nonstop Vinahouse Bay Phòng Lái Xe', channel: 'Nonstop Việt', thumb: 'https://i.ytimg.com/vi/sjQgYzkXjW8/mqdefault.jpg' },
-    { id: 'FkdP-OcvT30', title: 'Chạy Qua Những Ngày Đẹp Trời - Playlist Chill Lái Xe Đường Dài Không Buồn Ngủ', channel: 'Acoustic Chill Lofi', thumb: 'https://i.ytimg.com/vi/FkdP-OcvT30/mqdefault.jpg' }
+    { id: 'cUmpJ2zwfVU', title: 'Cắt Đôi Nỗi Sầu - Tăng Duy Tân (Official MV) | Nhạc Trẻ Hot Trend Lái Xe', channel: 'Tăng Duy Tân', thumb: 'https://i.ytimg.com/vi/cUmpJ2zwfVU/mqdefault.jpg' },
+    { id: '2Vv-BfVoq4g', title: 'Bật Tình Yêu Lên - Hòa Minzy x Tăng Duy Tân | Giai Điệu Vui Tươi Trên Mọi Cung Đường', channel: 'Hòa Minzy Official', thumb: 'https://i.ytimg.com/vi/Fn9O8246hTw/mqdefault.jpg' },
+    { id: 'FN7ALfpGxiI', title: 'Nơi Này Có Anh - Sơn Tùng M-TP | Bản Hit Nghe Trên Xe Cực Cuốn', channel: 'Sơn Tùng M-TP Official', thumb: 'https://i.ytimg.com/vi/FN7ALfpGxiI/mqdefault.jpg' },
+    { id: 'knW7-x7Y7RE', title: 'Hãy Trao Cho Anh - Sơn Tùng M-TP ft. Snoop Dogg | Giai Điệu Sôi Động Đường Dài', channel: 'Sơn Tùng M-TP Official', thumb: 'https://i.ytimg.com/vi/knW7-x7Y7RE/mqdefault.jpg' },
+    { id: 'gJHSDZfJrRY', title: 'See Tình - Hoàng Thùy Linh | Nhạc Trẻ Sôi Động Chống Buồn Ngủ Khi Lái Xe', channel: 'Hoàng Thùy Linh', thumb: 'https://i.ytimg.com/vi/gJHSDZfJrRY/mqdefault.jpg' },
+    { id: 'Llw9Q6akRo4', title: 'Lạc Trôi - Sơn Tùng M-TP | Hòa Âm Cực Chất Nghe Trên Loa Ô Tô', channel: 'Sơn Tùng M-TP Official', thumb: 'https://i.ytimg.com/vi/Llw9Q6akRo4/mqdefault.jpg' },
+    { id: 'xypzmu5mMPY', title: 'Muộn Rồi Mà Sao Còn - Sơn Tùng M-TP | Nhạc Chill Đêm Khuya Cho Bác Tài', channel: 'Sơn Tùng M-TP Official', thumb: 'https://i.ytimg.com/vi/xypzmu5mMPY/mqdefault.jpg' },
+    { id: '32sYGCOYJUM', title: 'Chúng Ta Của Hiện Tại - Sơn Tùng M-TP | Tình Khúc Du Hành Tuyệt Đẹp', channel: 'Sơn Tùng M-TP Official', thumb: 'https://i.ytimg.com/vi/32sYGCOYJUM/mqdefault.jpg' },
+    { id: '6t-MjBazs3o', title: 'Để Mị Nói Cho Mà Nghe - Hoàng Thùy Linh | Nhạc Việt Tươi Vui Rộn Ràng', channel: 'Hoàng Thùy Linh', thumb: 'https://i.ytimg.com/vi/6t-MjBazs3o/mqdefault.jpg' },
+    { id: 'ddaEtFOsFeM', title: 'Có Chắc Yêu Là Đây - Sơn Tùng M-TP | Giai Điệu Tươi Sáng Cho Chuyến Xe Mới', channel: 'Sơn Tùng M-TP Official', thumb: 'https://i.ytimg.com/vi/ddaEtFOsFeM/mqdefault.jpg' }
   ],
   favorites: [],
   history: [],
@@ -146,7 +146,7 @@ function getDeviceId() {
    HỆ THỐNG GỢI Ý BÀI HÁT CÙNG THỂ LOẠI THEO TÀI KHOẢN (CACHE TRÌNH DUYỆT)
    ========================================================================= */
 
-const TASTE_CACHE_PREFIX = 'trungplay_account_taste_v3_';
+const TASTE_CACHE_PREFIX = 'trungplay_account_taste_v5_';
 
 function getCurrentAccountPhone() {
   try {
@@ -320,15 +320,6 @@ function getHomeSuggestedPlaylist() {
       if (padded.length >= 15) break;
     }
     return padded;
-  }
-
-  // 2. Nếu chưa có gợi ý nhưng người dùng đã từng nghe bài trong history (kể cả 1 bài):
-  if (state && Array.isArray(state.history) && state.history.length > 0) {
-    const historySongs = state.history.slice(0, 20);
-    setTimeout(() => {
-      recordSongPlayForTaste(historySongs[0]);
-    }, 150);
-    return historySongs;
   }
 
   return defaults.playlist;
@@ -2116,51 +2107,28 @@ function clearRecentSearches() {}
    ========================================================================= */
 
 function getCarMode() {
-  return localStorage.getItem('aptv_car_mode') || 'rotary';
+  return 'touch';
 }
 
 function isTouchMode() {
-  return getCarMode() === 'touch';
+  return true;
 }
 
 function setCarMode(mode) {
-  if (mode !== 'touch' && mode !== 'rotary') mode = 'rotary';
+  mode = 'touch';
   localStorage.setItem('aptv_car_mode', mode);
   applyCarMode(mode);
   closeCarModeModal();
-  toast(`🚗 Đã chọn: ${mode === 'touch' ? 'Màn hình Cảm ứng 🖐' : 'Xe dùng Con Lăn 🎛'}`);
 }
 window.setCarMode = setCarMode;
 
 function applyCarMode(mode) {
-  const isTouch = (mode === 'touch');
-  document.body.classList.toggle('mode-touch', isTouch);
-  document.body.classList.toggle('mode-rotary', !isTouch);
+  const isTouch = true;
+  document.body.classList.toggle('mode-touch', true);
+  document.body.classList.toggle('mode-rotary', false);
 
-  // HDC_NATURAL_AUDIO_V13: KHÔNG BAO GIỜ di chuyển #playerWrap trong DOM
-  // vì di chuyển thẻ chứa iframe sẽ làm WebKit tải lại iframe và làm hỏng kết nối YT.Player!
   const playerContainer = document.getElementById('playerContainer');
-
-  // Cập nhật Topbar Badge
-  const iconEl = document.getElementById('modePillIcon');
-  const textEl = document.getElementById('modePillText');
-  const badgeEl = document.getElementById('modePillBadge');
-  if (iconEl) iconEl.textContent = isTouch ? '🖐' : '🎛';
-  if (textEl) textEl.textContent = isTouch ? 'Cảm ứng' : 'Con lăn';
-  if (badgeEl) badgeEl.title = isTouch ? 'Đang ở chế độ Màn hình Cảm ứng (Bấm để đổi)' : 'Đang ở chế độ Con lăn / Phím xoay (Bấm để đổi)';
-
-  // Nếu chuyển sang chế độ Con lăn thì thoát tab yêu thích về tìm kiếm
-  if (!isTouch) {
-    switchTouchTab('discover');
-    if (playerContainer && !document.body.classList.contains('cinema')) {
-      playerContainer.classList.remove('active');
-    }
-    setTimeout(() => {
-      if (typeof autoHighlightFirstSongInRotary === 'function') {
-        autoHighlightFirstSongInRotary();
-      }
-    }, 150);
-  } else if (current && playerContainer) {
+  if (current && playerContainer) {
     playerContainer.classList.add('active');
   }
 
@@ -2169,11 +2137,8 @@ function applyCarMode(mode) {
 }
 
 function openCarModeModal() {
-  const modal = document.getElementById('carModeModal');
-  if (modal) {
-    modal.style.display = 'grid';
-    modal.classList.add('open');
-  }
+  // Đã tạm ẩn chế độ chọn loại màn hình xe theo yêu cầu
+  return;
 }
 window.openCarModeModal = openCarModeModal;
 

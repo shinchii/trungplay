@@ -1496,7 +1496,7 @@ body.cinema .cinema-bar {
         <span>🎮</span>
         <span style="font-weight:700;">Game Vô Lăng</span>
       </a>
-      <button type="button" class="mode-pill-badge" id="modePillBadge" onclick="openCarModeModal()" title="Bấm để đổi loại màn hình xe" tabindex="0">
+      <button type="button" class="mode-pill-badge" id="modePillBadge" onclick="openCarModeModal()" title="Bấm để đổi loại màn hình xe" style="display:none;" tabindex="0">
         <span id="modePillIcon">🖐</span>
         <span id="modePillText">Cảm ứng</span>
       </button>
@@ -1667,7 +1667,7 @@ body.cinema .cinema-bar {
       <label>Mã thiết bị (Device ID)</label>
       <input class="field" id="accModalDevId" readonly style="font-size:11px;color:#8792a1">
     </div>
-    <div class="setting">
+    <div class="setting" style="display:none;">
       <label>Chế độ màn hình xe</label>
       <button type="button" class="pill" style="width:100%;justify-content:center;margin-top:6px;" onclick="closeAccountModal();openCarModeModal();" tabindex="0">
         🚗 Đổi loại màn hình (Cảm ứng / Con lăn)
@@ -1679,8 +1679,8 @@ body.cinema .cinema-bar {
   </div>
 </div>
 
-<!-- MODAL CHỌN LOẠI MÀN HÌNH XE (#carModeModal) -->
-<div class="modal-back" id="carModeModal">
+<!-- MODAL CHỌN LOẠI MÀN HÌNH XE (#carModeModal) - TẠM ẨN -->
+<div class="modal-back" id="carModeModal" style="display:none !important;">
   <div class="modal" style="max-width:500px;text-align:center;">
     <div class="modal-head" style="justify-content:center;">
       <h2 style="font-size:20px;color:#fff;">🚗 CHỌN LOẠI MÀN HÌNH XE</h2>
@@ -1810,6 +1810,6 @@ body.cinema .cinema-bar {
 <div class="toast" id="toast"></div>
 
 <!-- APPLICATION LOGIC JS -->
-<script src="app.js?v=20261112_v15"></script>
+<script src="app.js?v=20261112_v16"></script>
 </body>
 </html>
