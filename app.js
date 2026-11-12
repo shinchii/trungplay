@@ -569,6 +569,7 @@ function listenUserSession(phone) {
       liveData.expire_date = liveExpire.getTime() > 0 ? liveExpire.toISOString() : new Date(now.getTime() + 365 * 86400000).toISOString();
       localStorage.setItem('aptv_user', JSON.stringify(liveData));
       updateUserUI(liveData);
+      applyCloudAccountPlaylist(liveData, phone);
     } else if (!isAccountActive(liveData) || liveExpire <= now) {
       handleKickedOut(!isAccountActive(liveData) ? 'Tài khoản đang chờ thanh toán (PENDING).' : 'Tài khoản đã hết hạn sử dụng. Vui lòng gia hạn để tiếp tục sử dụng.', phone);
     }
@@ -2426,6 +2427,71 @@ function sendQuickChat(text) {
 }
 window.sendQuickChat = sendQuickChat;
 
+/* =========================================================================
+   ĐỒNG BỘ DANH SÁCH BÀI HÁT YÊU THÍCH THEO TÀI KHOẢN (FIREBASE FIRESTORE)
+   ========================================================================= */
+
+async function syncAccountPlaylistToCloud() {
+  const phone = getCurrentUserPhone();
+  if (!phone || !db) return;
+  try {
+    const cleanFavs = (state.favorites || []).slice(0, 200).map(item => ({
+      id: item.id,
+      title: item.title || 'YouTube video',
+      author: item.author || '',
+      thumb: item.thumb || ytThumb(item.id)
+    })).filter(x => x && x.id);
+
+    localStorage.setItem('aptv_fav_owner', phone);
+    await db.collection('users').doc(phone).update({
+      favorites: cleanFavs,
+      favorites_updated_at: new Date().toISOString()
+    });
+  } catch (err) {
+    console.warn('Đồng bộ danh sách bài hát lên tài khoản:', err);
+  }
+}
+window.syncAccountPlaylistToCloud = syncAccountPlaylistToCloud;
+
+function applyCloudAccountPlaylist(liveData, phone) {
+  if (!liveData || !phone) return;
+  const lastOwner = localStorage.getItem('aptv_fav_owner') || '';
+
+  if (Array.isArray(liveData.favorites)) {
+    const cloudFavs = liveData.favorites.filter(x => x && x.id);
+    const currentIds = (state.favorites || []).map(x => x.id).join(',');
+    const cloudIds = cloudFavs.map(x => x.id).join(',');
+
+    if (currentIds !== cloudIds || lastOwner !== phone) {
+      state.favorites = cloudFavs;
+      localStorage.setItem('aptv_fav_owner', phone);
+      saveState();
+      updateFavoritesUI();
+      document.querySelectorAll('.btn-fav-item[data-fav-id]').forEach(btn => {
+        const id = btn.getAttribute('data-fav-id');
+        const isNowFav = isFavorite(id);
+        btn.innerHTML = isNowFav ? '❤️' : '🤍';
+        btn.classList.toggle('active', isNowFav);
+        btn.title = isNowFav ? 'Bỏ yêu thích' : 'Thêm vào yêu thích';
+      });
+      const favoritesSection = document.getElementById('favoritesSection');
+      if (favoritesSection && favoritesSection.style.display !== 'none') {
+        renderFavoritesList();
+      }
+    }
+  } else if (Array.isArray(state.favorites) && state.favorites.length > 0 && (!lastOwner || lastOwner === phone)) {
+    // Tài khoản chưa có trường favorites trên cloud nhưng máy đang có bài -> tự động sao lưu lên tài khoản
+    syncAccountPlaylistToCloud();
+  } else if (lastOwner && lastOwner !== phone) {
+    // Đổi sang tài khoản mới chưa có bài hát yêu thích nào
+    state.favorites = [];
+    localStorage.setItem('aptv_fav_owner', phone);
+    saveState();
+    updateFavoritesUI();
+  }
+}
+window.applyCloudAccountPlaylist = applyCloudAccountPlaylist;
+
 function toggleFavorite(id) {
   const item = findItem(id);
   if (!item) return;
@@ -2437,10 +2503,11 @@ function toggleFavorite(id) {
     toast('Đã bỏ yêu thích: ' + (item.title || id));
   } else {
     state.favorites.unshift(item);
-    toast('❤️ Đã thêm vào bài hát yêu thích!');
+    toast('❤️ Đã lưu vào bài hát yêu thích của tài khoản!');
   }
   saveState();
   updateFavoritesUI();
+  syncAccountPlaylistToCloud();
 
   // Cập nhật ngay lập tức các nút trái tim đang có trên màn hình
   document.querySelectorAll(`.btn-fav-item[data-fav-id="${id}"]`).forEach(btn => {
@@ -2461,8 +2528,13 @@ function updateFavoritesUI() {
   const favs = state.favorites || [];
   const badge = document.getElementById('favBadgeCount');
   const subCount = document.getElementById('favSubCount');
+  const phone = getCurrentUserPhone();
   if (badge) badge.textContent = favs.length;
-  if (subCount) subCount.textContent = `${favs.length} bài hát đã lưu`;
+  if (subCount) {
+    subCount.textContent = phone
+      ? `${favs.length} bài hát đã lưu • ☁️ Đồng bộ theo SĐT ${phone}`
+      : `${favs.length} bài hát đã lưu`;
+  }
 }
 
 function renderFavoritesList() {

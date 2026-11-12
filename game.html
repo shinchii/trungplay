@@ -153,6 +153,24 @@
     .game-preview.flight-bg {
       background: radial-gradient(circle at 50% 30%, #fbbf24 0%, #0284c7 50%, #032030 100%);
     }
+    .game-preview.labyrinth-bg {
+      background: radial-gradient(circle at 50% 30%, #f59e0b 0%, #78350f 55%, #1c1917 100%);
+    }
+    .game-preview.parking-bg {
+      background: radial-gradient(circle at 50% 30%, #10b981 0%, #065f46 55%, #0f172a 100%);
+    }
+    .game-preview.skyjump-bg {
+      background: radial-gradient(circle at 50% 30%, #a855f7 0%, #4c1d95 55%, #090614 100%);
+    }
+    .game-preview.musicquiz-bg {
+      background: radial-gradient(circle at 50% 30%, #ff2975 0%, #831843 55%, #11071f 100%);
+    }
+    .game-preview.caro-bg {
+      background: radial-gradient(circle at 50% 30%, #00f2fe 0%, #0369a1 55%, #081226 100%);
+    }
+    .game-preview.bubble-bg {
+      background: radial-gradient(circle at 50% 30%, #f43f5e 0%, #6d28d9 55%, #0f0728 100%);
+    }
     .preview-art {
       font-size: 78px; filter: drop-shadow(0 12px 24px rgba(0,0,0,0.7));
       animation: floatArt 3s ease-in-out infinite;
@@ -195,6 +213,73 @@
       width: 100%; height: 100%; position: absolute; inset: 0; z-index: 1;
     }
     #canvas3dContainer canvas { width: 100% !important; height: 100% !important; display: block; }
+
+    /* 2D INTERACTIVE GAME PANEL */
+    #panel2dContainer {
+      position: absolute; inset: 0; z-index: 5;
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      background: radial-gradient(circle at 50% 20%, #1a103c 0%, #090614 100%);
+      padding: 76px 16px 20px; overflow-y: auto;
+    }
+    .quiz-card {
+      width: 100%; max-width: 620px; background: rgba(19, 15, 36, 0.92);
+      border: 1px solid rgba(0, 242, 254, 0.25); border-radius: 24px;
+      padding: 24px; text-align: center; box-shadow: 0 16px 48px rgba(0,0,0,0.7);
+    }
+    .quiz-timer-bar {
+      width: 100%; height: 8px; background: rgba(255,255,255,0.1);
+      border-radius: 99px; overflow: hidden; margin-bottom: 18px;
+    }
+    .quiz-timer-fill {
+      height: 100%; width: 100%; background: linear-gradient(90deg, #00f2fe, #ff2975);
+      transition: width 0.1s linear;
+    }
+    .quiz-disc {
+      width: 92px; height: 92px; border-radius: 50%; margin: 0 auto 14px;
+      background: radial-gradient(circle, #ff2975 0%, #ff2975 18%, #111 20%, #222 45%, #111 70%);
+      border: 3px solid var(--cyan); display: flex; align-items: center; justify-content: center;
+      font-size: 32px; animation: spinDisc 4s linear infinite;
+      box-shadow: 0 0 24px rgba(0, 242, 254, 0.35);
+    }
+    @keyframes spinDisc { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .quiz-clue-box {
+      background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2);
+      border-radius: 16px; padding: 14px 18px; margin-bottom: 18px;
+    }
+    .quiz-options {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    }
+    .quiz-opt-btn {
+      padding: 14px 16px; border-radius: 14px; background: #1e1836;
+      border: 2px solid rgba(255,255,255,0.12); color: #fff;
+      font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.18s;
+      text-align: left; display: flex; align-items: center; gap: 10px;
+    }
+    .quiz-opt-btn:hover { border-color: var(--cyan); background: #29204a; }
+    .quiz-opt-btn.correct { background: rgba(0, 210, 106, 0.25); border-color: #00d26a; color: #00f59b; }
+    .quiz-opt-btn.wrong { background: rgba(255, 41, 117, 0.25); border-color: #ff2975; color: #ff85ad; }
+
+    .caro-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%;
+    }
+    .caro-toolbar {
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center;
+    }
+    .caro-mode-btn {
+      padding: 8px 16px; border-radius: 99px; border: 1px solid rgba(255,255,255,0.2);
+      background: #1c1532; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+    .caro-mode-btn.active {
+      background: linear-gradient(135deg, var(--cyan), #0284c7); color: #000; border-color: var(--cyan);
+    }
+    #caroCanvas, #bubbleCanvas {
+      border-radius: 16px; border: 2px solid rgba(0, 242, 254, 0.35);
+      background: #0d0a1a; box-shadow: 0 12px 40px rgba(0,0,0,0.75);
+      touch-action: none; max-width: 100%;
+    }
+    @media (max-width: 640px) {
+      .quiz-options { grid-template-columns: 1fr; }
+    }
 
     /* IN-GAME HUD */
     .game-hud {
@@ -398,12 +483,121 @@
         </div>
       </div>
 
+      <!-- 3. LABYRINTH 3D BALANCE BALL -->
+      <div class="game-card" onclick="startTiltGame('labyrinth_ball')">
+        <div class="game-preview labyrinth-bg">
+          <span class="game-badge-tag">🎱 TILT LABYRINTH</span>
+          <div class="preview-art">🎱🪵</div>
+        </div>
+        <div class="game-info">
+          <h3 class="game-title">Lăn Bi Mê Cung Gỗ 3D</h3>
+          <p class="game-desc">Nghiêng điện thoại 4 hướng để nghiêng mặt bàn gỗ 3D, khéo léo lăn viên bi thép sáng bóng vượt qua các bức tường mê cung và né các lỗ bẫy đen để về đích Vàng.</p>
+          <div class="game-tags">
+            <span class="tag pill-hot">Tilt 4 hướng</span>
+            <span class="tag">Vật lý 3D thật</span>
+            <span class="tag">Qua màn liên hoàn</span>
+          </div>
+          <button type="button" class="btn-play-card">▶ CHƠI NGAY</button>
+        </div>
+      </div>
+
+      <!-- 4. MASTER PARKING 3D -->
+      <div class="game-card" onclick="startTiltGame('master_parking')">
+        <div class="game-preview parking-bg">
+          <span class="game-badge-tag">🅿️ TILT PARKING</span>
+          <div class="preview-art">🚘🅿️</div>
+        </div>
+        <div class="game-info">
+          <h3 class="game-title">Đỗ Xe Vào Chuồng 3D</h3>
+          <p class="game-desc">Thử tài căn góc của bác tài! Nghiêng điện thoại để xoay vô lăng kết hợp chân ga tiến/lùi đưa xe lách qua hàng xe đang đỗ để nằm gọn vào ô đỗ phát sáng.</p>
+          <div class="game-tags">
+            <span class="tag pill-hot">Vô lăng nghiêng</span>
+            <span class="tag">Số Tiến &amp; Lùi</span>
+            <span class="tag">Đỗ xe 3D</span>
+          </div>
+          <button type="button" class="btn-play-card">▶ CHƠI NGAY</button>
+        </div>
+      </div>
+
+      <!-- 5. SKY TILT JUMP 3D -->
+      <div class="game-card" onclick="startTiltGame('sky_jump')">
+        <div class="game-preview skyjump-bg">
+          <span class="game-badge-tag">🚀 TILT JUMP</span>
+          <div class="preview-art">🚀☁️</div>
+        </div>
+        <div class="game-info">
+          <h3 class="game-title">Bật Nhảy Lên Mây 3D</h3>
+          <p class="game-desc">Nghiêng điện thoại qua trái/phải để điều khiển phi thuyền mini bật nhảy liên hoàn lên các bệ phóng lơ lửng trên mây, ăn đệm lò xo siêu tốc để lập kỷ lục độ cao!</p>
+          <div class="game-tags">
+            <span class="tag pill-hot">Tilt Left/Right</span>
+            <span class="tag">Bay nhảy 3D</span>
+            <span class="tag">Đua Top độ cao</span>
+          </div>
+          <button type="button" class="btn-play-card">▶ CHƠI NGAY</button>
+        </div>
+      </div>
+
+      <!-- 6. ĐOÁN NHẠC NHANH -->
+      <div class="game-card" onclick="startTiltGame('music_quiz')">
+        <div class="game-preview musicquiz-bg">
+          <span class="game-badge-tag">🎵 MUSIC QUIZ</span>
+          <div class="preview-art">🎵💿</div>
+        </div>
+        <div class="game-info">
+          <h3 class="game-title">Đoán Nhạc Nhanh Bác Tài</h3>
+          <p class="game-desc">Thử tài am hiểu âm nhạc! Nghe giai điệu và xem gợi ý ca sĩ/lời bài hát từ kho nhạc Bolero, Nhạc Trẻ, Remix trên TrungPlay để chọn đáp án đúng trong 10 giây.</p>
+          <div class="game-tags">
+            <span class="tag pill-hot">Kho nhạc TrungPlay</span>
+            <span class="tag">Trắc nghiệm 10s</span>
+            <span class="tag">Combo điểm thưởng</span>
+          </div>
+          <button type="button" class="btn-play-card">▶ CHƠI NGAY</button>
+        </div>
+      </div>
+
+      <!-- 7. CỜ CARO ĐẤU TRÍ -->
+      <div class="game-card" onclick="startTiltGame('caro_duel')">
+        <div class="game-preview caro-bg">
+          <span class="game-badge-tag">❌⭕ CARO 15x15</span>
+          <div class="preview-art">❌⭕</div>
+        </div>
+        <div class="game-info">
+          <h3 class="game-title">Cờ Caro Bác Tài</h3>
+          <p class="game-desc">Bàn cờ Caro 15x15 chuẩn thi đấu giải khuây khi dừng xe chờ khách. Có chế độ đấu trí với Máy thông minh (AI Bác Tài) hoặc 2 anh em chơi chung trên 1 màn hình.</p>
+          <div class="game-tags">
+            <span class="tag pill-hot">Đấu AI thông minh</span>
+            <span class="tag">Chơi 2 người</span>
+            <span class="tag">Màn hình xe &amp; ĐT</span>
+          </div>
+          <button type="button" class="btn-play-card">▶ CHƠI NGAY</button>
+        </div>
+      </div>
+
+      <!-- 8. BẮN BÓNG MÀU -->
+      <div class="game-card" onclick="startTiltGame('bubble_shooter')">
+        <div class="game-preview bubble-bg">
+          <span class="game-badge-tag">🟢 BUBBLE SHOOTER</span>
+          <div class="preview-art">🫧🎯</div>
+        </div>
+        <div class="game-info">
+          <h3 class="game-title">Bắn Bóng Màu Giải Khuây</h3>
+          <p class="game-desc">Ngắm tia laser phản xạ và bắn các quả bóng 3D rực rỡ làm nổ tung các chùm bóng cùng màu. Đồ họa bóng kính bắt mắt, âm thanh nổ bóng cực kỳ thư giãn.</p>
+          <div class="game-tags">
+            <span class="tag pill-hot">Giải trí 1 chạm</span>
+            <span class="tag">Tia ngắm phản xạ</span>
+            <span class="tag">Hiệu ứng nổ 3D</span>
+          </div>
+          <button type="button" class="btn-play-card">▶ CHƠI NGAY</button>
+        </div>
+      </div>
+
     </div>
   </main>
 
-  <!-- MÀN HÌNH CHƠI GAME 3D (GAME VIEWPORT) -->
+  <!-- MÀN HÌNH CHƠI GAME 3D & 2D (GAME VIEWPORT) -->
   <div class="game-viewport" id="gameViewport">
     <div id="canvas3dContainer"></div>
+    <div id="panel2dContainer"></div>
 
     <!-- HUD THÔNG SỐ -->
     <div class="game-hud">
@@ -645,33 +839,84 @@
       });
     }
 
+    let hudExtraText = '';
+
     function startTiltGame(type) {
       enableSensorPermission();
       getAudioCtx();
-      initThree();
 
       document.getElementById('hubView').style.display = 'none';
       document.getElementById('gameViewport').classList.add('active');
       document.getElementById('gameOverModal').classList.remove('open');
 
+      if (animId) cancelAnimationFrame(animId);
+      if (typeof stopQuizTimer === 'function') stopQuizTimer();
+
       activeGame = type;
       isPaused = false;
       isGameOver = false;
       gameScore = 0;
+      gameSpeed = 0;
+      hudExtraText = '';
+      document.getElementById('btnPause').textContent = '⏸ Tạm dừng';
 
-      while(scene.children.length > 0) {
-        scene.remove(scene.children[0]);
+      const is3D = ['alpine_drive', 'alpine_flight', 'labyrinth_ball', 'master_parking', 'sky_jump'].includes(type);
+      const panel2d = document.getElementById('panel2dContainer');
+      const wheelBox = document.querySelector('.cockpit-wheel-box');
+      const touchBox = document.querySelector('.touch-controls');
+
+      if (is3D) {
+        initThree();
+        container.style.display = 'block';
+        if (panel2d) { panel2d.style.display = 'none'; panel2d.innerHTML = ''; }
+        if (wheelBox) wheelBox.style.display = (type === 'labyrinth_ball' || type === 'sky_jump') ? 'none' : 'flex';
+        if (touchBox) touchBox.style.display = 'flex';
+
+        while (scene.children.length > 0) {
+          scene.remove(scene.children[0]);
+        }
+
+        if (type === 'alpine_drive') {
+          document.getElementById('hudSpeedLabel').textContent = 'Tốc độ';
+          setupAlpineDrive();
+        } else if (type === 'alpine_flight') {
+          document.getElementById('hudSpeedLabel').textContent = 'Tốc độ';
+          setupAlpineFlight();
+        } else if (type === 'labyrinth_ball') {
+          document.getElementById('hudSpeedLabel').textContent = 'Màn chơi';
+          setupLabyrinthBall();
+        } else if (type === 'master_parking') {
+          document.getElementById('hudSpeedLabel').textContent = 'Bãi đỗ';
+          setupMasterParking();
+        } else if (type === 'sky_jump') {
+          document.getElementById('hudSpeedLabel').textContent = 'Độ cao';
+          setupSkyJump();
+        }
+
+        lastTime = performance.now();
+        gameLoop();
+      } else {
+        container.style.display = 'none';
+        if (wheelBox) wheelBox.style.display = 'none';
+        if (touchBox) touchBox.style.display = 'none';
+        if (panel2d) panel2d.style.display = 'flex';
+
+        if (type === 'music_quiz') {
+          document.getElementById('hudSpeedLabel').textContent = 'Combo';
+          setupMusicQuiz();
+        } else if (type === 'caro_duel') {
+          document.getElementById('hudSpeedLabel').textContent = 'Lượt đi';
+          setupCaroDuel();
+        } else if (type === 'bubble_shooter') {
+          document.getElementById('hudSpeedLabel').textContent = 'Bóng nổ';
+          setupBubbleShooter();
+        }
       }
-
-      if (type === 'alpine_drive') setupAlpineDrive();
-      else if (type === 'alpine_flight') setupAlpineFlight();
-
-      lastTime = performance.now();
-      gameLoop();
     }
 
     function exitTiltGame() {
       if (animId) cancelAnimationFrame(animId);
+      if (typeof stopQuizTimer === 'function') stopQuizTimer();
       activeGame = null;
       document.getElementById('gameViewport').classList.remove('active');
       document.getElementById('gameOverModal').classList.remove('open');
@@ -683,9 +928,12 @@
       document.getElementById('btnPause').textContent = isPaused ? '▶ Tiếp tục' : '⏸ Tạm dừng';
     }
 
-    function triggerGameOver() {
+    function triggerGameOver(customTitle) {
       isGameOver = true;
+      if (typeof stopQuizTimer === 'function') stopQuizTimer();
       playCrashSound();
+      const titleEl = document.querySelector('#gameOverModal h3');
+      if (titleEl) titleEl.textContent = customTitle || '💥 GAME OVER!';
       document.getElementById('finalScore').textContent = Math.floor(gameScore);
       const best = Math.max(Math.floor(gameScore), parseInt(localStorage.getItem('tp_tilt_best_' + activeGame) || '0', 10));
       localStorage.setItem('tp_tilt_best_' + activeGame, best);
@@ -705,11 +953,16 @@
       if (!isPaused && !isGameOver && activeGame) {
         if (activeGame === 'alpine_drive') updateAlpineDrive(dt);
         else if (activeGame === 'alpine_flight') updateAlpineFlight(dt);
+        else if (activeGame === 'labyrinth_ball') updateLabyrinthBall(dt);
+        else if (activeGame === 'master_parking') updateMasterParking(dt);
+        else if (activeGame === 'sky_jump') updateSkyJump(dt);
 
-        renderer.render(scene, camera);
+        if (renderer && scene && camera) {
+          renderer.render(scene, camera);
+        }
 
         document.getElementById('hudScore').textContent = Math.floor(gameScore);
-        document.getElementById('hudSpeed').textContent = Math.floor(gameSpeed) + ' km/h';
+        document.getElementById('hudSpeed').textContent = hudExtraText || (Math.floor(gameSpeed) + ' km/h');
       }
 
       if (activeGame && !isGameOver) {
@@ -1105,6 +1358,1184 @@
           ring.userData.passed = false;
         }
       });
+    }
+
+
+    /* =========================================================================
+       5. GAME 3: LĂN BI MÊ CUNG GỖ 3D (LABYRINTH BALANCE BALL - TILT 4 HƯỚNG)
+       ========================================================================= */
+    let labyrinthBoard, ballMesh, goalRingMesh;
+    let labWallBoxes = [], labTrapHoles = [], labGoalPos = { x: 7.5, z: -7.5 };
+    let ballPos = { x: -7.5, z: 7.5 }, ballVel = { vx: 0, vz: 0 };
+    let boardRotX = 0, boardRotZ = 0, labLevel = 1;
+
+    function setupLabyrinthBall() {
+      labLevel = 1;
+      buildLabyrinthLevel(labLevel);
+    }
+
+    function buildLabyrinthLevel(lvl) {
+      while (scene.children.length > 0) scene.remove(scene.children[0]);
+
+      scene.background = new THREE.Color(0x0c0a18);
+      scene.fog = new THREE.FogExp2(0x0c0a18, 0.012);
+
+      const hemi = new THREE.HemisphereLight(0xfff7ed, 0x1e293b, 0.9);
+      scene.add(hemi);
+
+      const dirLight = new THREE.DirectionalLight(0xffedd5, 1.5);
+      dirLight.position.set(18, 35, 16);
+      scene.add(dirLight);
+
+      labyrinthBoard = new THREE.Group();
+      scene.add(labyrinthBoard);
+
+      // Mặt bàn gỗ sồi đánh bóng
+      const baseGeo = new THREE.BoxGeometry(20, 1.0, 20);
+      const woodMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.45, metalness: 0.1 });
+      const borderMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.5, metalness: 0.15 });
+      const baseMesh = new THREE.Mesh(baseGeo, woodMat);
+      baseMesh.position.y = -0.5;
+      labyrinthBoard.add(baseMesh);
+
+      // Khung viền 4 cạnh
+      const borders = [
+        { x: 0, z: -9.6, w: 20, d: 0.8 },
+        { x: 0, z: 9.6, w: 20, d: 0.8 },
+        { x: -9.6, z: 0, w: 0.8, d: 18.4 },
+        { x: 9.6, z: 0, w: 0.8, d: 18.4 }
+      ];
+      borders.forEach(b => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(b.w, 1.2, b.d), borderMat);
+        m.position.set(b.x, 0.6, b.z);
+        labyrinthBoard.add(m);
+      });
+
+      // Các vách ngăn mê cung theo màn
+      const layouts = [
+        {
+          walls: [
+            { x: -3.5, z: 4.5, w: 11, d: 0.7 },
+            { x: 3.5, z: 0.0, w: 11, d: 0.7 },
+            { x: -3.5, z: -4.5, w: 11, d: 0.7 }
+          ],
+          holes: [
+            { x: 3.2, z: 6.8 }, { x: -7.2, z: 2.2 }, { x: 6.8, z: -2.2 }, { x: -2.0, z: -7.0 }
+          ],
+          start: { x: -7.5, z: 7.5 },
+          goal: { x: 7.5, z: -7.5 }
+        },
+        {
+          walls: [
+            { x: -4.5, z: 5.2, w: 9, d: 0.7 },
+            { x: 4.5, z: 2.0, w: 9, d: 0.7 },
+            { x: 0, z: -1.5, w: 0.7, d: 7 },
+            { x: -4.2, z: -5.0, w: 9.5, d: 0.7 },
+            { x: 5.0, z: -5.0, w: 6.0, d: 0.7 }
+          ],
+          holes: [
+            { x: 1.5, z: 6.8 }, { x: -6.8, z: 2.0 }, { x: 2.8, z: -1.5 }, { x: -2.5, z: -2.5 }, { x: 1.2, z: -7.2 }
+          ],
+          start: { x: -7.5, z: 7.5 },
+          goal: { x: 7.5, z: -7.5 }
+        },
+        {
+          walls: [
+            { x: 0, z: 5.5, w: 12, d: 0.7 },
+            { x: -5.2, z: 1.5, w: 0.7, d: 8 },
+            { x: 5.2, z: -1.5, w: 0.7, d: 8 },
+            { x: 0, z: -5.5, w: 12, d: 0.7 }
+          ],
+          holes: [
+            { x: -7.5, z: 3.5 }, { x: 7.2, z: 5.5 }, { x: 0, z: 1.8 }, { x: 0, z: -1.8 }, { x: -7.2, z: -5.5 }, { x: 3.0, z: -7.5 }
+          ],
+          start: { x: -7.5, z: 7.8 },
+          goal: { x: 7.5, z: -7.8 }
+        }
+      ];
+
+      const cfg = layouts[(lvl - 1) % layouts.length];
+      labWallBoxes = cfg.walls;
+      labTrapHoles = cfg.holes;
+      labGoalPos = cfg.goal;
+
+      cfg.walls.forEach(w => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w.w, 1.1, w.d), borderMat);
+        m.position.set(w.x, 0.55, w.z);
+        labyrinthBoard.add(m);
+      });
+
+      // Các lỗ bẫy màu đen viền đỏ cảnh báo
+      const holeGeo = new THREE.CylinderGeometry(0.82, 0.82, 0.08, 24);
+      const holeMat = new THREE.MeshBasicMaterial({ color: 0x050508 });
+      const rimGeo = new THREE.TorusGeometry(0.86, 0.08, 10, 24);
+      rimGeo.rotateX(Math.PI / 2);
+      const rimMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.4 });
+
+      cfg.holes.forEach(h => {
+        const hm = new THREE.Mesh(holeGeo, holeMat);
+        hm.position.set(h.x, 0.02, h.z);
+        labyrinthBoard.add(hm);
+        const rm = new THREE.Mesh(rimGeo, rimMat);
+        rm.position.set(h.x, 0.05, h.z);
+        labyrinthBoard.add(rm);
+      });
+
+      // Cổng đích phát sáng Vàng - Xanh Ngọc
+      const goalGeo = new THREE.TorusGeometry(1.05, 0.16, 12, 28);
+      goalGeo.rotateX(Math.PI / 2);
+      const goalMat = new THREE.MeshStandardMaterial({
+        color: 0x00e676, emissive: 0x00e676, emissiveIntensity: 0.7, metalness: 0.8, roughness: 0.2
+      });
+      goalRingMesh = new THREE.Mesh(goalGeo, goalMat);
+      goalRingMesh.position.set(labGoalPos.x, 0.25, labGoalPos.z);
+      labyrinthBoard.add(goalRingMesh);
+
+      // Viên bi thép sáng bóng
+      const ballGeo = new THREE.SphereGeometry(0.62, 32, 32);
+      const ballMat = new THREE.MeshStandardMaterial({
+        color: 0xf8fafc, metalness: 0.94, roughness: 0.08
+      });
+      ballMesh = new THREE.Mesh(ballGeo, ballMat);
+      ballPos = { x: cfg.start.x, z: cfg.start.z };
+      ballVel = { vx: 0, vz: 0 };
+      boardRotX = 0; boardRotZ = 0;
+      ballMesh.position.set(ballPos.x, 0.62, ballPos.z);
+      labyrinthBoard.add(ballMesh);
+
+      camera.position.set(0, 24, 13.5);
+      camera.lookAt(0, 0, 0.5);
+      hudExtraText = 'Màn ' + labLevel;
+    }
+
+    function checkWallCollision(nx, nz, r) {
+      if (nx < -9.2 + r) { nx = -9.2 + r; ballVel.vx = -ballVel.vx * 0.45; playTone(180, 'triangle', 0.05, 0.08); }
+      if (nx > 9.2 - r) { nx = 9.2 - r; ballVel.vx = -ballVel.vx * 0.45; playTone(180, 'triangle', 0.05, 0.08); }
+      if (nz < -9.2 + r) { nz = -9.2 + r; ballVel.vz = -ballVel.vz * 0.45; playTone(180, 'triangle', 0.05, 0.08); }
+      if (nz > 9.2 - r) { nz = 9.2 - r; ballVel.vz = -ballVel.vz * 0.45; playTone(180, 'triangle', 0.05, 0.08); }
+
+      for (let i = 0; i < labWallBoxes.length; i++) {
+        const w = labWallBoxes[i];
+        const halfW = w.w / 2;
+        const halfD = w.d / 2;
+        const closestX = Math.max(w.x - halfW, Math.min(nx, w.x + halfW));
+        const closestZ = Math.max(w.z - halfD, Math.min(nz, w.z + halfD));
+        const dx = nx - closestX;
+        const dz = nz - closestZ;
+        const distSq = dx * dx + dz * dz;
+        if (distSq < r * r && distSq > 0.00001) {
+          const dist = Math.sqrt(distSq);
+          const overlap = r - dist;
+          const ux = dx / dist;
+          const uz = dz / dist;
+          nx += ux * overlap;
+          nz += uz * overlap;
+          const dot = ballVel.vx * ux + ballVel.vz * uz;
+          if (dot < 0) {
+            ballVel.vx -= 1.45 * dot * ux;
+            ballVel.vz -= 1.45 * dot * uz;
+            if (Math.abs(dot) > 1.8) playTone(210, 'triangle', 0.04, 0.07);
+          }
+        }
+      }
+      return { x: nx, z: nz };
+    }
+
+    function updateLabyrinthBall(dt) {
+      let sx = tiltX;
+      let sy = tiltY;
+      if (keyLeft) sx = -0.8;
+      if (keyRight) sx = 0.8;
+      if (keyUp) sy = -0.8;
+      if (keyDown) sy = 0.8;
+
+      boardRotZ = THREE.MathUtils.lerp(boardRotZ, -sx * 0.25, 0.14);
+      boardRotX = THREE.MathUtils.lerp(boardRotX, sy * 0.25, 0.14);
+      labyrinthBoard.rotation.z = boardRotZ;
+      labyrinthBoard.rotation.x = boardRotX;
+
+      ballVel.vx += (-boardRotZ) * 42 * dt;
+      ballVel.vz += (boardRotX) * 42 * dt;
+      ballVel.vx *= 0.985;
+      ballVel.vz *= 0.985;
+
+      const nextPos = checkWallCollision(ballPos.x + ballVel.vx * dt, ballPos.z + ballVel.vz * dt, 0.62);
+      ballPos.x = nextPos.x;
+      ballPos.z = nextPos.z;
+      ballMesh.position.set(ballPos.x, 0.62, ballPos.z);
+
+      if (goalRingMesh) goalRingMesh.rotation.z += dt * 2.5;
+
+      // Kiểm tra rơi vào lỗ bẫy
+      for (let i = 0; i < labTrapHoles.length; i++) {
+        const h = labTrapHoles[i];
+        if (Math.hypot(ballPos.x - h.x, ballPos.z - h.z) < 0.74) {
+          triggerGameOver('🕳️ RƠI VÀO BẪY!');
+          return;
+        }
+      }
+
+      // Kiểm tra chạm đích
+      if (Math.hypot(ballPos.x - labGoalPos.x, ballPos.z - labGoalPos.z) < 1.1) {
+        playRingSound();
+        gameScore += 1000 * labLevel;
+        labLevel++;
+        buildLabyrinthLevel(labLevel);
+      }
+    }
+
+
+    /* =========================================================================
+       6. GAME 4: ĐỖ XE VÀO CHUỒNG 3D (MASTER PARKING 3D - VÔ LĂNG & SỐ TIẾN/LÙI)
+       ========================================================================= */
+    let parkingCar, parkingTargetMesh;
+    let parkingObstacles = [], parkingTarget = { x: 0, z: -8 };
+    let pCarX = 0, pCarZ = 10, pCarYaw = 0, pCarSpeed = 0, parkingLevel = 1;
+
+    function setupMasterParking() {
+      parkingLevel = 1;
+      buildParkingLevel(parkingLevel);
+    }
+
+    function buildParkingLevel(lvl) {
+      while (scene.children.length > 0) scene.remove(scene.children[0]);
+
+      scene.background = new THREE.Color(0x0f172a);
+      scene.fog = new THREE.FogExp2(0x0f172a, 0.008);
+
+      const hemi = new THREE.HemisphereLight(0xffffff, 0x334155, 0.95);
+      scene.add(hemi);
+      const sun = new THREE.DirectionalLight(0xfffbeb, 1.4);
+      sun.position.set(20, 40, 20);
+      scene.add(sun);
+
+      // Mặt sân nhựa Asphalt bãi đỗ xe
+      const lotGeo = new THREE.PlaneGeometry(36, 36);
+      lotGeo.rotateX(-Math.PI / 2);
+      const lotMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.85 });
+      scene.add(new THREE.Mesh(lotGeo, lotMat));
+
+      // Tường bao bãi đỗ
+      const curbMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.6 });
+      [
+        { x: 0, z: -17.5, w: 36, d: 1 },
+        { x: 0, z: 17.5, w: 36, d: 1 },
+        { x: -17.5, z: 0, w: 1, d: 35 },
+        { x: 17.5, z: 0, w: 1, d: 35 }
+      ].forEach(b => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(b.w, 1.2, b.d), curbMat);
+        m.position.set(b.x, 0.6, b.z);
+        scene.add(m);
+      });
+
+      // Vạch kẻ ô đỗ xe
+      const lineMat = new THREE.MeshBasicMaterial({ color: 0x94a3b8 });
+      for (let x = -10; x <= 10; x += 5) {
+        const l = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 6.5), lineMat);
+        l.rotateX(-Math.PI / 2);
+        l.position.set(x, 0.02, -11);
+        scene.add(l);
+      }
+
+      const scenarios = [
+        {
+          target: { x: 2.5, z: -11 },
+          parked: [
+            { x: -2.5, z: -11, color: 0x3b82f6 },
+            { x: 7.5, z: -11, color: 0x10b981 },
+            { x: -7.5, z: -11, color: 0xf59e0b },
+            { x: 5.5, z: 1, color: 0xe2e8f0 }
+          ]
+        },
+        {
+          target: { x: -2.5, z: -11 },
+          parked: [
+            { x: -7.5, z: -11, color: 0xef4444 },
+            { x: 2.5, z: -11, color: 0x3b82f6 },
+            { x: 7.5, z: -11, color: 0xa855f7 },
+            { x: -4.0, z: -1, color: 0xf59e0b },
+            { x: 4.5, z: 2, color: 0x10b981 }
+          ]
+        },
+        {
+          target: { x: 7.5, z: -11 },
+          parked: [
+            { x: -7.5, z: -11, color: 0x3b82f6 },
+            { x: -2.5, z: -11, color: 0x10b981 },
+            { x: 2.5, z: -11, color: 0xf59e0b },
+            { x: 0, z: -1.5, color: 0xe2e8f0 },
+            { x: 7.0, z: 0.5, color: 0xef4444 }
+          ]
+        }
+      ];
+
+      const sc = scenarios[(lvl - 1) % scenarios.length];
+      parkingTarget = sc.target;
+      parkingObstacles = [];
+
+      // Ô đỗ đích phát sáng Xanh Lá
+      const bayGroup = new THREE.Group();
+      const bayFloor = new THREE.Mesh(
+        new THREE.PlaneGeometry(3.8, 6.2),
+        new THREE.MeshBasicMaterial({ color: 0x00e676, transparent: true, opacity: 0.28 })
+      );
+      bayFloor.rotateX(-Math.PI / 2);
+      bayFloor.position.y = 0.03;
+      bayGroup.add(bayFloor);
+
+      const bayRing = new THREE.Mesh(
+        new THREE.TorusGeometry(1.5, 0.14, 10, 24),
+        new THREE.MeshBasicMaterial({ color: 0x00f2fe })
+      );
+      bayRing.rotateX(Math.PI / 2);
+      bayRing.position.y = 0.25;
+      bayGroup.add(bayRing);
+
+      bayGroup.position.set(parkingTarget.x, 0, parkingTarget.z);
+      scene.add(bayGroup);
+      parkingTargetMesh = bayRing;
+
+      // Các xe đang đỗ làm chướng ngại vật
+      sc.parked.forEach(p => {
+        const c = createStylizedCar(p.color, false);
+        c.position.set(p.x, 0, p.z);
+        scene.add(c);
+        parkingObstacles.push({ x: p.x, z: p.z, r: 2.15 });
+      });
+
+      // Xe của Bác Tài
+      parkingCar = createStylizedCar(0xff2975, true);
+      pCarX = -5; pCarZ = 10.5; pCarYaw = 0; pCarSpeed = 0;
+      parkingCar.position.set(pCarX, 0, pCarZ);
+      scene.add(parkingCar);
+
+      camera.position.set(0, 26, 17);
+      camera.lookAt(0, 0, -2);
+      hudExtraText = 'Bãi ' + parkingLevel;
+    }
+
+    function updateMasterParking(dt) {
+      let steer = tiltX;
+      if (keyLeft) steer = -0.85;
+      if (keyRight) steer = 0.85;
+
+      // Điều khiển Tiến (▲ hoặc nghiêng tới) / Lùi (▼ hoặc nghiêng lui)
+      if (keyUp || tiltY < -0.28) {
+        pCarSpeed = Math.min(9.5, pCarSpeed + 14 * dt);
+      } else if (keyDown || tiltY > 0.28) {
+        pCarSpeed = Math.max(-6.5, pCarSpeed - 14 * dt);
+      } else {
+        pCarSpeed *= 0.91;
+        if (Math.abs(pCarSpeed) < 0.08) pCarSpeed = 0;
+      }
+
+      pCarYaw -= steer * (pCarSpeed * 0.22) * dt;
+      pCarX += -Math.sin(pCarYaw) * pCarSpeed * dt;
+      pCarZ += -Math.cos(pCarYaw) * pCarSpeed * dt;
+
+      parkingCar.position.set(pCarX, 0, pCarZ);
+      parkingCar.rotation.y = pCarYaw;
+
+      if (parkingTargetMesh) parkingTargetMesh.rotation.z += dt * 2.2;
+
+      // Kiểm tra va quẹt tường bao
+      if (Math.abs(pCarX) > 15.6 || Math.abs(pCarZ) > 15.2) {
+        triggerGameOver('💥 QUẸT TƯỜNG BÃI ĐỖ!');
+        return;
+      }
+
+      // Kiểm tra va quẹt xe khác
+      for (let i = 0; i < parkingObstacles.length; i++) {
+        const ob = parkingObstacles[i];
+        if (Math.hypot(pCarX - ob.x, pCarZ - ob.z) < 2.55) {
+          triggerGameOver('💥 VA QUẸT XE KHÁC!');
+          return;
+        }
+      }
+
+      // Kiểm tra đã đỗ gọn vào chuồng
+      const distToTarget = Math.hypot(pCarX - parkingTarget.x, pCarZ - parkingTarget.z);
+      if (distToTarget < 1.65 && Math.abs(pCarSpeed) < 1.8) {
+        playRingSound();
+        gameScore += 1200 * parkingLevel;
+        parkingLevel++;
+        buildParkingLevel(parkingLevel);
+      }
+    }
+
+
+    /* =========================================================================
+       7. GAME 5: BẬT NHẢY LÊN MÂY 3D (SKY TILT JUMP 3D)
+       ========================================================================= */
+    let skyJumper, skyPlatforms = [];
+    let skyX = 0, skyY = 2, skyVy = 14, maxSkyY = 2;
+
+    function setupSkyJump() {
+      scene.background = new THREE.Color(0x0b0720);
+      scene.fog = new THREE.FogExp2(0x0b0720, 0.012);
+
+      const hemi = new THREE.HemisphereLight(0xffffff, 0x3b0764, 1.0);
+      scene.add(hemi);
+      const dir = new THREE.DirectionalLight(0x00f2fe, 1.3);
+      dir.position.set(15, 30, 20);
+      scene.add(dir);
+
+      // Phi thuyền mini bật nhảy
+      skyJumper = new THREE.Group();
+      const pod = new THREE.Mesh(
+        new THREE.SphereGeometry(0.75, 20, 20),
+        new THREE.MeshStandardMaterial({ color: 0xff2975, metalness: 0.7, roughness: 0.2 })
+      );
+      skyJumper.add(pod);
+      const visor = new THREE.Mesh(
+        new THREE.SphereGeometry(0.45, 16, 16),
+        new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00f2fe, emissiveIntensity: 0.4 })
+      );
+      visor.position.set(0, 0.15, 0.48);
+      skyJumper.add(visor);
+      scene.add(skyJumper);
+
+      skyX = 0; skyY = 2; skyVy = 15; maxSkyY = 2;
+      skyPlatforms = [];
+
+      for (let i = 0; i < 16; i++) {
+        const isFirst = (i === 0);
+        const px = isFirst ? 0 : (Math.random() - 0.5) * 14;
+        const py = i * 2.5;
+        const type = (!isFirst && Math.random() < 0.2) ? 'spring' : ((!isFirst && Math.random() < 0.25) ? 'moving' : 'normal');
+        const pMesh = createSkyPlatformMesh(type);
+        pMesh.position.set(px, py, 0);
+        scene.add(pMesh);
+        skyPlatforms.push({ mesh: pMesh, x: px, y: py, type, vx: (Math.random() > 0.5 ? 1 : -1) * 3.8 });
+      }
+
+      camera.position.set(0, 6, 18);
+      camera.lookAt(0, 6, 0);
+    }
+
+    function createSkyPlatformMesh(type) {
+      const color = type === 'spring' ? 0xffd200 : (type === 'moving' ? 0x00f2fe : 0x00e676);
+      const g = new THREE.Group();
+      const bar = new THREE.Mesh(
+        new THREE.BoxGeometry(2.7, 0.42, 1.4),
+        new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.35, roughness: 0.25 })
+      );
+      g.add(bar);
+      if (type === 'spring') {
+        const sp = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.35, 0.35, 0.45, 12),
+          new THREE.MeshStandardMaterial({ color: 0xff2975, emissive: 0xff2975, emissiveIntensity: 0.6 })
+        );
+        sp.position.y = 0.35;
+        g.add(sp);
+      }
+      return g;
+    }
+
+    function updateSkyJump(dt) {
+      let sx = tiltX;
+      if (keyLeft) sx = -0.85;
+      if (keyRight) sx = 0.85;
+
+      skyX += sx * 16 * dt;
+      if (skyX > 9.5) skyX = -9.5;
+      if (skyX < -9.5) skyX = 9.5;
+
+      skyVy -= 26 * dt;
+      skyY += skyVy * dt;
+
+      // Kiểm tra đáp xuống bệ phóng khi đang rơi xuống
+      if (skyVy < 0) {
+        for (let i = 0; i < skyPlatforms.length; i++) {
+          const p = skyPlatforms[i];
+          if (Math.abs(skyX - p.x) < 1.65 && skyY >= p.y && skyY <= p.y + 0.95) {
+            if (p.type === 'spring') {
+              skyVy = 23.5;
+              playRingSound();
+            } else {
+              skyVy = 14.8;
+              playTone(520, 'sine', 0.09, 0.15);
+            }
+            break;
+          }
+        }
+      }
+
+      skyPlatforms.forEach(p => {
+        if (p.type === 'moving') {
+          p.x += p.vx * dt;
+          if (p.x > 7.5 || p.x < -7.5) p.vx = -p.vx;
+          p.mesh.position.x = p.x;
+        }
+      });
+
+      if (skyY > maxSkyY) {
+        maxSkyY = skyY;
+        gameScore = Math.floor(maxSkyY * 20);
+      }
+      hudExtraText = Math.floor(maxSkyY) + ' m';
+
+      skyJumper.position.set(skyX, skyY + 0.6, 0);
+      skyJumper.rotation.z = -sx * 0.35;
+      skyJumper.rotation.y += dt * 2.5;
+
+      camera.position.y = THREE.MathUtils.lerp(camera.position.y, maxSkyY + 2.5, 0.12);
+      camera.lookAt(0, camera.position.y, 0);
+
+      // Tái chế các bệ phóng ở dưới đáy màn hình lên phía trên đỉnh
+      let highestPlatY = maxSkyY;
+      skyPlatforms.forEach(p => { if (p.y > highestPlatY) highestPlatY = p.y; });
+
+      skyPlatforms.forEach(p => {
+        if (p.y < camera.position.y - 11) {
+          p.y = highestPlatY + 2.3 + Math.random() * 1.1;
+          highestPlatY = p.y;
+          p.x = (Math.random() - 0.5) * 14;
+          p.mesh.position.set(p.x, p.y, 0);
+        }
+      });
+
+      if (skyY < camera.position.y - 11.5) {
+        triggerGameOver('💥 RƠI KHỎI TẦNG MÂY!');
+      }
+    }
+
+
+    /* =========================================================================
+       8. GAME 6: ĐOÁN NHẠC NHANH BÁC TÀI (AI LÀ THÁNH NHẠC TRUNGPLAY)
+       ========================================================================= */
+    const QUIZ_SONGS = [
+      { title: 'Vùng Lá Me Bay', artist: 'Như Quỳnh', genre: 'Bolero Trữ Tình', clue: 'Nhìn lá me bay nhớ kỷ niệm hai chúng mình...' },
+      { title: 'Sầu Tím Thiệp Hồng', artist: 'Quang Lê & Lệ Quyên', genre: 'Song Ca Bolero', clue: 'Từ lúc quen nhau chưa nói một lời gì tỏ tình...' },
+      { title: 'Duyên Phận', artist: 'Như Quỳnh', genre: 'Bolero Kinh Điển', clue: 'Phận là con gái chưa một lần yêu ai...' },
+      { title: 'Đập Vỡ Cây Đàn', artist: 'Quang Lê', genre: 'Bolero Bất Hủ', clue: 'Giận người đổi trắng thay đen, đập vỡ cây đàn...' },
+      { title: 'Cắt Đôi Nỗi Sầu', artist: 'Tăng Duy Tân', genre: 'Nhạc Trẻ Remix', clue: 'Anh cắt đôi nỗi sầu, anh buông tay cắt đôi nỗi sầu...' },
+      { title: 'Ngày Mai Người Ta Lấy Chồng', artist: 'Thành Đạt', genre: 'Ballad Đang Hot', clue: 'Ngày hôm ấy em đi trong mưa thế nhưng lại quên tim không khóa cửa...' },
+      { title: 'Lạc Trôi', artist: 'Sơn Tùng M-TP', genre: 'V-Pop Hiện Đại', clue: 'Người theo hương hoa mây mù giăng lối...' },
+      { title: 'Nơi Này Có Anh', artist: 'Sơn Tùng M-TP', genre: 'V-Pop Tình Yêu', clue: 'Cầm tay anh, dựa vai anh, kề bên anh nơi này có anh...' },
+      { title: 'Bông Điên Điển', artist: 'Phi Nhung', genre: 'Nhạc Quê Hương', clue: 'Chồng gần không lấy em lấy chồng xa...' },
+      { title: 'Áo Mới Cà Mau', artist: 'Phi Nhung', genre: 'Dân Ca Miền Tây', clue: 'Nghe nói Cà Mau xa lắm, ở cuối cùng bản đồ Việt Nam...' },
+      { title: 'Chuyến Tàu Hoàng Hôn', artist: 'Lệ Quyên', genre: 'Bolero Chuyến Xe', clue: 'Chiều nao tiễn nhau đi khi bóng ngả xế tà...' },
+      { title: 'Thành Phố Buồn', artist: 'Đan Nguyên', genre: 'Bolero Đà Lạt', clue: 'Thành phố nào nhớ không em, nơi chúng mình tìm phút êm đềm...' },
+      { title: 'Hoa Trinh Nữ', artist: 'Chế Linh', genre: 'Nhạc Vàng Xưa', clue: 'Qua một rừng hoang gió núi theo sang giũ bụi đường trên vai...' },
+      { title: 'Tàu Đêm Năm Cũ', artist: 'Hoàng Oanh', genre: 'Nhạc Vàng Bất Hủ', clue: 'Trời đêm dần tàn tôi đến sân ga đưa tiễn người trai lính về ngàn...' },
+      { title: 'Bên Trên Tầng Lầu', artist: 'Tăng Duy Tân', genre: 'Deep House Remix', clue: 'Em ơi đừng khóc bóng tối trước mắt sẽ bắt em đi...' },
+      { title: 'See Tình', artist: 'Hoàng Thùy Linh', genre: 'Dance Pop Việt', clue: 'Tình tình tình tang tang tính, giây phút đầu tiên anh gặp em...' }
+    ];
+
+    let quizInterval = null;
+    let quizTimeLeft = 10;
+    let quizCombo = 0;
+    let quizLives = 3;
+    let currentQuizQ = null;
+
+    function stopQuizTimer() {
+      if (quizInterval) {
+        clearInterval(quizInterval);
+        quizInterval = null;
+      }
+    }
+
+    function playQuizMelody() {
+      const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 659.25];
+      notes.forEach((f, idx) => {
+        setTimeout(() => {
+          if (activeGame === 'music_quiz' && !isGameOver && !isPaused) {
+            playTone(f, 'sine', 0.14, 0.12);
+          }
+        }, idx * 140);
+      });
+    }
+
+    function setupMusicQuiz() {
+      quizCombo = 0;
+      quizLives = 3;
+      gameScore = 0;
+      document.getElementById('hudScore').textContent = '0';
+      document.getElementById('hudSpeed').textContent = 'x0 ❤️❤️❤️';
+      nextMusicQuestion();
+    }
+
+    function nextMusicQuestion() {
+      stopQuizTimer();
+      if (isGameOver) return;
+
+      const idx = Math.floor(Math.random() * QUIZ_SONGS.length);
+      const correct = QUIZ_SONGS[idx];
+      const pool = QUIZ_SONGS.filter((_, i) => i !== idx).sort(() => Math.random() - 0.5).slice(0, 3);
+      const options = [correct, ...pool].sort(() => Math.random() - 0.5);
+      currentQuizQ = { correct, options, answered: false };
+
+      const panel = document.getElementById('panel2dContainer');
+      const hearts = '❤️'.repeat(quizLives) + '🖤'.repeat(Math.max(0, 3 - quizLives));
+      document.getElementById('hudSpeed').textContent = `x${quizCombo} ${hearts}`;
+
+      panel.innerHTML = `
+        <div class="quiz-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;color:var(--muted);">
+            <span>🎶 Thể loại: <strong style="color:var(--cyan)">${correct.genre}</strong></span>
+            <span>Mạng: ${hearts}</span>
+          </div>
+          <div class="quiz-timer-bar">
+            <div class="quiz-timer-fill" id="quizTimerFill"></div>
+          </div>
+          <div class="quiz-disc">💿</div>
+          <div class="quiz-clue-box">
+            <div style="font-size:12px;color:var(--gold);font-weight:800;text-transform:uppercase;margin-bottom:6px;">
+              🎤 Ca sĩ thể hiện: ${correct.artist}
+            </div>
+            <div style="font-size:16px;color:#fff;font-style:italic;line-height:1.45;">
+              "${correct.clue}"
+            </div>
+          </div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">👇 Chọn nhanh tên bài hát chính xác:</div>
+          <div class="quiz-options">
+            ${options.map((opt, i) => `
+              <button type="button" class="quiz-opt-btn" id="quizOpt_${i}" onclick="answerMusicQuiz(${i})">
+                <span style="color:var(--cyan);font-family:'Orbitron',sans-serif;">${['A', 'B', 'C', 'D'][i]}.</span>
+                <span>${opt.title}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      `;
+
+      playQuizMelody();
+      quizTimeLeft = 10.0;
+      quizInterval = setInterval(() => {
+        if (isPaused || isGameOver) return;
+        quizTimeLeft -= 0.1;
+        const fill = document.getElementById('quizTimerFill');
+        if (fill) fill.style.width = Math.max(0, (quizTimeLeft / 10) * 100) + '%';
+        if (quizTimeLeft <= 0) {
+          stopQuizTimer();
+          handleQuizWrong(-1);
+        }
+      }, 100);
+    }
+
+    function answerMusicQuiz(optIdx) {
+      if (!currentQuizQ || currentQuizQ.answered || isGameOver) return;
+      currentQuizQ.answered = true;
+      stopQuizTimer();
+
+      const chosen = currentQuizQ.options[optIdx];
+      const isRight = chosen.title === currentQuizQ.correct.title;
+
+      currentQuizQ.options.forEach((o, i) => {
+        const btn = document.getElementById('quizOpt_' + i);
+        if (!btn) return;
+        if (o.title === currentQuizQ.correct.title) btn.classList.add('correct');
+        else if (i === optIdx && !isRight) btn.classList.add('wrong');
+      });
+
+      if (isRight) {
+        playRingSound();
+        quizCombo++;
+        const bonus = Math.round(100 + quizTimeLeft * 25 + quizCombo * 50);
+        gameScore += bonus;
+        document.getElementById('hudScore').textContent = Math.floor(gameScore);
+        setTimeout(() => nextMusicQuestion(), 900);
+      } else {
+        handleQuizWrong(optIdx);
+      }
+    }
+
+    function handleQuizWrong() {
+      playCrashSound();
+      quizCombo = 0;
+      quizLives--;
+      if (quizLives <= 0) {
+        setTimeout(() => triggerGameOver('🎵 HẾT LƯỢT ĐOÁN NHẠC!'), 600);
+      } else {
+        setTimeout(() => nextMusicQuestion(), 1100);
+      }
+    }
+
+
+    /* =========================================================================
+       9. GAME 7: CỜ CARO BÁC TÀI 15x15 (ĐẤU MÁY AI & 2 NGƯỜI CHƠI)
+       ========================================================================= */
+    const CARO_SIZE = 15;
+    let caroBoard = [];
+    let caroTurn = 1; // 1 = X (Bác tài), 2 = O (Máy AI / Bác tài 2)
+    let caroVsAi = true;
+    let caroLastMove = null;
+    let caroWinCells = null;
+
+    function setupCaroDuel() {
+      const panel = document.getElementById('panel2dContainer');
+      const boardPx = Math.min(window.innerWidth - 32, window.innerHeight - 170, 480);
+      panel.innerHTML = `
+        <div class="caro-wrap">
+          <div class="caro-toolbar">
+            <button type="button" class="caro-mode-btn ${caroVsAi ? 'active' : ''}" id="btnCaroAi" onclick="setCaroMode(true)">🤖 Đấu Máy (AI Bác Tài)</button>
+            <button type="button" class="caro-mode-btn ${!caroVsAi ? 'active' : ''}" id="btnCaro2P" onclick="setCaroMode(false)">👥 2 Bác Tài (Cùng máy)</button>
+            <button type="button" class="caro-mode-btn" onclick="resetCaroBoard()">🔄 Ván mới</button>
+          </div>
+          <canvas id="caroCanvas" width="${boardPx}" height="${boardPx}"></canvas>
+        </div>
+      `;
+      resetCaroBoard();
+      const cvs = document.getElementById('caroCanvas');
+      if (cvs) {
+        cvs.addEventListener('pointerdown', onCaroPointerDown);
+      }
+    }
+
+    function setCaroMode(vsAi) {
+      caroVsAi = vsAi;
+      const b1 = document.getElementById('btnCaroAi');
+      const b2 = document.getElementById('btnCaro2P');
+      if (b1) b1.classList.toggle('active', vsAi);
+      if (b2) b2.classList.toggle('active', !vsAi);
+      resetCaroBoard();
+    }
+
+    function resetCaroBoard() {
+      caroBoard = Array.from({ length: CARO_SIZE }, () => Array(CARO_SIZE).fill(0));
+      caroTurn = 1;
+      caroLastMove = null;
+      caroWinCells = null;
+      isGameOver = false;
+      document.getElementById('hudSpeed').textContent = 'Lượt ❌';
+      drawCaroBoard();
+    }
+
+    function onCaroPointerDown(e) {
+      if (isGameOver || isPaused) return;
+      if (caroVsAi && caroTurn === 2) return;
+      const cvs = document.getElementById('caroCanvas');
+      if (!cvs) return;
+      const rect = cvs.getBoundingClientRect();
+      const cellW = cvs.width / CARO_SIZE;
+      const col = Math.floor(((e.clientX - rect.left) / rect.width) * cvs.width / cellW);
+      const row = Math.floor(((e.clientY - rect.top) / rect.height) * cvs.height / cellW);
+      if (row < 0 || row >= CARO_SIZE || col < 0 || col >= CARO_SIZE) return;
+      if (caroBoard[row][col] !== 0) return;
+
+      placeCaroMove(row, col, caroTurn);
+
+      if (!isGameOver && caroVsAi && caroTurn === 2) {
+        setTimeout(() => {
+          if (!isGameOver && activeGame === 'caro_duel') makeCaroAiMove();
+        }, 260);
+      }
+    }
+
+    function placeCaroMove(r, c, player) {
+      caroBoard[r][c] = player;
+      caroLastMove = { r, c };
+      playTone(player === 1 ? 660 : 480, 'sine', 0.08, 0.14);
+
+      const winLine = checkCaroWin(r, c, player);
+      if (winLine) {
+        caroWinCells = winLine;
+        drawCaroBoard();
+        if (player === 1) {
+          playRingSound();
+          gameScore += 1500;
+          document.getElementById('hudScore').textContent = Math.floor(gameScore);
+          setTimeout(() => triggerGameOver('🏆 BÁC TÀI ❌ CHIẾN THẮNG!'), 500);
+        } else {
+          setTimeout(() => triggerGameOver(caroVsAi ? '🤖 MÁY AI CHIẾN THẮNG!' : '🏆 BÁC TÀI ⭕ CHIẾN THẮNG!'), 500);
+        }
+        return;
+      }
+
+      caroTurn = player === 1 ? 2 : 1;
+      document.getElementById('hudSpeed').textContent = caroTurn === 1 ? 'Lượt ❌' : 'Lượt ⭕';
+      drawCaroBoard();
+    }
+
+    function checkCaroWin(r, c, player) {
+      const dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
+      for (const [dr, dc] of dirs) {
+        const line = [{ r, c }];
+        for (let step = 1; step < 5; step++) {
+          const nr = r + dr * step, nc = c + dc * step;
+          if (nr >= 0 && nr < CARO_SIZE && nc >= 0 && nc < CARO_SIZE && caroBoard[nr][nc] === player) line.push({ r: nr, c: nc });
+          else break;
+        }
+        for (let step = 1; step < 5; step++) {
+          const nr = r - dr * step, nc = c - dc * step;
+          if (nr >= 0 && nr < CARO_SIZE && nc >= 0 && nc < CARO_SIZE && caroBoard[nr][nc] === player) line.push({ r: nr, c: nc });
+          else break;
+        }
+        if (line.length >= 5) return line;
+      }
+      return null;
+    }
+
+    function makeCaroAiMove() {
+      let bestScore = -1;
+      let bestCell = { r: 7, c: 7 };
+      const dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
+
+      function evalLine(r, c, targetPlayer) {
+        let total = 0;
+        for (const [dr, dc] of dirs) {
+          let count = 1, openEnds = 0;
+          let s1 = 1;
+          while (s1 < 5) {
+            const nr = r + dr * s1, nc = c + dc * s1;
+            if (nr < 0 || nr >= CARO_SIZE || nc < 0 || nc >= CARO_SIZE) break;
+            if (caroBoard[nr][nc] === targetPlayer) { count++; s1++; }
+            else { if (caroBoard[nr][nc] === 0) openEnds++; break; }
+          }
+          let s2 = 1;
+          while (s2 < 5) {
+            const nr = r - dr * s2, nc = c - dc * s2;
+            if (nr < 0 || nr >= CARO_SIZE || nc < 0 || nc >= CARO_SIZE) break;
+            if (caroBoard[nr][nc] === targetPlayer) { count++; s2++; }
+            else { if (caroBoard[nr][nc] === 0) openEnds++; break; }
+          }
+          if (count >= 5) total += 100000;
+          else if (count === 4 && openEnds === 2) total += 12000;
+          else if (count === 4 && openEnds === 1) total += 3500;
+          else if (count === 3 && openEnds === 2) total += 1800;
+          else if (count === 3 && openEnds === 1) total += 300;
+          else if (count === 2 && openEnds === 2) total += 120;
+        }
+        return total;
+      }
+
+      for (let r = 0; r < CARO_SIZE; r++) {
+        for (let c = 0; c < CARO_SIZE; c++) {
+          if (caroBoard[r][c] !== 0) continue;
+          const attack = evalLine(r, c, 2) * 1.1;
+          const defend = evalLine(r, c, 1);
+          const centerBias = 14 - (Math.abs(r - 7) + Math.abs(c - 7));
+          const sc = attack + defend + centerBias;
+          if (sc > bestScore) {
+            bestScore = sc;
+            bestCell = { r, c };
+          }
+        }
+      }
+      placeCaroMove(bestCell.r, bestCell.c, 2);
+    }
+
+    function drawCaroBoard() {
+      const cvs = document.getElementById('caroCanvas');
+      if (!cvs) return;
+      const ctx = cvs.getContext('2d');
+      const W = cvs.width;
+      const cell = W / CARO_SIZE;
+
+      ctx.fillStyle = '#0d0a1a';
+      ctx.fillRect(0, 0, W, W);
+
+      // Lưới bàn cờ
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= CARO_SIZE; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * cell, 0); ctx.lineTo(i * cell, W);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i * cell); ctx.lineTo(W, i * cell);
+        ctx.stroke();
+      }
+
+      if (caroLastMove) {
+        ctx.fillStyle = 'rgba(0, 242, 254, 0.16)';
+        ctx.fillRect(caroLastMove.c * cell, caroLastMove.r * cell, cell, cell);
+      }
+
+      if (caroWinCells) {
+        ctx.fillStyle = 'rgba(255, 210, 0, 0.28)';
+        caroWinCells.forEach(p => {
+          ctx.fillRect(p.c * cell, p.r * cell, cell, cell);
+        });
+      }
+
+      for (let r = 0; r < CARO_SIZE; r++) {
+        for (let c = 0; c < CARO_SIZE; c++) {
+          const v = caroBoard[r][c];
+          if (!v) continue;
+          const cx = (c + 0.5) * cell;
+          const cy = (r + 0.5) * cell;
+          const rad = cell * 0.32;
+          if (v === 1) {
+            ctx.strokeStyle = '#00f2fe';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(cx - rad, cy - rad); ctx.lineTo(cx + rad, cy + rad);
+            ctx.moveTo(cx + rad, cy - rad); ctx.lineTo(cx - rad, cy + rad);
+            ctx.stroke();
+          } else {
+            ctx.strokeStyle = '#ff2975';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+
+    /* =========================================================================
+       10. GAME 8: BẮN BÓNG MÀU GIẢI KHUÂY (BUBBLE SHOOTER ARCADE)
+       ========================================================================= */
+    const BUBBLE_COLORS = ['#ff2975', '#00f2fe', '#ffd200', '#00e676', '#a855f7'];
+    const B_COLS = 9;
+    const B_ROWS = 11;
+    let bubbleGrid = [];
+    let shooterBall = null;
+    let nextBallColor = BUBBLE_COLORS[0];
+    let aimAngle = -Math.PI / 2;
+    let bubblePopCount = 0;
+    let bubbleParticles = [];
+
+    function setupBubbleShooter() {
+      const panel = document.getElementById('panel2dContainer');
+      const cw = Math.min(window.innerWidth - 24, 420);
+      const ch = Math.min(window.innerHeight - 110, 560);
+      panel.innerHTML = `<canvas id="bubbleCanvas" width="${cw}" height="${ch}"></canvas>`;
+
+      bubbleGrid = Array.from({ length: B_ROWS }, (_, r) =>
+        Array.from({ length: B_COLS }, () =>
+          r < 5 ? BUBBLE_COLORS[Math.floor(Math.random() * BUBBLE_COLORS.length)] : null
+        )
+      );
+      bubblePopCount = 0;
+      bubbleParticles = [];
+      nextBallColor = BUBBLE_COLORS[Math.floor(Math.random() * BUBBLE_COLORS.length)];
+      spawnShooterBall(cw, ch);
+      document.getElementById('hudSpeed').textContent = '0 quả';
+
+      const cvs = document.getElementById('bubbleCanvas');
+      if (cvs) {
+        const updateAim = (e) => {
+          const rect = cvs.getBoundingClientRect();
+          const mx = (e.clientX - rect.left) * (cw / rect.width);
+          const my = (e.clientY - rect.top) * (ch / rect.height);
+          const dx = mx - cw / 2;
+          const dy = my - (ch - 36);
+          if (dy < -15) {
+            aimAngle = Math.atan2(dy, dx);
+          }
+        };
+        cvs.addEventListener('pointermove', updateAim);
+        cvs.addEventListener('pointerdown', (e) => {
+          updateAim(e);
+          fireBubble();
+        });
+      }
+
+      if (animId) cancelAnimationFrame(animId);
+      bubbleLoop();
+    }
+
+    function spawnShooterBall(cw, ch) {
+      shooterBall = {
+        x: cw / 2,
+        y: ch - 36,
+        vx: 0,
+        vy: 0,
+        color: nextBallColor,
+        moving: false
+      };
+      nextBallColor = BUBBLE_COLORS[Math.floor(Math.random() * BUBBLE_COLORS.length)];
+    }
+
+    function fireBubble() {
+      if (!shooterBall || shooterBall.moving || isPaused || isGameOver) return;
+      const speed = 11.5;
+      shooterBall.vx = Math.cos(aimAngle) * speed;
+      shooterBall.vy = Math.sin(aimAngle) * speed;
+      shooterBall.moving = true;
+      playTone(440, 'sine', 0.08, 0.14);
+    }
+
+    function getBubbleCellCenter(r, c, rad) {
+      const offset = (r % 2 === 1) ? rad : 0;
+      return {
+        x: rad + c * (rad * 2) + offset + 6,
+        y: rad + r * (rad * 1.76) + 10
+      };
+    }
+
+    function snapShooterBall(cvs) {
+      const rad = (cvs.width - 24) / (B_COLS * 2 + 1);
+      let bestR = 0, bestC = 0, bestDist = 99999;
+      for (let r = 0; r < B_ROWS; r++) {
+        for (let c = 0; c < B_COLS; c++) {
+          if (bubbleGrid[r][c]) continue;
+          const pos = getBubbleCellCenter(r, c, rad);
+          const d = Math.hypot(shooterBall.x - pos.x, shooterBall.y - pos.y);
+          if (d < bestDist) {
+            bestDist = d;
+            bestR = r;
+            bestC = c;
+          }
+        }
+      }
+
+      bubbleGrid[bestR][bestC] = shooterBall.color;
+
+      // Tìm chuỗi bóng cùng màu (>= 3 quả) để nổ
+      const targetColor = shooterBall.color;
+      const visited = new Set();
+      const cluster = [];
+      const queue = [[bestR, bestC]];
+      visited.add(bestR + ',' + bestC);
+
+      while (queue.length > 0) {
+        const [cr, cc] = queue.shift();
+        cluster.push([cr, cc]);
+        const odd = cr % 2 === 1;
+        const neighbors = [
+          [cr, cc - 1], [cr, cc + 1],
+          [cr - 1, cc + (odd ? 0 : -1)], [cr - 1, cc + (odd ? 1 : 0)],
+          [cr + 1, cc + (odd ? 0 : -1)], [cr + 1, cc + (odd ? 1 : 0)]
+        ];
+        for (const [nr, nc] of neighbors) {
+          if (nr >= 0 && nr < B_ROWS && nc >= 0 && nc < B_COLS) {
+            const key = nr + ',' + nc;
+            if (!visited.has(key) && bubbleGrid[nr][nc] === targetColor) {
+              visited.add(key);
+              queue.push([nr, nc]);
+            }
+          }
+        }
+      }
+
+      if (cluster.length >= 3) {
+        playRingSound();
+        cluster.forEach(([r, c]) => {
+          const p = getBubbleCellCenter(r, c, rad);
+          for (let k = 0; k < 6; k++) {
+            bubbleParticles.push({
+              x: p.x, y: p.y,
+              vx: (Math.random() - 0.5) * 6,
+              vy: (Math.random() - 0.5) * 6,
+              color: targetColor,
+              life: 1.0
+            });
+          }
+          bubbleGrid[r][c] = null;
+        });
+        bubblePopCount += cluster.length;
+        gameScore += cluster.length * 120;
+        document.getElementById('hudScore').textContent = Math.floor(gameScore);
+        document.getElementById('hudSpeed').textContent = bubblePopCount + ' quả';
+      }
+
+      if (bestR >= B_ROWS - 1) {
+        triggerGameOver('💥 BÓNG CHẠM ĐÁY!');
+        return;
+      }
+
+      // Nếu phá hết bóng trên bàn -> thưởng màn mới
+      const remaining = bubbleGrid.some(row => row.some(cell => cell !== null));
+      if (!remaining) {
+        gameScore += 2000;
+        for (let r = 0; r < 5; r++) {
+          for (let c = 0; c < B_COLS; c++) {
+            bubbleGrid[r][c] = BUBBLE_COLORS[Math.floor(Math.random() * BUBBLE_COLORS.length)];
+          }
+        }
+      }
+
+      spawnShooterBall(cvs.width, cvs.height);
+    }
+
+    function bubbleLoop() {
+      if (activeGame !== 'bubble_shooter') return;
+      const cvs = document.getElementById('bubbleCanvas');
+      if (!cvs) return;
+      const ctx = cvs.getContext('2d');
+      const W = cvs.width, H = cvs.height;
+      const rad = (W - 24) / (B_COLS * 2 + 1);
+
+      if (!isPaused && !isGameOver && shooterBall && shooterBall.moving) {
+        shooterBall.x += shooterBall.vx;
+        shooterBall.y += shooterBall.vy;
+
+        if (shooterBall.x < rad + 4 || shooterBall.x > W - rad - 4) {
+          shooterBall.vx = -shooterBall.vx;
+          shooterBall.x = Math.max(rad + 4, Math.min(W - rad - 4, shooterBall.x));
+        }
+
+        let hit = shooterBall.y <= rad + 12;
+        if (!hit) {
+          for (let r = 0; r < B_ROWS && !hit; r++) {
+            for (let c = 0; c < B_COLS; c++) {
+              if (!bubbleGrid[r][c]) continue;
+              const pos = getBubbleCellCenter(r, c, rad);
+              if (Math.hypot(shooterBall.x - pos.x, shooterBall.y - pos.y) < rad * 1.85) {
+                hit = true;
+                break;
+              }
+            }
+          }
+        }
+
+        if (hit) snapShooterBall(cvs);
+      }
+
+      ctx.fillStyle = '#0c081a';
+      ctx.fillRect(0, 0, W, H);
+
+      // Tia ngắm laser
+      if (shooterBall && !shooterBall.moving) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(0, 242, 254, 0.45)';
+        ctx.setLineDash([6, 6]);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(W / 2, H - 36);
+        ctx.lineTo(W / 2 + Math.cos(aimAngle) * 180, (H - 36) + Math.sin(aimAngle) * 180);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawGlossyBall(x, y, r, color) {
+        const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.3, color);
+        grad.addColorStop(1, '#090614');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, r - 1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      for (let r = 0; r < B_ROWS; r++) {
+        for (let c = 0; c < B_COLS; c++) {
+          if (!bubbleGrid[r][c]) continue;
+          const pos = getBubbleCellCenter(r, c, rad);
+          drawGlossyBall(pos.x, pos.y, rad, bubbleGrid[r][c]);
+        }
+      }
+
+      if (shooterBall) {
+        drawGlossyBall(shooterBall.x, shooterBall.y, rad, shooterBall.color);
+      }
+
+      for (let i = bubbleParticles.length - 1; i >= 0; i--) {
+        const pt = bubbleParticles[i];
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        pt.life -= 0.05;
+        if (pt.life <= 0) {
+          bubbleParticles.splice(i, 1);
+          continue;
+        }
+        ctx.fillStyle = pt.color;
+        ctx.globalAlpha = pt.life;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      if (activeGame === 'bubble_shooter' && !isGameOver) {
+        animId = requestAnimationFrame(bubbleLoop);
+      }
     }
   </script>
 </body>
