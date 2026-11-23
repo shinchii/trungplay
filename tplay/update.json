@@ -1,12 +1,12 @@
 {
-  "version": "1.2.1",
-  "versionCode": 10201,
+  "version": "1.2.2",
+  "versionCode": 10202,
   "date": "23/11/2026",
   "notes": [
-    "Sửa lỗi không kết nối được với một số đầu Android lắp thêm khi cắm cáp lần đầu",
-    "Trang Giới thiệu tiếng Việt"
+    "Màn chia ô là màn hình chính và chạy cả khi xe đang chạy, bật sẵn",
+    "Đổi các chữ còn sót sang TPlay"
   ],
-  "apk": "https://trungplay.vercel.app/tplay/TPlayAuto-1.2.1.apk",
-  "sha256": "9d8deec96ee47a9a31498bd6ec3815dca96dc91c286d394c7d9e3c8a8a90c456",
-  "size": 32701439
+  "apk": "https://trungplay.vercel.app/tplay/TPlayAuto-1.2.2.apk",
+  "sha256": "087abe32eb904196be058978a1ef0e5492d38957612f4ac700113f9a3942b10e",
+  "size": 32701423
 }
