@@ -24,11 +24,15 @@ pre{white-space:pre-wrap;background:#0e1422;padding:10px;border-radius:10px;max-
   <button onclick="login()">Đăng nhập</button>
 </div>
 <div id="app" style="display:none">
-  <div class="tabs row" style="margin-bottom:12px"><button class="on" data-t="stats">Thống kê</button><button data-t="users">Khách hàng</button><button data-t="promos">Mã khuyến mãi</button><button data-t="crashes">Lỗi app</button></div>
+  <div class="tabs row" style="margin-bottom:12px"><button class="on" data-t="stats">Thống kê</button><button data-t="users">Khách hàng</button><button data-t="logs">Nhật ký</button><button data-t="promos">Mã khuyến mãi</button><button data-t="crashes">Lỗi app</button></div>
   <section id="t-stats"><div class="card" id="stats">Đang tải…</div></section>
   <section id="t-users" style="display:none">
     <div class="card"><div class="row"><input id="q" placeholder="Số điện thoại hoặc email khách" style="flex:3"><button onclick="find()" style="flex:0">Tìm</button></div></div>
     <div class="card" id="res" style="display:none"></div>
+  </section>
+  <section id="t-logs" style="display:none">
+    <div class="card"><div class="row"><input id="lq" placeholder="Mã nhật ký khách gửi (VD: SD5DUG) — để trống để xem mới nhất" style="flex:3"><button onclick="loadLogs()" style="flex:0">Tìm</button></div></div>
+    <div class="card" id="logs">Đang tải…</div>
   </section>
   <section id="t-promos" style="display:none">
     <div class="card"><h2>Tạo / sửa mã</h2>
@@ -53,7 +57,14 @@ async function login(){
   const r=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key="+KEY,{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({email:$("em").value.trim(),password:$("pw").value,returnSecureToken:true})}).then(r=>r.json());
   if(r.error){msg("Sai email hoặc mật khẩu",1);return}
-  tok=r.idToken;$("login").style.display="none";$("app").style.display="";msg("");loadStats();
+  tok=r.idToken;
+  // Admins need a verified email: the first time, a link is sent to it.
+  const claims=JSON.parse(atob(tok.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+  if(!claims.email_verified){
+    await fetch("https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key="+KEY,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requestType:"VERIFY_EMAIL",idToken:tok})});
+    msg("Lần đầu: đã gửi email xác minh tới "+claims.email+". Bấm link trong email (xem cả mục Spam), rồi đăng nhập lại.",1);return;
+  }
+  $("login").style.display="none";$("app").style.display="";msg("");loadStats();
 }
 async function call(name,data){
   const r=await fetch(FN+name,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+tok},body:JSON.stringify({data:data||{}})}).then(r=>r.json());
@@ -62,8 +73,8 @@ async function call(name,data){
 }
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
-  ["stats","users","promos","crashes"].forEach(t=>$("t-"+t).style.display=t===b.dataset.t?"":"none");
-  if(b.dataset.t==="stats")loadStats(); if(b.dataset.t==="promos")loadPromos(); if(b.dataset.t==="crashes")loadCrashes();
+  ["stats","users","logs","promos","crashes"].forEach(t=>$("t-"+t).style.display=t===b.dataset.t?"":"none");
+  if(b.dataset.t==="stats")loadStats(); if(b.dataset.t==="promos")loadPromos(); if(b.dataset.t==="logs")loadLogs(); if(b.dataset.t==="crashes")loadCrashes();
 });
 async function loadStats(){
   try{const s=await call("adminStats");const max=Math.max(1,...s.last14.map(x=>x.amount));
@@ -114,6 +125,13 @@ async function savePromo(){
     plans:[...document.querySelectorAll(".pl:checked")].map(x=>x.value)})).promos);msg("Đã lưu mã")}catch(e){msg(e.message,1)}
 }
 async function disablePromo(code){try{renderPromos((await call("adminPromos",{action:"disable",code})).promos)}catch(e){msg(e.message,1)}}
+async function loadLogs(){
+  try{const l=(await call("adminLogs",{q:$("lq").value})).logs;
+  $("logs").innerHTML=l.length?l.map(x=>`<div style="margin-bottom:14px"><p><b>${esc(x.ref)}</b> · ${d(x.at)} · <a href="#" data-id="${esc(x.identifier)}" onclick="openUser(this.dataset.id);return false" style="color:var(--pri)">${esc(x.identifier)}</a> · ${esc(x.app)} · ${esc(x.device)}</p>
+  ${x.note?`<p>“${esc(x.note)}”</p>`:""}<details><summary class="mut" style="cursor:pointer">Xem nội dung nhật ký</summary><pre>${esc(x.text)}</pre></details></div>`).join(""):'<p class="mut">Không có nhật ký nào.</p>'}
+  catch(e){$("logs").textContent=e.message}
+}
+function openUser(id){$("q").value=id;document.querySelector('[data-t=users]').click();find()}
 async function loadCrashes(){
   try{const c=(await call("adminCrashes")).crashes;
   $("crashes").innerHTML=`<h2>Lỗi văng app gần đây</h2>${c.length?c.map(x=>`<p><b>${esc(x.app)}</b> · ${esc(x.device)} · Android ${esc(x.android)} · ${d(x.crashedAt||x.at)}</p><pre>${esc(x.trace)}</pre>`).join(""):'<p class="mut">Chưa có lỗi nào.</p>'}`}
