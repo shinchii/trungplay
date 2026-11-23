@@ -1,12 +1,17 @@
 {
-  "version": "1.2.2",
-  "versionCode": 10202,
+  "version": "1.3.0",
+  "versionCode": 10300,
   "date": "23/11/2026",
   "notes": [
-    "Màn chia ô là màn hình chính và chạy cả khi xe đang chạy, bật sẵn",
-    "Đổi các chữ còn sót sang TPlay"
+    "Kiểm tra \"Sẵn sàng ra xe\" ngay trên trang chủ",
+    "Gửi nhật ký cho hỗ trợ chỉ một chạm",
+    "Đổi mật khẩu và xem lịch sử thanh toán trong app",
+    "Mã khuyến mãi và mã giới thiệu: bạn bè giảm 10%, bạn được tặng 15 ngày",
+    "Nhắc gia hạn trước 3 ngày và 1 ngày",
+    "Hướng dẫn theo từng loại đầu xe",
+    "Chỉ còn tiếng Việt và tiếng Anh, app nhẹ hơn"
   ],
-  "apk": "https://trungplay.vercel.app/tplay/TPlayAuto-1.2.2.apk",
-  "sha256": "087abe32eb904196be058978a1ef0e5492d38957612f4ac700113f9a3942b10e",
-  "size": 32701423
+  "apk": "https://trungplay.vercel.app/tplay/TPlayAuto-1.3.0.apk",
+  "sha256": "001b130105749844a8b378c28870b50a6d6201f368a2d873505d29c8318540b8",
+  "size": 31303863
 }

@@ -1,17 +1,20 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TPlay Auto · Quản trị</title>
-<meta name="robots" content="noindex">
+<title>TPlay Auto · Quản trị</title><meta name="robots" content="noindex">
 <style>
-:root{--bg:#0b0f19;--card:#151c2c;--fg:#e3e7f2;--mut:#a9b2c6;--pri:#2f6bff;--ok:#2bb673;--err:#ff8a80}
-body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg)}
-main{max-width:720px;margin:0 auto;padding:24px 16px}
-.card{background:var(--card);border-radius:18px;padding:18px;margin-bottom:16px}
-input{width:100%;box-sizing:border-box;padding:12px;border-radius:12px;border:1px solid #2c3446;background:#0e1422;color:var(--fg);font-size:16px;margin:6px 0}
-button{padding:10px 16px;border-radius:12px;border:0;background:var(--pri);color:#fff;font-size:15px;cursor:pointer;margin:4px 6px 4px 0}
+:root{--bg:#0b0f19;--card:#151c2c;--fg:#e3e7f2;--mut:#a9b2c6;--pri:#2f6bff;--ok:#2bb673;--err:#ff8a80;--amb:#ffb020}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg)}
+main{max-width:860px;margin:0 auto;padding:20px 14px}h1{font-size:22px}h2{font-size:18px;margin:4px 0 10px}h3{font-size:15px;margin:14px 0 6px}
+.card{background:var(--card);border-radius:18px;padding:16px;margin-bottom:14px}
+input,select{width:100%;padding:11px;border-radius:12px;border:1px solid #2c3446;background:#0e1422;color:var(--fg);font-size:15px;margin:4px 0}
+button{padding:9px 14px;border-radius:12px;border:0;background:var(--pri);color:#fff;font-size:14px;cursor:pointer;margin:3px 6px 3px 0}
 button.sec{background:#26324a}button.dan{background:#9b2c2c}
-.mut{color:var(--mut);font-size:14px}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:6px;border-bottom:1px solid #2c3446;text-align:left}
+.mut{color:var(--mut);font-size:13px}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{flex:1;min-width:120px}
+.tabs button{background:#26324a}.tabs button.on{background:var(--pri)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.kpi{background:#0e1422;border-radius:14px;padding:12px}.kpi b{font-size:22px;display:block}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px;border-bottom:1px solid #2c3446;text-align:left;vertical-align:top}
+.bars{display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:8px}.bars div{flex:1;background:var(--pri);border-radius:4px 4px 0 0;min-height:2px;position:relative}
+pre{white-space:pre-wrap;background:#0e1422;padding:10px;border-radius:10px;max-height:300px;overflow:auto;font-size:12px}
 #msg{min-height:20px}
 </style></head><body><main>
 <h1>TPlay Auto · Quản trị</h1>
@@ -21,28 +24,61 @@ table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:6px;borde
   <button onclick="login()">Đăng nhập</button>
 </div>
 <div id="app" style="display:none">
-  <div class="card"><div class="row"><input id="q" placeholder="Số điện thoại hoặc email khách" style="flex:1"><button onclick="find()">Tìm</button></div></div>
-  <div class="card" id="res" style="display:none"></div>
+  <div class="tabs row" style="margin-bottom:12px"><button class="on" data-t="stats">Thống kê</button><button data-t="users">Khách hàng</button><button data-t="promos">Mã khuyến mãi</button><button data-t="crashes">Lỗi app</button></div>
+  <section id="t-stats"><div class="card" id="stats">Đang tải…</div></section>
+  <section id="t-users" style="display:none">
+    <div class="card"><div class="row"><input id="q" placeholder="Số điện thoại hoặc email khách" style="flex:3"><button onclick="find()" style="flex:0">Tìm</button></div></div>
+    <div class="card" id="res" style="display:none"></div>
+  </section>
+  <section id="t-promos" style="display:none">
+    <div class="card"><h2>Tạo / sửa mã</h2>
+      <div class="row"><input id="pc" placeholder="Mã (VD: TET2027)"><input id="pp" type="number" placeholder="% giảm (0-100)"><input id="pd" type="number" placeholder="Tặng thêm ngày"></div>
+      <div class="row"><input id="pm" type="number" placeholder="Số lần dùng tối đa (0 = không giới hạn)"><input id="pe" type="date" title="Hết hạn"></div>
+      <div class="row"><label><input type="checkbox" class="pl" value="month" checked style="width:auto"> 1 tháng</label><label><input type="checkbox" class="pl" value="year" checked style="width:auto"> 1 năm</label><label><input type="checkbox" class="pl" value="lifetime" checked style="width:auto"> Vĩnh viễn</label></div>
+      <button onclick="savePromo()">Lưu mã</button></div>
+    <div class="card" id="promos">Đang tải…</div>
+  </section>
+  <section id="t-crashes" style="display:none"><div class="card" id="crashes">Đang tải…</div></section>
 </div>
 <p id="msg"></p>
 </main>
 <script>
 const KEY="AIzaSyBFXjImyZgFzyl8ITTIzAwaox2ak4t9bNc", FN="https://asia-southeast1-trungplay-12c60.cloudfunctions.net/";
 let tok=null, cur=null;
-const $=id=>document.getElementById(id), msg=(t,e)=>{$("msg").textContent=t||"";$("msg").style.color=e?"var(--err)":"var(--ok)"};
+const $=id=>document.getElementById(id), esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const msg=(t,e)=>{$("msg").textContent=t||"";$("msg").style.color=e?"var(--err)":"var(--ok)"};
+const vnd=n=>(n||0).toLocaleString("vi-VN")+" đ", d=ms=>ms?new Date(ms).toLocaleString("vi-VN"):"—";
+const planVi={trial:"Dùng thử",month:"1 tháng",year:"1 năm",lifetime:"Vĩnh viễn"};
 async function login(){
   const r=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key="+KEY,{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({email:$("em").value.trim(),password:$("pw").value,returnSecureToken:true})}).then(r=>r.json());
   if(r.error){msg("Sai email hoặc mật khẩu",1);return}
-  tok=r.idToken;$("login").style.display="none";$("app").style.display="";msg("");
+  tok=r.idToken;$("login").style.display="none";$("app").style.display="";msg("");loadStats();
 }
 async function call(name,data){
-  const r=await fetch(FN+name,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+tok},body:JSON.stringify({data})}).then(r=>r.json());
+  const r=await fetch(FN+name,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+tok},body:JSON.stringify({data:data||{}})}).then(r=>r.json());
   if(r.error) throw new Error(r.error.status==="PERMISSION_DENIED"?"Tài khoản này không có quyền quản trị":r.error.message);
   return r.result;
 }
-const d=ms=>ms?new Date(ms).toLocaleString("vi-VN"):"—";
-const planVi={trial:"Dùng thử",month:"1 tháng",year:"1 năm",lifetime:"Vĩnh viễn"};
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
+  ["stats","users","promos","crashes"].forEach(t=>$("t-"+t).style.display=t===b.dataset.t?"":"none");
+  if(b.dataset.t==="stats")loadStats(); if(b.dataset.t==="promos")loadPromos(); if(b.dataset.t==="crashes")loadCrashes();
+});
+async function loadStats(){
+  try{const s=await call("adminStats");const max=Math.max(1,...s.last14.map(x=>x.amount));
+  $("stats").innerHTML=`<h2>Tổng quan</h2><div class="kpis">
+   <div class="kpi"><span class="mut">Doanh thu hôm nay</span><b>${vnd(s.revenueToday)}</b></div>
+   <div class="kpi"><span class="mut">Doanh thu tháng này</span><b>${vnd(s.revenueMonth)}</b></div>
+   <div class="kpi"><span class="mut">Tổng doanh thu</span><b>${vnd(s.revenueTotal)}</b></div>
+   <div class="kpi"><span class="mut">Tài khoản</span><b>${s.users}</b></div>
+   <div class="kpi"><span class="mut">Đang dùng thử</span><b>${s.trials}</b></div>
+   <div class="kpi"><span class="mut">Gói tháng/năm còn hạn</span><b>${s.paidActive}</b></div>
+   <div class="kpi"><span class="mut">Vĩnh viễn</span><b>${s.lifetime}</b></div>
+   <div class="kpi"><span class="mut">Tỷ lệ mua</span><b>${s.conversion}%</b><span class="mut">${s.payers} người đã trả tiền</span></div></div>
+   <h3>Doanh thu 14 ngày</h3><div class="bars">${s.last14.map(x=>`<div title="${x.day}: ${vnd(x.amount)}" style="height:${Math.round(x.amount*100/max)}%"></div>`).join("")}</div>
+   <p class="mut">Gói đã bán: 1 tháng ${s.plans.month} · 1 năm ${s.plans.year} · vĩnh viễn ${s.plans.lifetime}</p>`}catch(e){$("stats").textContent=e.message}
+}
 async function find(){
   msg("");try{const r=await call("adminFind",{q:$("q").value});
     if(!r.found){$("res").style.display="";$("res").innerHTML="<p>Không tìm thấy tài khoản.</p>";return}
@@ -51,17 +87,36 @@ async function find(){
 function show(r){
   const exp=r.plan==="lifetime"?"Vĩnh viễn":d(r.expiresAt);
   $("res").style.display="";
-  $("res").innerHTML=`<h2>${r.identifier}</h2>
-  <p>Gói: <b>${planVi[r.plan]||r.plan||"—"}</b> · Hết hạn: <b>${exp}</b><br><span class="mut">Tạo lúc ${r.createdAt} · Máy: ${r.deviceName||"—"} (từ ${d(r.deviceSince)})</span></p>
+  $("res").innerHTML=`<h2>${esc(r.identifier)}</h2>
+  <p>Gói: <b>${planVi[r.plan]||r.plan||"—"}</b> · Hết hạn: <b>${exp}</b><br><span class="mut">Tạo lúc ${esc(r.createdAt)} · Máy: ${esc(r.deviceName)||"—"} (từ ${d(r.deviceSince)}) · Mã giới thiệu ${esc(r.referral)} (${r.referred} lượt)</span></p>
   <div class="row"><button onclick="act('addDays',30)">+30 ngày</button><button onclick="act('addDays',365)">+1 năm</button>
   <button onclick="act('setPlan','lifetime')">Đặt vĩnh viễn</button><button class="sec" onclick="act('unbindDevice')">Gỡ thiết bị</button>
   <button class="dan" onclick="act('setPlan','expired')">Cho hết hạn</button></div>
-  <div class="row" style="margin-top:8px"><input id="np" placeholder="Mật khẩu mới (≥ 6 ký tự)" style="flex:1"><button onclick="act('resetPassword',$('np').value)">Đặt lại mật khẩu</button></div>
-  <h3>Đơn hàng</h3><table><tr><th>Mã</th><th>Gói</th><th>Số tiền</th><th>Trạng thái</th><th>Ngày</th></tr>
-  ${(r.orders||[]).map(o=>`<tr><td>${o.code}</td><td>${planVi[o.plan]||o.plan}</td><td>${(o.amount||0).toLocaleString("vi-VN")} đ</td><td>${o.status}</td><td>${d(o.createdAt)}</td></tr>`).join("")}</table>`;
+  <div class="row" style="margin-top:8px"><input id="np" placeholder="Mật khẩu mới (≥ 6 ký tự)" style="flex:3"><button style="flex:0;white-space:nowrap" onclick="act('resetPassword',$('np').value)">Đặt lại mật khẩu</button></div>
+  <h3>Đơn hàng</h3><table><tr><th>Mã</th><th>Gói</th><th>Số tiền</th><th>KM</th><th>Trạng thái</th><th>Ngày</th></tr>
+  ${(r.orders||[]).map(o=>`<tr><td>${o.code}</td><td>${planVi[o.plan]||o.plan}</td><td>${vnd(o.amount)}</td><td>${esc(o.promo||"")}</td><td>${o.status}</td><td>${d(o.createdAt)}</td></tr>`).join("")}</table>
+  <h3>Nhật ký khách gửi</h3>${(r.logs||[]).length?r.logs.map(l=>`<p><b>${l.id}</b> · ${d(l.at)} · ${esc(l.app)} · ${esc(l.device)}<br>${esc(l.note)}</p><pre>${esc(l.text)}</pre>`).join(""):'<p class="mut">Chưa có.</p>'}`;
 }
 async function act(action,value){
   if(action==="setPlan"&&value==="expired"&&!confirm("Cho tài khoản này hết hạn ngay?"))return;
   try{await call("adminAction",{uid:cur.uid,action,value});msg("Đã cập nhật");$("q").value=cur.identifier;find()}catch(e){msg(e.message,1)}
+}
+function renderPromos(list){
+  $("promos").innerHTML=`<h2>Mã đang có</h2><table><tr><th>Mã</th><th>Giảm</th><th>Tặng</th><th>Đã dùng</th><th>Hết hạn</th><th>Gói</th><th></th></tr>
+  ${list.map(p=>`<tr><td><b>${esc(p.code)}</b>${p.active===false?' <span class="mut">(tắt)</span>':''}</td><td>${p.percent||0}%</td><td>${p.bonusDays||0} ngày</td><td>${p.used||0}${p.maxUses?"/"+p.maxUses:""}</td>
+  <td>${p.expiresAt?new Date(p.expiresAt).toLocaleDateString("vi-VN"):"—"}</td><td>${(p.plans||[]).map(x=>planVi[x]).join(", ")||"Tất cả"}</td>
+  <td>${p.active===false?"":`<button class="dan" onclick="disablePromo('${esc(p.code)}')">Tắt</button>`}</td></tr>`).join("")}</table>`;
+}
+async function loadPromos(){try{renderPromos((await call("adminPromos",{})).promos)}catch(e){$("promos").textContent=e.message}}
+async function savePromo(){
+  const exp=$("pe").value?new Date($("pe").value+"T23:59:59").getTime():null;
+  try{renderPromos((await call("adminPromos",{action:"save",code:$("pc").value,percent:$("pp").value,bonusDays:$("pd").value,maxUses:$("pm").value,expiresAt:exp,
+    plans:[...document.querySelectorAll(".pl:checked")].map(x=>x.value)})).promos);msg("Đã lưu mã")}catch(e){msg(e.message,1)}
+}
+async function disablePromo(code){try{renderPromos((await call("adminPromos",{action:"disable",code})).promos)}catch(e){msg(e.message,1)}}
+async function loadCrashes(){
+  try{const c=(await call("adminCrashes")).crashes;
+  $("crashes").innerHTML=`<h2>Lỗi văng app gần đây</h2>${c.length?c.map(x=>`<p><b>${esc(x.app)}</b> · ${esc(x.device)} · Android ${esc(x.android)} · ${d(x.crashedAt||x.at)}</p><pre>${esc(x.trace)}</pre>`).join(""):'<p class="mut">Chưa có lỗi nào.</p>'}`}
+  catch(e){$("crashes").textContent=e.message}
 }
 </script></body></html>
