@@ -1,0 +1,14 @@
+{
+  "version": "1.2.0",
+  "versionCode": 10200,
+  "date": "23/11/2026",
+  "notes": [
+    "Tài khoản TPlay Auto: đăng ký bằng email hoặc số điện thoại",
+    "Dùng thử miễn phí 7 ngày",
+    "Mua gói 1 tháng, 1 năm hoặc vĩnh viễn, thanh toán bằng mã QR ngân hàng",
+    "Mỗi tài khoản dùng trên một điện thoại"
+  ],
+  "apk": "https://trungplay.vercel.app/tplay/TPlayAuto-1.2.0.apk",
+  "sha256": "5c57635c2c96459a64b5649fd2d4ee90655ce2969e8bc368ddd4de7abc061aa6",
+  "size": 32701303
+}

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TPlay Auto · Quản trị</title>
+<meta name="robots" content="noindex">
+<style>
+:root{--bg:#0b0f19;--card:#151c2c;--fg:#e3e7f2;--mut:#a9b2c6;--pri:#2f6bff;--ok:#2bb673;--err:#ff8a80}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg)}
+main{max-width:720px;margin:0 auto;padding:24px 16px}
+.card{background:var(--card);border-radius:18px;padding:18px;margin-bottom:16px}
+input{width:100%;box-sizing:border-box;padding:12px;border-radius:12px;border:1px solid #2c3446;background:#0e1422;color:var(--fg);font-size:16px;margin:6px 0}
+button{padding:10px 16px;border-radius:12px;border:0;background:var(--pri);color:#fff;font-size:15px;cursor:pointer;margin:4px 6px 4px 0}
+button.sec{background:#26324a}button.dan{background:#9b2c2c}
+.mut{color:var(--mut);font-size:14px}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:6px;border-bottom:1px solid #2c3446;text-align:left}
+#msg{min-height:20px}
+</style></head><body><main>
+<h1>TPlay Auto · Quản trị</h1>
+<div class="card" id="login">
+  <p class="mut">Đăng nhập bằng tài khoản quản trị (email + mật khẩu đã đăng ký trong TPlay Auto).</p>
+  <input id="em" placeholder="Email quản trị" autocomplete="username"><input id="pw" type="password" placeholder="Mật khẩu" autocomplete="current-password">
+  <button onclick="login()">Đăng nhập</button>
+</div>
+<div id="app" style="display:none">
+  <div class="card"><div class="row"><input id="q" placeholder="Số điện thoại hoặc email khách" style="flex:1"><button onclick="find()">Tìm</button></div></div>
+  <div class="card" id="res" style="display:none"></div>
+</div>
+<p id="msg"></p>
+</main>
+<script>
+const KEY="AIzaSyBFXjImyZgFzyl8ITTIzAwaox2ak4t9bNc", FN="https://asia-southeast1-trungplay-12c60.cloudfunctions.net/";
+let tok=null, cur=null;
+const $=id=>document.getElementById(id), msg=(t,e)=>{$("msg").textContent=t||"";$("msg").style.color=e?"var(--err)":"var(--ok)"};
+async function login(){
+  const r=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key="+KEY,{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({email:$("em").value.trim(),password:$("pw").value,returnSecureToken:true})}).then(r=>r.json());
+  if(r.error){msg("Sai email hoặc mật khẩu",1);return}
+  tok=r.idToken;$("login").style.display="none";$("app").style.display="";msg("");
+}
+async function call(name,data){
+  const r=await fetch(FN+name,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+tok},body:JSON.stringify({data})}).then(r=>r.json());
+  if(r.error) throw new Error(r.error.status==="PERMISSION_DENIED"?"Tài khoản này không có quyền quản trị":r.error.message);
+  return r.result;
+}
+const d=ms=>ms?new Date(ms).toLocaleString("vi-VN"):"—";
+const planVi={trial:"Dùng thử",month:"1 tháng",year:"1 năm",lifetime:"Vĩnh viễn"};
+async function find(){
+  msg("");try{const r=await call("adminFind",{q:$("q").value});
+    if(!r.found){$("res").style.display="";$("res").innerHTML="<p>Không tìm thấy tài khoản.</p>";return}
+    cur=r;show(r)}catch(e){msg(e.message,1)}
+}
+function show(r){
+  const exp=r.plan==="lifetime"?"Vĩnh viễn":d(r.expiresAt);
+  $("res").style.display="";
+  $("res").innerHTML=`<h2>${r.identifier}</h2>
+  <p>Gói: <b>${planVi[r.plan]||r.plan||"—"}</b> · Hết hạn: <b>${exp}</b><br><span class="mut">Tạo lúc ${r.createdAt} · Máy: ${r.deviceName||"—"} (từ ${d(r.deviceSince)})</span></p>
+  <div class="row"><button onclick="act('addDays',30)">+30 ngày</button><button onclick="act('addDays',365)">+1 năm</button>
+  <button onclick="act('setPlan','lifetime')">Đặt vĩnh viễn</button><button class="sec" onclick="act('unbindDevice')">Gỡ thiết bị</button>
+  <button class="dan" onclick="act('setPlan','expired')">Cho hết hạn</button></div>
+  <div class="row" style="margin-top:8px"><input id="np" placeholder="Mật khẩu mới (≥ 6 ký tự)" style="flex:1"><button onclick="act('resetPassword',$('np').value)">Đặt lại mật khẩu</button></div>
+  <h3>Đơn hàng</h3><table><tr><th>Mã</th><th>Gói</th><th>Số tiền</th><th>Trạng thái</th><th>Ngày</th></tr>
+  ${(r.orders||[]).map(o=>`<tr><td>${o.code}</td><td>${planVi[o.plan]||o.plan}</td><td>${(o.amount||0).toLocaleString("vi-VN")} đ</td><td>${o.status}</td><td>${d(o.createdAt)}</td></tr>`).join("")}</table>`;
+}
+async function act(action,value){
+  if(action==="setPlan"&&value==="expired"&&!confirm("Cho tài khoản này hết hạn ngay?"))return;
+  try{await call("adminAction",{uid:cur.uid,action,value});msg("Đã cập nhật");$("q").value=cur.identifier;find()}catch(e){msg(e.message,1)}
+}
+</script></body></html>
