@@ -1,15 +1,11 @@
 {
-  "version": "1.4.0",
-  "versionCode": 10400,
-  "date": "23/11/2026",
+  "version": "1.4.1",
+  "versionCode": 10401,
+  "date": "24/11/2026",
   "notes": [
-    "Xe không có màn hình cảm ứng: núm xoay giờ vào được menu ba chấm, bảng chọn app và bảng bố cục",
-    "Nút giọng nói dùng giọng nói tiếng Việt của TPlay (trước đây có máy bấm không phản hồi)",
-    "Đầu xe có micro không hoạt động: tự chuyển sang micro điện thoại",
-    "Thông báo lỗi rõ ràng hơn khi đăng nhập hoặc thanh toán quá nhiều lần",
-    "Trang tải và cập nhật mới: tplay.io.vn"
+    "Lưu ảnh mã QR khi thanh toán, để quét bằng app ngân hàng"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.4.0/TPlayAuto-1.4.0.apk",
-  "sha256": "7e636df33cc8a3fe4f2c49b100c317d489bf4733d2549ff03ac13557d416f98a",
-  "size": 31320231
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.4.1/TPlayAuto-1.4.1.apk",
+  "sha256": "1ba0b20a5a4b4130a17b771c8f0a8dbb895728667fcfc7c97ec5c77cdf09c687",
+  "size": 31320783
 }
