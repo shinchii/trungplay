@@ -1,14 +1,13 @@
 {
-  "version": "1.4.7",
-  "versionCode": 10407,
+  "version": "1.4.8",
+  "versionCode": 10408,
   "date": "24/11/2026",
   "notes": [
-    "Cầu nối ADB chạy được trên xe không có Wi-Fi: âm thanh ra loa xe và app điện thoại trên màn xe hoạt động bình thường",
-    "Bước mới \"Cầu nối khi lên xe\": vào Cài đặt › Cấp phép truy cập, bấm \"Bật cầu nối cho xe\" một lần khi đang ở nhà có Wi-Fi",
-    "\"Tự tắt cầu nối khi không lái xe\" không còn cần Wi-Fi để bật lại khi cắm xe",
-    "Nhật ký ghi rõ lý do khi cầu nối không kết nối được"
+    "Nhận thông báo từ TPlay Auto: tin bản mới, nhắc gia hạn, tin hỗ trợ",
+    "Nhắc trước 3 ngày khi gói hoặc thời gian dùng thử sắp hết",
+    "Bấm vào thông báo để mở thẳng phần cập nhật hoặc gia hạn"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.4.7/TPlayAuto-1.4.7.apk",
-  "sha256": "c3d4779cb5d62873709f2a11e35353c33011c30963c3a8a79edddb92a4e78442",
-  "size": 31385891
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.4.8/TPlayAuto-1.4.8.apk",
+  "sha256": "4ffda0181e9dd9ea82107f2c059b4afcb1420ccb09b960093969d777302af4da",
+  "size": 32040712
 }
