@@ -1,13 +1,11 @@
 {
-  "version": "1.4.8",
-  "versionCode": 10408,
+  "version": "1.4.9",
+  "versionCode": 10409,
   "date": "24/11/2026",
   "notes": [
-    "Nhận thông báo từ TPlay Auto: tin bản mới, nhắc gia hạn, tin hỗ trợ",
-    "Nhắc trước 3 ngày khi gói hoặc thời gian dùng thử sắp hết",
-    "Bấm vào thông báo để mở thẳng phần cập nhật hoặc gia hạn"
+    "Có bản mới là hiện thông báo cập nhật ngay khi mở app, không phải chờ"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.4.8/TPlayAuto-1.4.8.apk",
-  "sha256": "4ffda0181e9dd9ea82107f2c059b4afcb1420ccb09b960093969d777302af4da",
-  "size": 32040712
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.4.9/TPlayAuto-1.4.9.apk",
+  "sha256": "d37d189bbd4da741baa727f70527b07da00c6c97339dcb87723a36f7dc75b697",
+  "size": 32040708
 }
