@@ -1,16 +1,14 @@
 {
-  "version": "1.4.6",
-  "versionCode": 10406,
+  "version": "1.4.7",
+  "versionCode": 10407,
   "date": "24/11/2026",
   "notes": [
-    "Tự tải sẵn chứng chỉ cho xe ngay khi mở app (ở nhà có mạng), lên xe cắm cáp là chạy, không phải rút ra cắm lại",
-    "Thêm đường tải chứng chỉ dự phòng khi mạng chặn GitHub",
-    "Xe từ chối chứng chỉ: tự tải ngay, không cần bấm thông báo",
-    "Android 12 trở xuống (Samsung S10, S9, Note 10…): tự tắt màn hình điện thoại khi lên xe mà không khóa máy, nên màn xe không còn hiện màn hình khóa",
-    "Nút \"Tắt/Bật màn hình ĐT\" trên thông báo khi đang kết nối xe",
-    "Khi điện thoại bị khóa, màn xe hiện lời nhắc mở khóa thay cho màn hình khóa"
+    "Cầu nối ADB chạy được trên xe không có Wi-Fi: âm thanh ra loa xe và app điện thoại trên màn xe hoạt động bình thường",
+    "Bước mới \"Cầu nối khi lên xe\": vào Cài đặt › Cấp phép truy cập, bấm \"Bật cầu nối cho xe\" một lần khi đang ở nhà có Wi-Fi",
+    "\"Tự tắt cầu nối khi không lái xe\" không còn cần Wi-Fi để bật lại khi cắm xe",
+    "Nhật ký ghi rõ lý do khi cầu nối không kết nối được"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.4.6/TPlayAuto-1.4.6.apk",
-  "sha256": "875fc0bbe4d1f0a69fedea029e41dbb6160de6c01c4f06344dc590fd5c089e12",
-  "size": 31367523
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.4.7/TPlayAuto-1.4.7.apk",
+  "sha256": "c3d4779cb5d62873709f2a11e35353c33011c30963c3a8a79edddb92a4e78442",
+  "size": 31385891
 }
