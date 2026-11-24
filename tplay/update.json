@@ -1,11 +1,16 @@
 {
-  "version": "1.4.5",
-  "versionCode": 10405,
+  "version": "1.4.6",
+  "versionCode": 10406,
   "date": "24/11/2026",
   "notes": [
-    "Đổi sang nhóm hỗ trợ Zalo mới: bấm \"Nhóm hỗ trợ Zalo\" trong app để tham gia"
+    "Tự tải sẵn chứng chỉ cho xe ngay khi mở app (ở nhà có mạng), lên xe cắm cáp là chạy, không phải rút ra cắm lại",
+    "Thêm đường tải chứng chỉ dự phòng khi mạng chặn GitHub",
+    "Xe từ chối chứng chỉ: tự tải ngay, không cần bấm thông báo",
+    "Android 12 trở xuống (Samsung S10, S9, Note 10…): tự tắt màn hình điện thoại khi lên xe mà không khóa máy, nên màn xe không còn hiện màn hình khóa",
+    "Nút \"Tắt/Bật màn hình ĐT\" trên thông báo khi đang kết nối xe",
+    "Khi điện thoại bị khóa, màn xe hiện lời nhắc mở khóa thay cho màn hình khóa"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.4.5/TPlayAuto-1.4.5.apk",
-  "sha256": "4554557dfa44b04c31e34e3b1cf945d8ae0630f4e2f3f0ca6f575fa230954845",
-  "size": 31366639
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.4.6/TPlayAuto-1.4.6.apk",
+  "sha256": "875fc0bbe4d1f0a69fedea029e41dbb6160de6c01c4f06344dc590fd5c089e12",
+  "size": 31367523
 }
