@@ -1,13 +1,17 @@
 {
-  "version": "1.4.2",
-  "versionCode": 10402,
+  "version": "1.4.4",
+  "versionCode": 10404,
   "date": "24/11/2026",
   "notes": [
-    "Hướng dẫn thiết lập từng bước khi mới cài: cho phép thông báo, ghép cầu nối, cấp tất cả quyền chỉ bằng 1 nút",
-    "Sửa lỗi không ghép được cầu nối khi chưa cho phép thông báo",
-    "Mới: \"Dùng app ngân hàng\" tắt Tùy chọn nhà phát triển để mở app ngân hàng, tự bật lại khi cắm xe"
+    "Âm thanh xe qua cầu nối ADB: không cần root hay Shizuku, có giọng chỉ đường",
+    "Nút Điện thoại trên thanh dock: gọi từ danh bạ, cuộc gọi gần đây, bàn phím số",
+    "Gọi bằng giọng nói: \"gọi cho Mẹ\", \"gọi số 0969…\"",
+    "Tin nhắn từ người trong danh bạ có nút \"Gọi lại\"",
+    "Tiếng Việt mặc định, đổi sang tiếng Anh trong Cài đặt › Ngôn ngữ",
+    "Đổi tên công tắc thành \"Tự tắt cầu nối khi không lái xe\"",
+    "Sửa mục Định tuyến âm thanh hệ thống mở nhầm trang web"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.4.2/TPlayAuto-1.4.2.apk",
-  "sha256": "dc89237700296a16e64b2e27bd3311e632df135889de27e68de85dfcf7c2329e",
-  "size": 31348019
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.4.4/TPlayAuto-1.4.4.apk",
+  "sha256": "e830e10597f72aa88e1b93101f0b69957a8f19434bfe812c3e86617fbf083b40",
+  "size": 31366631
 }
