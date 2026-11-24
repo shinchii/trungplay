@@ -1,11 +1,13 @@
 {
-  "version": "1.4.1",
-  "versionCode": 10401,
+  "version": "1.4.2",
+  "versionCode": 10402,
   "date": "24/11/2026",
   "notes": [
-    "Lưu ảnh mã QR khi thanh toán, để quét bằng app ngân hàng"
+    "Hướng dẫn thiết lập từng bước khi mới cài: cho phép thông báo, ghép cầu nối, cấp tất cả quyền chỉ bằng 1 nút",
+    "Sửa lỗi không ghép được cầu nối khi chưa cho phép thông báo",
+    "Mới: \"Dùng app ngân hàng\" tắt Tùy chọn nhà phát triển để mở app ngân hàng, tự bật lại khi cắm xe"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.4.1/TPlayAuto-1.4.1.apk",
-  "sha256": "1ba0b20a5a4b4130a17b771c8f0a8dbb895728667fcfc7c97ec5c77cdf09c687",
-  "size": 31320783
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.4.2/TPlayAuto-1.4.2.apk",
+  "sha256": "dc89237700296a16e64b2e27bd3311e632df135889de27e68de85dfcf7c2329e",
+  "size": 31348019
 }
