@@ -1,17 +1,11 @@
 {
-  "version": "1.4.4",
-  "versionCode": 10404,
+  "version": "1.4.5",
+  "versionCode": 10405,
   "date": "24/11/2026",
   "notes": [
-    "Âm thanh xe qua cầu nối ADB: không cần root hay Shizuku, có giọng chỉ đường",
-    "Nút Điện thoại trên thanh dock: gọi từ danh bạ, cuộc gọi gần đây, bàn phím số",
-    "Gọi bằng giọng nói: \"gọi cho Mẹ\", \"gọi số 0969…\"",
-    "Tin nhắn từ người trong danh bạ có nút \"Gọi lại\"",
-    "Tiếng Việt mặc định, đổi sang tiếng Anh trong Cài đặt › Ngôn ngữ",
-    "Đổi tên công tắc thành \"Tự tắt cầu nối khi không lái xe\"",
-    "Sửa mục Định tuyến âm thanh hệ thống mở nhầm trang web"
+    "Đổi sang nhóm hỗ trợ Zalo mới: bấm \"Nhóm hỗ trợ Zalo\" trong app để tham gia"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.4.4/TPlayAuto-1.4.4.apk",
-  "sha256": "e830e10597f72aa88e1b93101f0b69957a8f19434bfe812c3e86617fbf083b40",
-  "size": 31366631
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.4.5/TPlayAuto-1.4.5.apk",
+  "sha256": "4554557dfa44b04c31e34e3b1cf945d8ae0630f4e2f3f0ca6f575fa230954845",
+  "size": 31366639
 }
