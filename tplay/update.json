@@ -1,11 +1,11 @@
 {
-  "version": "1.4.9",
-  "versionCode": 10409,
+  "version": "1.5.0",
+  "versionCode": 10500,
   "date": "24/11/2026",
   "notes": [
-    "Có bản mới là hiện thông báo cập nhật ngay khi mở app, không phải chờ"
+    "Số ngày còn lại của gói được tính theo giờ chuẩn, không bị sai khi đồng hồ điện thoại lệch"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.4.9/TPlayAuto-1.4.9.apk",
-  "sha256": "d37d189bbd4da741baa727f70527b07da00c6c97339dcb87723a36f7dc75b697",
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.5.0/TPlayAuto-1.5.0.apk",
+  "sha256": "b7a7152c9a62966bc35e8bc3320996a5933b2653be38c2c3f64c56e7b7603f58",
   "size": 32040708
 }
