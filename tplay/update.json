@@ -1,12 +1,14 @@
 {
-  "version": "1.5.2",
-  "versionCode": 10502,
+  "version": "1.5.4",
+  "versionCode": 10504,
   "date": "25/11/2026",
   "notes": [
-    "Cuộc gọi Zalo, Messenger, WhatsApp… hiện trên màn xe: nghe, từ chối, kết thúc ngay trên màn xe",
-    "Sửa lỗi tin nhắn và tên người gọi không lên màn xe sau khi bấm \"Cấp tất cả quyền\""
+    "Cầu nối bị ngắt giữa chừng: các app trên màn xe tự mở lại, không còn đứng hình",
+    "Nút \"Kiểm tra kỹ trước khi ra xe\": thử thật cầu nối, âm thanh lên xe, app trên màn xe và chứng chỉ ngay tại nhà",
+    "Xiaomi: tự cấp lại quyền bị HyperOS thu hồi sau khi cập nhật app",
+    "Gửi báo cáo chuyến đi ẩn danh để sửa lỗi nhanh hơn (tắt được trong Nâng cao)"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.5.2/TPlayAuto-1.5.2.apk",
-  "sha256": "906043cf4b390fa644f7b7a7b9334587a551c05662eab47dfae57fa91d287887",
-  "size": 32043356
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.5.4/TPlayAuto-1.5.4.apk",
+  "sha256": "9e4096cea44b3994c48fcc1c8ee5543752f5a90a56c06eb5b7b938f3293ace9b",
+  "size": 32063084
 }
