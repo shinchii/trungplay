@@ -1,16 +1,13 @@
 {
-  "version": "1.6.1",
-  "versionCode": 10601,
+  "version": "1.6.3",
+  "versionCode": 10603,
   "date": "25/11/2026",
   "notes": [
-    "Hướng dẫn thiết lập mới: sau khi ghép cầu nối, bấm một lần là app tự cấp quyền, bật cầu nối chạy không cần Wi-Fi và tải chứng chỉ cho xe",
-    "Máy Samsung: thêm hướng dẫn tắt Trình chặn tự động và cho TPlay vào Ứng dụng không bao giờ ngủ, để không bị đứt kết nối khi lái xe",
-    "Tự cập nhật ứng dụng được bật sẵn",
-    "Quên mật khẩu tài khoản số điện thoại: bấm một nút để nhắn hỗ trợ lấy lại",
-    "Sửa lỗi thông báo từ TPlay không đến được một số máy",
-    "Sửa dấu tích Âm thanh xe hơi không hiện trong mục Cấp phép truy cập"
+    "Sửa lỗi xe bị ngắt kết nối ngay sau khi cắm cáp khi đang bật \"Tự tắt chế độ nhà phát triển\": TPlay bật lại chế độ này trước khi kết nối xe",
+    "\"Tự tắt chế độ nhà phát triển\" giờ chờ khoảng 2 phút sau khi rời xe mới tắt, để những lần ngắt ngắn không làm mất kết nối",
+    "Sau khi cập nhật, app tự cấp lại quyền chắc chắn hơn trên máy Xiaomi"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.6.1/TPlayAuto-1.6.1.apk",
-  "sha256": "1ad02215a221060d03c9ae5001ad540294faa69e0426aaadb9c74cf88571bf64",
-  "size": 32086236
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.6.3/TPlayAuto-1.6.3.apk",
+  "sha256": "ffec4e6a9a485b5b906549d6ca80cc0d71b470d43c6b7aba5ec99052804a466d",
+  "size": 32086232
 }
