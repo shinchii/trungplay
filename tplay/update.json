@@ -1,14 +1,11 @@
 {
-  "version": "1.5.8",
-  "versionCode": 10508,
+  "version": "1.5.9",
+  "versionCode": 10509,
   "date": "25/11/2026",
   "notes": [
-    "Icon mới: các nút trên thanh đáy màn xe có màu riêng, icon ứng dụng bo góc đồng đều",
-    "Giao diện trong app gọn hơn: gộp các trang cài đặt trùng nhau, icon màu đậm dễ nhìn",
-    "Bỏ bớt các kiểu giao diện ít dùng, thêm kiểu \"Bo tròn\"",
-    "Xiaomi: tự cấp lại quyền sau khi cập nhật app chắc chắn hơn"
+    "Bán ra nước ngoài: nút \"Switch to English\", đăng ký bằng số điện thoại có mã nước, thanh toán PayPal / thẻ quốc tế (USD)"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.5.8/TPlayAuto-1.5.8.apk",
-  "sha256": "55b32b8ccf7cb22db52021beffd23d638266ba889144835ef1d499da903e13a7",
-  "size": 32063260
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.5.9/TPlayAuto-1.5.9.apk",
+  "sha256": "30bfdf692191dadfe3df7103804784bc59dc68b41d3dd20ca47febc4cf179ba1",
+  "size": 32081444
 }
