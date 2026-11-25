@@ -1,11 +1,16 @@
 {
-  "version": "1.6.0",
-  "versionCode": 10600,
+  "version": "1.6.1",
+  "versionCode": 10601,
   "date": "25/11/2026",
   "notes": [
-    "Thẻ \"Tự tắt chế độ nhà phát triển\" đưa ra Trang chủ: rời xe khoảng 10 giây là tự tắt, cắm xe tự bật lại không cần Wi-Fi"
+    "Hướng dẫn thiết lập mới: sau khi ghép cầu nối, bấm một lần là app tự cấp quyền, bật cầu nối chạy không cần Wi-Fi và tải chứng chỉ cho xe",
+    "Máy Samsung: thêm hướng dẫn tắt Trình chặn tự động và cho TPlay vào Ứng dụng không bao giờ ngủ, để không bị đứt kết nối khi lái xe",
+    "Tự cập nhật ứng dụng được bật sẵn",
+    "Quên mật khẩu tài khoản số điện thoại: bấm một nút để nhắn hỗ trợ lấy lại",
+    "Sửa lỗi thông báo từ TPlay không đến được một số máy",
+    "Sửa dấu tích Âm thanh xe hơi không hiện trong mục Cấp phép truy cập"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.6.0/TPlayAuto-1.6.0.apk",
-  "sha256": "53177aa40dd35d2083a030626131a918def99ede3229212c698016b6acb14148",
-  "size": 32081548
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.6.1/TPlayAuto-1.6.1.apk",
+  "sha256": "1ad02215a221060d03c9ae5001ad540294faa69e0426aaadb9c74cf88571bf64",
+  "size": 32086236
 }
