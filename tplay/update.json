@@ -1,14 +1,14 @@
 {
-  "version": "1.5.4",
-  "versionCode": 10504,
+  "version": "1.5.8",
+  "versionCode": 10508,
   "date": "25/11/2026",
   "notes": [
-    "Cầu nối bị ngắt giữa chừng: các app trên màn xe tự mở lại, không còn đứng hình",
-    "Nút \"Kiểm tra kỹ trước khi ra xe\": thử thật cầu nối, âm thanh lên xe, app trên màn xe và chứng chỉ ngay tại nhà",
-    "Xiaomi: tự cấp lại quyền bị HyperOS thu hồi sau khi cập nhật app",
-    "Gửi báo cáo chuyến đi ẩn danh để sửa lỗi nhanh hơn (tắt được trong Nâng cao)"
+    "Icon mới: các nút trên thanh đáy màn xe có màu riêng, icon ứng dụng bo góc đồng đều",
+    "Giao diện trong app gọn hơn: gộp các trang cài đặt trùng nhau, icon màu đậm dễ nhìn",
+    "Bỏ bớt các kiểu giao diện ít dùng, thêm kiểu \"Bo tròn\"",
+    "Xiaomi: tự cấp lại quyền sau khi cập nhật app chắc chắn hơn"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.5.4/TPlayAuto-1.5.4.apk",
-  "sha256": "9e4096cea44b3994c48fcc1c8ee5543752f5a90a56c06eb5b7b938f3293ace9b",
-  "size": 32063084
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.5.8/TPlayAuto-1.5.8.apk",
+  "sha256": "55b32b8ccf7cb22db52021beffd23d638266ba889144835ef1d499da903e13a7",
+  "size": 32063260
 }
