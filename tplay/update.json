@@ -1,11 +1,11 @@
 {
-  "version": "1.5.9",
-  "versionCode": 10509,
+  "version": "1.6.0",
+  "versionCode": 10600,
   "date": "25/11/2026",
   "notes": [
-    "Bán ra nước ngoài: nút \"Switch to English\", đăng ký bằng số điện thoại có mã nước, thanh toán PayPal / thẻ quốc tế (USD)"
+    "Thẻ \"Tự tắt chế độ nhà phát triển\" đưa ra Trang chủ: rời xe khoảng 10 giây là tự tắt, cắm xe tự bật lại không cần Wi-Fi"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.5.9/TPlayAuto-1.5.9.apk",
-  "sha256": "30bfdf692191dadfe3df7103804784bc59dc68b41d3dd20ca47febc4cf179ba1",
-  "size": 32081444
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.6.0/TPlayAuto-1.6.0.apk",
+  "sha256": "53177aa40dd35d2083a030626131a918def99ede3229212c698016b6acb14148",
+  "size": 32081548
 }
