@@ -1,11 +1,12 @@
 {
-  "version": "1.5.0",
-  "versionCode": 10500,
-  "date": "24/11/2026",
+  "version": "1.5.1",
+  "versionCode": 10501,
+  "date": "25/11/2026",
   "notes": [
-    "Số ngày còn lại của gói được tính theo giờ chuẩn, không bị sai khi đồng hồ điện thoại lệch"
+    "Âm thanh bị ra loa điện thoại: màn xe hiện nút \"Bật lại cầu nối\", app cũng tự thử lại",
+    "Sau khi khởi động lại điện thoại, cầu nối cho xe tự bật lại khi có Wi-Fi, không cần mở app"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.5.0/TPlayAuto-1.5.0.apk",
-  "sha256": "b7a7152c9a62966bc35e8bc3320996a5933b2653be38c2c3f64c56e7b7603f58",
-  "size": 32040708
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.5.1/TPlayAuto-1.5.1.apk",
+  "sha256": "69a9470eedafcdbc47b783551c8a8a2b8de2d9177efd64c5d40c26dc92aa0c2f",
+  "size": 32043240
 }
