@@ -1,14 +1,16 @@
 {
-  "version": "1.6.4",
-  "versionCode": 10604,
+  "version": "1.6.6",
+  "versionCode": 10606,
   "date": "26/11/2026",
   "notes": [
-    "Thêm công tắc \"Tự tắt màn hình điện thoại khi lên xe\" trong Giao diện hiển thị: màn điện thoại tối đi nhưng màn xe vẫn chạy",
-    "Thêm hướng dẫn: không bấm nút nguồn khi đang dùng trên xe",
-    "Sửa lỗi app bị dừng trên một số máy Android 12 khi tìm xe không dây lúc app đang chạy nền",
-    "Sửa lỗi báo cáo chuyến đi bị gửi hai lần"
+    "Kiểm tra trước khi ra xe báo khi Android Auto của Google còn bật (nó có thể giành kết nối với TPlay, làm xe vừa nối đã ngắt), và tắt được bằng một chạm",
+    "Thiết lập tự động tắt luôn Android Auto của Google; muốn dùng lại thì bật lại trong Thiết lập lên màn hình ô tô",
+    "Âm thanh trên máy không root: nếu điện thoại đang phát mà xe không nhận được tiếng, TPlay tự đổi sang cách thu âm thanh khác",
+    "Lệnh giọng nói ưu tiên bộ nhận giọng nói của Google (bộ của Xiaomi nghe nhầm sang tiếng Trung)",
+    "\"Tự tắt chế độ nhà phát triển\" không còn tắt gỡ lỗi khi xe đang kết nối, và bật lại đủ những gì cần cho chuyến đi",
+    "Kiểm tra âm thanh trước khi ra xe chính xác hơn khi bật \"Tự tắt chế độ nhà phát triển\""
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.6.4/TPlayAuto-1.6.4.apk",
-  "sha256": "7c4dbb8ce1d5cf232505eb90be610984ec4a241d88d7543e7506934a86aaf9c2",
-  "size": 32087440
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.6.6/TPlayAuto-1.6.6.apk",
+  "sha256": "0a40332b86df01cf2f96c06e36e9a6e52307fa86617853a0f1552ddcebec76ff",
+  "size": 32105536
 }
