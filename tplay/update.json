@@ -1,13 +1,14 @@
 {
-  "version": "1.6.3",
-  "versionCode": 10603,
-  "date": "25/11/2026",
+  "version": "1.6.4",
+  "versionCode": 10604,
+  "date": "26/11/2026",
   "notes": [
-    "Sửa lỗi xe bị ngắt kết nối ngay sau khi cắm cáp khi đang bật \"Tự tắt chế độ nhà phát triển\": TPlay bật lại chế độ này trước khi kết nối xe",
-    "\"Tự tắt chế độ nhà phát triển\" giờ chờ khoảng 2 phút sau khi rời xe mới tắt, để những lần ngắt ngắn không làm mất kết nối",
-    "Sau khi cập nhật, app tự cấp lại quyền chắc chắn hơn trên máy Xiaomi"
+    "Thêm công tắc \"Tự tắt màn hình điện thoại khi lên xe\" trong Giao diện hiển thị: màn điện thoại tối đi nhưng màn xe vẫn chạy",
+    "Thêm hướng dẫn: không bấm nút nguồn khi đang dùng trên xe",
+    "Sửa lỗi app bị dừng trên một số máy Android 12 khi tìm xe không dây lúc app đang chạy nền",
+    "Sửa lỗi báo cáo chuyến đi bị gửi hai lần"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.6.3/TPlayAuto-1.6.3.apk",
-  "sha256": "ffec4e6a9a485b5b906549d6ca80cc0d71b470d43c6b7aba5ec99052804a466d",
-  "size": 32086232
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.6.4/TPlayAuto-1.6.4.apk",
+  "sha256": "7c4dbb8ce1d5cf232505eb90be610984ec4a241d88d7543e7506934a86aaf9c2",
+  "size": 32087440
 }
