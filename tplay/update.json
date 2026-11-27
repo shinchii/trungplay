@@ -1,11 +1,12 @@
 {
-  "version": "1.6.7",
-  "versionCode": 10607,
+  "version": "1.6.8",
+  "versionCode": 10608,
   "date": "27/11/2026",
   "notes": [
-    "Nhật ký kết nối ghi thêm về hình ảnh trên màn xe (xe có cho hiện TPlay không, khung hình đầu tiên, lỗi bộ mã hóa), để tìm nhanh nguyên nhân khi màn xe đen"
+    "Sửa màn xe đen trên một số xe Hyundai và Kia: TPlay tự lấy địa chỉ Bluetooth của điện thoại qua cầu nối và báo cho xe biết điện thoại nào đang kết nối",
+    "Khi xe không cho hiện TPlay, app nhắc ghép Bluetooth với xe và nhập địa chỉ Bluetooth ở Cài đặt → Kết nối"
   ],
-  "apk": "https://github.com/shinchii/tplay/releases/download/v1.6.7/TPlayAuto-1.6.7.apk",
-  "sha256": "27a1935f5cbf96502d830ce49d03f1595777393910b0dcee30f58245f0a0f7df",
-  "size": 32105536
+  "apk": "https://github.com/shinchii/tplay/releases/download/v1.6.8/TPlayAuto-1.6.8.apk",
+  "sha256": "b3522626739049c9bf47ff6865780f091d76eadb8df8994baff1e8ee620282da",
+  "size": 32106080
 }
